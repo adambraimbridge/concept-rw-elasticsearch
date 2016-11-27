@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/Financial-Times/neo-model-utils-go/mapper"
 	log "github.com/Sirupsen/logrus"
-	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/gorilla/mux"
 	"gopkg.in/olivere/elastic.v2"
 	"net/http"
@@ -33,7 +32,8 @@ type bulkProcessorConfig struct {
 }
 
 func NewESWriterService(accessConfig *amazonAccessConfig, bulkConfig *bulkProcessorConfig) (service *esWriterService, err error) {
-	elasticClient, err := newElasticClient(credentials.NewStaticCredentials(accessConfig.accessKey, accessConfig.secretKey, ""), &accessConfig.esEndpoint, &accessConfig.esRegion)
+
+	elasticClient, err := newElasticClient(accessConfig.accessKey, accessConfig.secretKey, &accessConfig.esEndpoint, &accessConfig.esRegion)
 	if err != nil {
 		return nil, fmt.Errorf("Creating elasticsearch client failed with error=[%v]\n", err)
 	}
@@ -45,8 +45,6 @@ func NewESWriterService(accessConfig *amazonAccessConfig, bulkConfig *bulkProces
 		FlushInterval(bulkConfig.flushInterval * time.Second).
 		After(handleBulkFailures).
 		Do()
-
-	defer bulkProcessor.Close()
 
 	if err != nil {
 		return nil, fmt.Errorf("Creating bulk processor failed with error=[%v]\n", err)
@@ -88,6 +86,7 @@ func (service *esWriterService) loadData(writer http.ResponseWriter, request *ht
 
 	if err != nil {
 		log.Errorf(err.Error())
+		writer.WriteHeader(http.StatusInternalServerError)
 	}
 }
 

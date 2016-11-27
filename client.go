@@ -1,22 +1,36 @@
 package main
 
 import (
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/signer/v4"
-	"github.com/sha1sum/aws_signing_client"
+	awsauth "github.com/smartystreets/go-aws-auth"
 	"gopkg.in/olivere/elastic.v2"
+	"net/http"
 )
 
-func newElasticClient(creds *credentials.Credentials, endpoint *string, region *string) (*elastic.Client, error) {
-	signer := v4.NewSigner(creds)
-	awsClient, err := aws_signing_client.New(signer, nil, "es", *region)
-	if err != nil {
-		return nil, err
+type AWSSigningTransport struct {
+	HTTPClient  *http.Client
+	Credentials awsauth.Credentials
+}
+
+// RoundTrip implementation
+func (a AWSSigningTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	return a.HTTPClient.Do(awsauth.Sign4(req, a.Credentials))
+}
+
+func newElasticClient(accessKey string, secretKey string, endpoint *string, region *string) (*elastic.Client, error) {
+
+	signingTransport := AWSSigningTransport{
+		Credentials: awsauth.Credentials{
+			AccessKeyID:     accessKey,
+			SecretAccessKey: secretKey,
+		},
+		HTTPClient: http.DefaultClient,
 	}
+	signingClient := &http.Client{Transport: http.RoundTripper(signingTransport)}
+
 	return elastic.NewClient(
 		elastic.SetURL(*endpoint),
 		elastic.SetScheme("https"),
-		elastic.SetHttpClient(awsClient),
+		elastic.SetHttpClient(signingClient),
 		elastic.SetSniff(false), //needs to be disabled due to EAS behavior. Healthcheck still operates as normal.
 	)
 }

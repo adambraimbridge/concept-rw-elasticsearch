@@ -5,8 +5,7 @@ Small application that writes concepts into amazon elasticsearch in batches.
 :warning: The AWS SDK for Go [does not currently include support for ES data plane api](https://github.com/aws/aws-sdk-go/issues/710), but the Signer is exposed since v1.2.0.
 
 The taken approach to access ES:
-- Use the v4.Signer provided by the amazon-go-sdk
-- Create an HTTP client [wrapping](https://github.com/sha1sum/aws_signing_client) all the requests with Amazon signer
+- Create Transport based on [https://github.com/smartystreets/go-aws-auth](https://github.com/smartystreets/go-aws-auth), using v4 signer.
 - Use https://github.com/olivere/elastic library to any ES request, after passing in the above created client
 
 ## How to run

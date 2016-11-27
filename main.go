@@ -61,6 +61,7 @@ func main() {
 		}
 
 		elasticWriter, err := NewESWriterService(&accessConfig, &bulkProcessorConfig)
+		defer elasticWriter.bulkProcessor.Close()
 		if err != nil {
 			log.Errorf("Elasticsearch read-writer failed to start: %v\n", err)
 		}
