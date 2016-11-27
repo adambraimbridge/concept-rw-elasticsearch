@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/Financial-Times/neo-model-utils-go/mapper"
 	log "github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
 	"gopkg.in/olivere/elastic.v2"
@@ -176,17 +175,4 @@ func (service *esWriterService) deleteData(writer http.ResponseWriter, request *
 		writer.WriteHeader(http.StatusNotFound)
 		return
 	}
-}
-
-func convertToESConceptModel(concept conceptModel, conceptType string) esConceptModel {
-
-	esModel := esConceptModel{}
-	esModel.ApiUrl = mapper.APIURL(concept.UUID, []string{concept.DirectType}, "")
-	esModel.Id = mapper.IDURL(concept.UUID)
-	esModel.Types = mapper.TypeURIs(concept.Types)
-	esModel.DirectType = concept.DirectType
-	esModel.Aliases = concept.Aliases
-	esModel.PrefLabel = concept.PrefLabel
-
-	return esModel
 }
