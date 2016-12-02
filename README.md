@@ -23,6 +23,7 @@ It is also possible to provide the elasticsearch endpoint, region and the port y
 Other parameters:
 - elasticsearch-endpoint
 - elasticsearch-region
+- port
 - bulk-workers
 - bulk-requests
 - bulk-size
@@ -31,6 +32,9 @@ Other parameters:
 ## Available DATA endpoints:
 
 localhost:8080/{type}/{uuid}
+
+Available types:
+`organisations, brands, genres, locations, people, sections, subjects, topics`
 
 ### -XPUT localhost:8080/{type}/{uuid}
 
