@@ -9,8 +9,7 @@ import (
 	"github.com/rcrowley/go-metrics"
 	"net/http"
 	"os"
-	"os/signal"
-	"syscall"
+	"time"
 )
 
 func main() {
@@ -33,7 +32,6 @@ func main() {
 	})
 	esEndpoint := app.String(cli.StringOpt{
 		Name:   "elasticsearch-endpoint",
-		Value:  "search-concept-search-mvp-k2vkgwhfgjv63nu6jvortpggha.eu-west-1.es.amazonaws.com",
 		Desc:   "AES endpoint",
 		EnvVar: "ELASTICSEARCH_ENDPOINT",
 	})
@@ -44,9 +42,37 @@ func main() {
 		EnvVar: "ELASTICSEARCH_REGION",
 	})
 
+	nrOfElasticsearchWorkers := app.Int(cli.IntOpt{
+		Name:   "bulk-workers",
+		Value:  2,
+		Desc:   "Number of workers used in elasticsearch bulk processor",
+		EnvVar: "ELASTICSEARCH_WORKERS",
+	})
+
+	nrOfElasticsearchRequests := app.Int(cli.IntOpt{
+		Name:   "bulk-requests",
+		Value:  1000,
+		Desc:   "Elasticsearch bulk processor should commit if requests >= 1000 (default)",
+		EnvVar: "ELASTICSEARCH_REQUEST_NR",
+	})
+
+	elasticsearchBulkSize := app.Int(cli.IntOpt{
+		Name:   "bulk-size",
+		Value:  2 << 20,
+		Desc:   "Elasticsearch bulk processor should commit requests if size of requests >= 2 MB (default)",
+		EnvVar: "ELASTICSEARCH_BULK_SIZE",
+	})
+
+	elasticsearchFlushInterval := app.Int(cli.IntOpt{
+		Name:   "flush-interval",
+		Value:  30,
+		Desc:   "How frequently should the elasticsearch bulk processor commit requests",
+		EnvVar: "ELASTICSEARCH_FLUSH_INTERVAL",
+	})
+
 	app.Action = func() {
 
-		accessConfig := amazonAccessConfig{
+		accessConfig := esAccessConfig{
 			accessKey:  *accessKey,
 			secretKey:  *secretKey,
 			esEndpoint: *esEndpoint,
@@ -54,16 +80,18 @@ func main() {
 		}
 
 		bulkProcessorConfig := bulkProcessorConfig{
-			nrWorkers:     2,
-			nrOfRequests:  1000,    // commit if # requests >= 1000
-			bulkSize:      2 << 20, // commit if size of requests >= 2 MB
-			flushInterval: 30,      // commit every 30s
+			nrWorkers:     *nrOfElasticsearchWorkers,
+			nrOfRequests:  *nrOfElasticsearchRequests,
+			bulkSize:      *elasticsearchBulkSize,
+			flushInterval: time.Duration(*elasticsearchFlushInterval) * time.Second,
 		}
 
 		elasticWriter, err := NewESWriterService(&accessConfig, &bulkProcessorConfig)
-		defer elasticWriter.bulkProcessor.Close()
 		if err != nil {
 			log.Errorf("Elasticsearch read-writer failed to start: %v\n", err)
+		}
+		if elasticWriter.bulkProcessor != nil {
+			defer elasticWriter.bulkProcessor.Close()
 		}
 
 		servicesRouter := mux.NewRouter()
@@ -85,14 +113,6 @@ func main() {
 		if err := http.ListenAndServe(":"+*port, nil); err != nil {
 			log.Fatalf("Unable to start: %v", err)
 		}
-
-		// Watch for SIGINT and SIGTERM from the console.
-		go func() {
-			ch := make(chan os.Signal)
-			signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
-			<-ch
-			log.Infof("Received termination signal. Quitting... \n")
-		}()
 	}
 
 	log.SetLevel(log.InfoLevel)

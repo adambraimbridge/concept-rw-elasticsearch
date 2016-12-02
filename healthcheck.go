@@ -16,7 +16,7 @@ func (service *esWriterService) clusterIsHealthyCheck() v1a.Check {
 		Name:             "Check Elasticsearch cluster health",
 		PanicGuide:       "todo",
 		Severity:         1,
-		TechnicalSummary: "Elasticsearch cluster is not healthy. Details on __elasticsearch-mvp/__health-details",
+		TechnicalSummary: "Elasticsearch cluster is not healthy. Details on /__health-details",
 		Checker:          service.healthChecker,
 	}
 }
@@ -66,7 +66,7 @@ func (service *esWriterService) HealthDetails(writer http.ResponseWriter, req *h
 
 	writer.Header().Set("Content-Type", "application/json")
 
-	if writer == nil {
+	if writer == nil || service.elasticClient == nil {
 		writer.WriteHeader(http.StatusServiceUnavailable)
 		return
 	}

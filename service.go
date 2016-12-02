@@ -16,7 +16,7 @@ type esWriterService struct {
 	bulkProcessor *elastic.BulkProcessor
 }
 
-type amazonAccessConfig struct {
+type esAccessConfig struct {
 	accessKey  string
 	secretKey  string
 	esEndpoint string
@@ -30,11 +30,11 @@ type bulkProcessorConfig struct {
 	flushInterval time.Duration
 }
 
-func NewESWriterService(accessConfig *amazonAccessConfig, bulkConfig *bulkProcessorConfig) (service *esWriterService, err error) {
+func NewESWriterService(accessConfig *esAccessConfig, bulkConfig *bulkProcessorConfig) (service *esWriterService, err error) {
 
 	elasticClient, err := newElasticClient(accessConfig.accessKey, accessConfig.secretKey, &accessConfig.esEndpoint, &accessConfig.esRegion)
 	if err != nil {
-		return nil, fmt.Errorf("Creating elasticsearch client failed with error=[%v]\n", err)
+		return &esWriterService{}, fmt.Errorf("Creating elasticsearch client failed with error=[%v]\n", err)
 	}
 
 	bulkProcessor, err := elasticClient.BulkProcessor().Name("BackgroundWorker-1").
@@ -46,7 +46,7 @@ func NewESWriterService(accessConfig *amazonAccessConfig, bulkConfig *bulkProces
 		Do()
 
 	if err != nil {
-		return nil, fmt.Errorf("Creating bulk processor failed with error=[%v]\n", err)
+		return &esWriterService{}, fmt.Errorf("Creating bulk processor failed with error=[%v]\n", err)
 	}
 
 	elasticWriter := esWriterService{elasticClient: elasticClient, indexName: "concept", bulkProcessor: bulkProcessor}
@@ -58,6 +58,12 @@ func (service *esWriterService) loadData(writer http.ResponseWriter, request *ht
 
 	uuid := mux.Vars(request)["id"]
 	conceptType := mux.Vars(request)["concept-type"]
+
+	if service.elasticClient == nil {
+		log.Errorf("Elasticsearch client is not created.")
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	var concept conceptModel
 	decoder := json.NewDecoder(request.Body)
@@ -92,6 +98,12 @@ func (service *esWriterService) loadData(writer http.ResponseWriter, request *ht
 func (service *esWriterService) loadBulkData(writer http.ResponseWriter, request *http.Request) {
 	uuid := mux.Vars(request)["id"]
 	conceptType := mux.Vars(request)["concept-type"]
+
+	if service.elasticClient == nil || service.bulkProcessor == nil {
+		log.Errorf("Elasticsearch client is not created.")
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	var concept conceptModel
 	decoder := json.NewDecoder(request.Body)
@@ -135,6 +147,12 @@ func (service *esWriterService) readData(writer http.ResponseWriter, request *ht
 	uuid := mux.Vars(request)["id"]
 	conceptType := mux.Vars(request)["concept-type"]
 
+	if service.elasticClient == nil {
+		log.Errorf("Elasticsearch client is not created.")
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	getResult, err := service.elasticClient.Get().
 		Index(service.indexName).
 		Type(conceptType).
@@ -160,6 +178,12 @@ func (service *esWriterService) deleteData(writer http.ResponseWriter, request *
 
 	uuid := mux.Vars(request)["id"]
 	conceptType := mux.Vars(request)["concept-type"]
+
+	if service.elasticClient == nil {
+		log.Errorf("Elasticsearch client is not created.")
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	res, err := service.elasticClient.Delete().
 		Index(service.indexName).

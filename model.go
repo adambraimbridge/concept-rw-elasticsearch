@@ -18,7 +18,7 @@ type esConceptModel struct {
 	PrefLabel  string   `json:"prefLabel"`
 	Types      []string `json:"types"`
 	DirectType string   `json:"directType"`
-	Aliases    []string `json:"aliases"`
+	Aliases    []string `json:"aliases,omitempty"`
 }
 
 func convertToESConceptModel(concept conceptModel, conceptType string) esConceptModel {
@@ -27,7 +27,11 @@ func convertToESConceptModel(concept conceptModel, conceptType string) esConcept
 	esModel.ApiUrl = mapper.APIURL(concept.UUID, []string{concept.DirectType}, "")
 	esModel.Id = mapper.IDURL(concept.UUID)
 	esModel.Types = mapper.TypeURIs(concept.Types)
-	esModel.DirectType = concept.DirectType
+
+	directTypeArray := mapper.TypeURIs([]string{concept.DirectType})
+	if len(directTypeArray) == 1 {
+		esModel.DirectType = directTypeArray[0]
+	}
 	esModel.Aliases = concept.Aliases
 	esModel.PrefLabel = concept.PrefLabel
 
