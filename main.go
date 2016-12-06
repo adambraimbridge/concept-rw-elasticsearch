@@ -32,13 +32,13 @@ func main() {
 		EnvVar: "AWS_SECRET_ACCESS_KEY",
 	})
 	esEndpoint := app.String(cli.StringOpt{
-		Name: "elasticsearch-endpoint",
+		Name:   "elasticsearch-endpoint",
 		Desc:   "AES endpoint",
 		EnvVar: "ELASTICSEARCH_ENDPOINT",
 	})
 	esRegion := app.String(cli.StringOpt{
-		Name:  "elasticsearch-region",
-		Value: "local",
+		Name:   "elasticsearch-region",
+		Value:  "local",
 		Desc:   "AES region",
 		EnvVar: "ELASTICSEARCH_REGION",
 	})
@@ -113,7 +113,7 @@ func main() {
 
 		var esHealthService esHealthServiceI = newEsHealthService(elasticClient)
 		healthService := newHealthService(&esHealthService)
-		routeRequest(port, conceptWriter, healthService)
+		routeRequests(port, conceptWriter, healthService)
 	}
 
 	log.SetLevel(log.InfoLevel)
@@ -124,7 +124,7 @@ func main() {
 	}
 }
 
-func routeRequest(port *string, conceptWriter *conceptWriter, healthService *healthService) {
+func routeRequests(port *string, conceptWriter *conceptWriter, healthService *healthService) {
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/bulk/{concept-type}/{id}", conceptWriter.loadBulkData).Methods("PUT")

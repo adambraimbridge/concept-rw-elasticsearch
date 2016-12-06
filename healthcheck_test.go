@@ -2,30 +2,13 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/docker/docker/pkg/testutil/assert"
 	"github.com/pkg/errors"
 	"gopkg.in/olivere/elastic.v2"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"github.com/docker/docker/pkg/testutil/assert"
 )
-
-type dummyEsHealthService struct {
-	healthy      bool
-	returnsError bool
-}
-
-func (service dummyEsHealthService) getClusterHealth() (*elastic.ClusterHealthResponse, error) {
-	if service.returnsError {
-		return nil, errors.New("Request ended up in retuning some internal error")
-	}
-
-	if service.healthy {
-		return &elastic.ClusterHealthResponse{Status: "green"}, nil
-	} else {
-		return &elastic.ClusterHealthResponse{Status: "red"}, nil
-	}
-}
 
 func TestHealthDetailsHealthyCluster(t *testing.T) {
 
@@ -70,7 +53,7 @@ func TestHealthDetailsHealthyCluster(t *testing.T) {
 func TestHealthDetailsReturnsError(t *testing.T) {
 
 	//create a request to pass to our handler
-	req, err := http.NewRequest("GET", "/__gtg", nil)
+	req, err := http.NewRequest("GET", "/__health-details", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -133,7 +116,7 @@ func TestGoodToGoHealthyCluster(t *testing.T) {
 func TestGoodToGoUnhealthyCluster(t *testing.T) {
 
 	//create a request to pass to our handler
-	req, err := http.NewRequest("GET", "/__health-details", nil)
+	req, err := http.NewRequest("GET", "/__gtg", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -179,4 +162,21 @@ func TestHealthServiceConnectivityCheckerForFailedConnection(t *testing.T) {
 	assert.Equal(t, message, "Could not connect to elasticsearch")
 	assert.NotNil(t, err)
 
+}
+
+type dummyEsHealthService struct {
+	healthy      bool
+	returnsError bool
+}
+
+func (service dummyEsHealthService) getClusterHealth() (*elastic.ClusterHealthResponse, error) {
+	if service.returnsError {
+		return nil, errors.New("Request ended up in retuning some internal error")
+	}
+
+	if service.healthy {
+		return &elastic.ClusterHealthResponse{Status: "green"}, nil
+	} else {
+		return &elastic.ClusterHealthResponse{Status: "red"}, nil
+	}
 }
