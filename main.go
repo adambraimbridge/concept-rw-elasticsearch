@@ -32,15 +32,13 @@ func main() {
 		EnvVar: "AWS_SECRET_ACCESS_KEY",
 	})
 	esEndpoint := app.String(cli.StringOpt{
-		Name:   "elasticsearch-endpoint",
-		//Value:  "http://127.0.0.1:9200",
+		Name: "elasticsearch-endpoint",
 		Desc:   "AES endpoint",
 		EnvVar: "ELASTICSEARCH_ENDPOINT",
 	})
 	esRegion := app.String(cli.StringOpt{
 		Name:  "elasticsearch-region",
 		Value: "local",
-		//Value:  "eu-west-1",
 		Desc:   "AES region",
 		EnvVar: "ELASTICSEARCH_REGION",
 	})
@@ -112,8 +110,9 @@ func main() {
 		var esService esServiceI = newEsService(elasticClient, *indexName, bulkProcessor)
 		conceptWriter := newESWriter(&esService)
 		defer (*conceptWriter.elasticService).closeBulkProcessor()
-		healthService := newEsHealthService(elasticClient)
 
+		var esHealthService esHealthServiceI = newEsHealthService(elasticClient)
+		healthService := newHealthService(&esHealthService)
 		routeRequest(port, conceptWriter, healthService)
 	}
 
@@ -125,7 +124,7 @@ func main() {
 	}
 }
 
-func routeRequest(port *string, conceptWriter *conceptWriter, esHealthService *esHealthService) {
+func routeRequest(port *string, conceptWriter *conceptWriter, healthService *healthService) {
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/bulk/{concept-type}/{id}", conceptWriter.loadBulkData).Methods("PUT")
@@ -137,9 +136,9 @@ func routeRequest(port *string, conceptWriter *conceptWriter, esHealthService *e
 	monitoringRouter = httphandlers.TransactionAwareRequestLoggingHandler(log.StandardLogger(), monitoringRouter)
 	monitoringRouter = httphandlers.HTTPMetricsHandler(metrics.DefaultRegistry, monitoringRouter)
 
-	http.HandleFunc("/__health", v1a.Handler("Amazon Elasticsearch Service Healthcheck", "Checks for AES", esHealthService.connectivityHealthyCheck(), esHealthService.clusterIsHealthyCheck()))
-	http.HandleFunc("/__health-details", esHealthService.HealthDetails)
-	http.HandleFunc("/__gtg", esHealthService.GoodToGo)
+	http.HandleFunc("/__health", v1a.Handler("Amazon Elasticsearch Service Healthcheck", "Checks for AES", healthService.connectivityHealthyCheck(), healthService.clusterIsHealthyCheck()))
+	http.HandleFunc("/__health-details", healthService.HealthDetails)
+	http.HandleFunc("/__gtg", healthService.GoodToGo)
 
 	http.Handle("/", monitoringRouter)
 

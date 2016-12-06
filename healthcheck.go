@@ -11,6 +11,8 @@ import (
 	"gopkg.in/olivere/elastic.v2"
 )
 
+//************** elasticsearch health service **************
+
 type esHealthService struct {
 	client *elastic.Client
 }
@@ -20,6 +22,10 @@ type esHealthServiceI interface {
 }
 
 func (esHealthService esHealthService) getClusterHealth() (*elastic.ClusterHealthResponse, error) {
+	if esHealthService.client == nil {
+		return nil, errors.New("Client could not be created, please check the application parameters/env variables, and restart the service.")
+	}
+
 	return esHealthService.client.ClusterHealth().Do()
 }
 
@@ -27,7 +33,17 @@ func newEsHealthService(client *elastic.Client) *esHealthService {
 	return &esHealthService{client: client}
 }
 
-func (service *esHealthService) clusterIsHealthyCheck() v1a.Check {
+//************** concept-writer health service **************
+
+type healthService struct {
+	esHealthService *esHealthServiceI
+}
+
+func newHealthService(esHealthService *esHealthServiceI) *healthService {
+	return &healthService{esHealthService: esHealthService}
+}
+
+func (service *healthService) clusterIsHealthyCheck() v1a.Check {
 	return v1a.Check{
 		BusinessImpact:   "Full or partial degradation in serving requests from Elasticsearch",
 		Name:             "Check Elasticsearch cluster health",
@@ -38,21 +54,18 @@ func (service *esHealthService) clusterIsHealthyCheck() v1a.Check {
 	}
 }
 
-func (service *esHealthService) healthChecker() (string, error) {
-	if service.client != nil {
-		output, err := service.getClusterHealth()
-		if err != nil {
-			return "Cluster is not healthy: ", err
-		} else if output.Status != "green" {
-			return fmt.Sprintf("Cluster is %v", output.Status), nil
-		}
+func (service *healthService) healthChecker() (string, error) {
+	output, err := (*service.esHealthService).getClusterHealth()
+	if err != nil {
+		return "Cluster is not healthy: ", err
+	} else if output.Status != "green" {
+		return "Cluster is not healthy", errors.New(fmt.Sprintf("Cluster is %v", output.Status))
+	} else {
 		return "Cluster is healthy", nil
 	}
-
-	return "Couldn't check the cluster's health.", errors.New("Couldn't establish connectivity.")
 }
 
-func (service *esHealthService) connectivityHealthyCheck() v1a.Check {
+func (service *healthService) connectivityHealthyCheck() v1a.Check {
 	return v1a.Check{
 		BusinessImpact:   "Could not connect to Elasticsearch",
 		Name:             "Check connectivity to the Elasticsearch cluster",
@@ -63,34 +76,31 @@ func (service *esHealthService) connectivityHealthyCheck() v1a.Check {
 	}
 }
 
-func (service *esHealthService) connectivityChecker() (string, error) {
-	if service.client == nil {
-		return "", errors.New("Could not connect to elasticsearch, please check the application parameters/env variables, and restart the service.")
+func (service *healthService) connectivityChecker() (string, error) {
+
+	_, err := (*service.esHealthService).getClusterHealth()
+	if err != nil {
+		return "Could not connect to elasticsearch", err
 	}
 
 	return "Successfully connected to the cluster", nil
 }
 
 //GoodToGo returns a 503 if the healthcheck fails - suitable for use from varnish to check availability of a node
-func (service *esHealthService) GoodToGo(writer http.ResponseWriter, req *http.Request) {
+func (service *healthService) GoodToGo(writer http.ResponseWriter, req *http.Request) {
 	if _, err := service.healthChecker(); err != nil {
 		writer.WriteHeader(http.StatusServiceUnavailable)
 	}
 }
 
 //HealthDetails returns the response from elasticsearch service /__health endpoint - describing the cluster health
-func (service *esHealthService) HealthDetails(writer http.ResponseWriter, req *http.Request) {
+func (service *healthService) HealthDetails(writer http.ResponseWriter, req *http.Request) {
 
 	writer.Header().Set("Content-Type", "application/json")
 
-	if writer == nil || service.client == nil {
-		writer.WriteHeader(http.StatusServiceUnavailable)
-		return
-	}
-
-	output, err := service.getClusterHealth()
+	output, err := (*service.esHealthService).getClusterHealth()
 	if err != nil {
-		writer.WriteHeader(http.StatusServiceUnavailable)
+		writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
