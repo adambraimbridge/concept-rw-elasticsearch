@@ -7,6 +7,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/jawher/mow.cli"
 	"github.com/rcrowley/go-metrics"
+	"gopkg.in/olivere/elastic.v2"
 	"net/http"
 	"os"
 	"time"
@@ -32,14 +33,22 @@ func main() {
 	})
 	esEndpoint := app.String(cli.StringOpt{
 		Name:   "elasticsearch-endpoint",
+		//Value:  "http://127.0.0.1:9200",
 		Desc:   "AES endpoint",
 		EnvVar: "ELASTICSEARCH_ENDPOINT",
 	})
 	esRegion := app.String(cli.StringOpt{
-		Name:   "elasticsearch-region",
-		Value:  "eu-west-1",
+		Name:  "elasticsearch-region",
+		Value: "local",
+		//Value:  "eu-west-1",
 		Desc:   "AES region",
 		EnvVar: "ELASTICSEARCH_REGION",
+	})
+	indexName := app.String(cli.StringOpt{
+		Name:   "index-name",
+		Value:  "concept",
+		Desc:   "The name of the elaticsearch index",
+		EnvVar: "ELASTICSEARCH_INDEX",
 	})
 
 	nrOfElasticsearchWorkers := app.Int(cli.IntOpt{
@@ -65,54 +74,47 @@ func main() {
 
 	elasticsearchFlushInterval := app.Int(cli.IntOpt{
 		Name:   "flush-interval",
-		Value:  30,
+		Value:  10,
 		Desc:   "How frequently should the elasticsearch bulk processor commit requests",
 		EnvVar: "ELASTICSEARCH_FLUSH_INTERVAL",
 	})
 
+	accessConfig := esAccessConfig{
+		accessKey:  *accessKey,
+		secretKey:  *secretKey,
+		esEndpoint: *esEndpoint,
+	}
+
+	bulkProcessorConfig := bulkProcessorConfig{
+		nrWorkers:     *nrOfElasticsearchWorkers,
+		nrOfRequests:  *nrOfElasticsearchRequests,
+		bulkSize:      *elasticsearchBulkSize,
+		flushInterval: time.Duration(*elasticsearchFlushInterval) * time.Second,
+	}
+
 	app.Action = func() {
-
-		accessConfig := esAccessConfig{
-			accessKey:  *accessKey,
-			secretKey:  *secretKey,
-			esEndpoint: *esEndpoint,
-			esRegion:   *esRegion,
+		var elasticClient *elastic.Client
+		var err error
+		if *esRegion == "local" {
+			elasticClient, err = newSimpleClient(accessConfig)
+		} else {
+			elasticClient, err = newAmazonClient(accessConfig)
 		}
-
-		bulkProcessorConfig := bulkProcessorConfig{
-			nrWorkers:     *nrOfElasticsearchWorkers,
-			nrOfRequests:  *nrOfElasticsearchRequests,
-			bulkSize:      *elasticsearchBulkSize,
-			flushInterval: time.Duration(*elasticsearchFlushInterval) * time.Second,
-		}
-
-		elasticWriter, err := NewESWriterService(&accessConfig, &bulkProcessorConfig)
 		if err != nil {
-			log.Errorf("Elasticsearch read-writer failed to start: %v\n", err)
-		}
-		if elasticWriter.bulkProcessor != nil {
-			defer elasticWriter.bulkProcessor.Close()
+			log.Fatalf("Creating elasticsearch client failed with error=[%v]\n", err)
 		}
 
-		servicesRouter := mux.NewRouter()
-		servicesRouter.HandleFunc("/bulk/{concept-type}/{id}", elasticWriter.loadBulkData).Methods("PUT")
-		servicesRouter.HandleFunc("/{concept-type}/{id}", elasticWriter.loadData).Methods("PUT")
-		servicesRouter.HandleFunc("/{concept-type}/{id}", elasticWriter.readData).Methods("GET")
-		servicesRouter.HandleFunc("/{concept-type}/{id}", elasticWriter.deleteData).Methods("DELETE")
-
-		var monitoringRouter http.Handler = servicesRouter
-		monitoringRouter = httphandlers.TransactionAwareRequestLoggingHandler(log.StandardLogger(), monitoringRouter)
-		monitoringRouter = httphandlers.HTTPMetricsHandler(metrics.DefaultRegistry, monitoringRouter)
-
-		http.HandleFunc("/__health", v1a.Handler("Amazon Elasticsearch Service Healthcheck", "Checks for AES", elasticWriter.connectivityHealthyCheck(), elasticWriter.clusterIsHealthyCheck()))
-		http.HandleFunc("/__health-details", elasticWriter.HealthDetails)
-		http.HandleFunc("/__gtg", elasticWriter.GoodToGo)
-
-		http.Handle("/", monitoringRouter)
-
-		if err := http.ListenAndServe(":"+*port, nil); err != nil {
-			log.Fatalf("Unable to start: %v", err)
+		bulkProcessor, err := newBulkProcessor(elasticClient, &bulkProcessorConfig)
+		if err != nil {
+			log.Fatalf("Creating bulk processor failed with error=[%v]\n", err)
 		}
+
+		var esService esServiceI = newEsService(elasticClient, *indexName, bulkProcessor)
+		conceptWriter := newESWriter(&esService)
+		defer (*conceptWriter.elasticService).closeBulkProcessor()
+		healthService := newEsHealthService(elasticClient)
+
+		routeRequest(port, conceptWriter, healthService)
 	}
 
 	log.SetLevel(log.InfoLevel)
@@ -121,4 +123,28 @@ func main() {
 		log.Errorf("App could not start, error=[%s]\n", err)
 		return
 	}
+}
+
+func routeRequest(port *string, conceptWriter *conceptWriter, esHealthService *esHealthService) {
+
+	servicesRouter := mux.NewRouter()
+	servicesRouter.HandleFunc("/bulk/{concept-type}/{id}", conceptWriter.loadBulkData).Methods("PUT")
+	servicesRouter.HandleFunc("/{concept-type}/{id}", conceptWriter.loadData).Methods("PUT")
+	servicesRouter.HandleFunc("/{concept-type}/{id}", conceptWriter.readData).Methods("GET")
+	servicesRouter.HandleFunc("/{concept-type}/{id}", conceptWriter.deleteData).Methods("DELETE")
+
+	var monitoringRouter http.Handler = servicesRouter
+	monitoringRouter = httphandlers.TransactionAwareRequestLoggingHandler(log.StandardLogger(), monitoringRouter)
+	monitoringRouter = httphandlers.HTTPMetricsHandler(metrics.DefaultRegistry, monitoringRouter)
+
+	http.HandleFunc("/__health", v1a.Handler("Amazon Elasticsearch Service Healthcheck", "Checks for AES", esHealthService.connectivityHealthyCheck(), esHealthService.clusterIsHealthyCheck()))
+	http.HandleFunc("/__health-details", esHealthService.HealthDetails)
+	http.HandleFunc("/__gtg", esHealthService.GoodToGo)
+
+	http.Handle("/", monitoringRouter)
+
+	if err := http.ListenAndServe(":"+*port, nil); err != nil {
+		log.Fatalf("Unable to start: %v", err)
+	}
+
 }

@@ -62,6 +62,34 @@ func TestConvertToESConceptModel(t *testing.T) {
 				},
 			},
 		},
+		{
+			conceptModel{
+				UUID:       "2384fa7a-d514-3d6a-a0ea-3a711f66d0d8",
+				DirectType: "PublicCompany",
+				PrefLabel:  "Apple, Inc.",
+				Aliases:    []string{},
+				Types: []string{
+					"Thing",
+					"Concept",
+					"Organisation",
+					"Company",
+					"PublicCompany"},
+			},
+			esConceptModel{
+				Id:        "http://api.ft.com/things/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8",
+				ApiUrl:    "http://api.ft.com/organisations/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8",
+				PrefLabel: "Apple, Inc.",
+				Types: []string{
+					"http://www.ft.com/ontology/core/Thing",
+					"http://www.ft.com/ontology/concept/Concept",
+					"http://www.ft.com/ontology/organisation/Organisation",
+					"http://www.ft.com/ontology/company/Company",
+					"http://www.ft.com/ontology/company/PublicCompany",
+				},
+				DirectType: "http://www.ft.com/ontology/company/PublicCompany",
+				Aliases:    []string{},
+			},
+		},
 	}
 
 	for _, testModel := range tests {

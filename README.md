@@ -1,4 +1,4 @@
-# Concept Read Writer for Elasticsearch ()
+# Concept Read Writer for Elasticsearch
 
 [![Circle CI](https://circleci.com/gh/Financial-Times/concept-rw-elasticsearch/tree/master.png?style=shield)](https://circleci.com/gh/Financial-Times/concept-rw-elasticsearch/tree/master)
 
@@ -24,6 +24,7 @@ Other parameters:
 - elasticsearch-endpoint
 - elasticsearch-region
 - port
+- index-name (defaults to concept)
 - bulk-workers
 - bulk-requests
 - bulk-size
