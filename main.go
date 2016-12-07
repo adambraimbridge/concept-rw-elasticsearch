@@ -107,12 +107,15 @@ func main() {
 			log.Fatalf("Creating bulk processor failed with error=[%v]\n", err)
 		}
 
+		//create writer service
 		var esService esServiceI = newEsService(elasticClient, *indexName, bulkProcessor)
 		conceptWriter := newESWriter(&esService)
 		defer (*conceptWriter.elasticService).closeBulkProcessor()
 
+		//create health service
 		var esHealthService esHealthServiceI = newEsHealthService(elasticClient)
 		healthService := newHealthService(&esHealthService)
+
 		routeRequests(port, conceptWriter, healthService)
 	}
 

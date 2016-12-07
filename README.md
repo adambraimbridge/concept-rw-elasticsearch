@@ -22,7 +22,7 @@ It is also possible to provide the elasticsearch endpoint, region and the port y
 
 Other parameters:
 - elasticsearch-endpoint
-- elasticsearch-region
+- elasticsearch-region (if `local`: the application creates a simple client, without the amazon signing mechanism)
 - port
 - index-name (defaults to concept)
 - bulk-workers
@@ -42,9 +42,9 @@ Available types:
 A successful PUT results in 200. If a request fails it will return a 500 server error response.
 Invalid json body input, or uuids that don't match between the path and the body will result in a 400 bad request response.
 
-`curl -XPUT -H "Content-Type: application/json" -H "X-Request-Id: 123" localhost:8080/organisations/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8 --data '{"uuid":"2384fa7a-d514-3d6a-a0ea-3a711f66d0d8","type":"PublicCompany","properName":"Apple, Inc.","prefLabel":"Apple, Inc.","legalName":"Apple Inc.","shortName":"Apple","hiddenLabel":"APPLE INC","formerNames":["Apple Computer, Inc."],"aliases":["Apple Inc","Apple Computers","Apple","Apple Canada","Apple Computer","Apple Computer, Inc.","APPLE INC","Apple Incorporated","Apple Computer Inc","Apple Inc.","Apple, Inc."],"industryClassification":"7a01c847-a9bd-33be-b991-c6fbd8871a46","alternativeIdentifiers":{"TME":["TnN0ZWluX09OX0ZvcnR1bmVDb21wYW55X0FBUEw=-T04="],"uuids":["2384fa7a-d514-3d6a-a0ea-3a711f66d0d8","2abff0bd-544d-31c3-899b-fba2f60d53dd"],"factsetIdentifier":"000C7F-E","leiCode":"HWUPKR0MPOU8FGXBT394"},"types":["Thing","Concept","Organisation","Company","PublicCompany"]}'`
+`curl -XPUT -H "Content-Type: application/json" -H "X-Request-Id: 123" localhost:8080/organisations/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8 --data '{"uuid":"2384fa7a-d514-3d6a-a0ea-3a711f66d0d8","type":"PublicCompany","properName":"Apple, Inc.","prefLabel":"Apple, Inc.","legalName":"Apple Inc.","shortName":"Apple","hiddenLabel":"APPLE INC","formerNames":["Apple Computer, Inc."],"aliases":["Apple Inc","Apple Computers","Apple","Apple Canada","Apple Computer","Apple Computer, Inc.","APPLE INC","Apple Incorporated","Apple Computer Inc","Apple Inc.","Apple, Inc."],"industryClassification":"7a01c847-a9bd-33be-b991-c6fbd8871a46","alternativeIdentifiers":{"TME":["TnN0ZWluX09OX0ZvcnR1bmVDb21wYW55X0FBUEw=-T04="],"uuids":["2384fa7a-d514-3d6a-a0ea-3a711f66d0d8","2abff0bd-544d-31c3-899b-fba2f60d53dd"],"factsetIdentifier":"000C7F-E","leiCode":"HWUPKR0MPOU8FGXBT394"}}'`
 
-The only fields which will be saved at this point are: uuid (transformed into id), prefLabel, aliases, type and types, the others are ignored.
+The only fields which will be saved at this point are: uuid (transformed into id), prefLabel, aliases, type and types(generated from type), the others are ignored.
 
 ### -XPUT localhost:8080/bulk/{type}/{uuid}
 
@@ -52,7 +52,7 @@ Requests will be executed in batched, according to the bulk processor's configur
 If the request was correctly "taken" by the application, it will always return 200.
 If the request fails to correctly get written into elasticsearch, the requests will be logged. (Please verify application logs.)
 
-`curl -XPUT -H "Content-Type: application/json" -H "X-Request-Id: 123" localhost:8080/bulk/organisations/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8 --data '{"uuid":"2384fa7a-d514-3d6a-a0ea-3a711f66d0d8","type":"PublicCompany","properName":"Apple, Inc.","prefLabel":"Apple, Inc.","legalName":"Apple Inc.","shortName":"Apple","hiddenLabel":"APPLE INC","formerNames":["Apple Computer, Inc."],"aliases":["Apple Inc","Apple Computers","Apple","Apple Canada","Apple Computer","Apple Computer, Inc.","APPLE INC","Apple Incorporated","Apple Computer Inc","Apple Inc.","Apple, Inc."],"industryClassification":"7a01c847-a9bd-33be-b991-c6fbd8871a46","alternativeIdentifiers":{"TME":["TnN0ZWluX09OX0ZvcnR1bmVDb21wYW55X0FBUEw=-T04="],"uuids":["2384fa7a-d514-3d6a-a0ea-3a711f66d0d8","2abff0bd-544d-31c3-899b-fba2f60d53dd"],"factsetIdentifier":"000C7F-E","leiCode":"HWUPKR0MPOU8FGXBT394"},"types":["Thing","Concept","Organisation","Company","PublicCompany"]}'`
+`curl -XPUT -H "Content-Type: application/json" -H "X-Request-Id: 123" localhost:8080/bulk/organisations/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8 --data '{"uuid":"2384fa7a-d514-3d6a-a0ea-3a711f66d0d8","type":"PublicCompany","properName":"Apple, Inc.","prefLabel":"Apple, Inc.","legalName":"Apple Inc.","shortName":"Apple","hiddenLabel":"APPLE INC","formerNames":["Apple Computer, Inc."],"aliases":["Apple Inc","Apple Computers","Apple","Apple Canada","Apple Computer","Apple Computer, Inc.","APPLE INC","Apple Incorporated","Apple Computer Inc","Apple Inc.","Apple, Inc."],"industryClassification":"7a01c847-a9bd-33be-b991-c6fbd8871a46","alternativeIdentifiers":{"TME":["TnN0ZWluX09OX0ZvcnR1bmVDb21wYW55X0FBUEw=-T04="],"uuids":["2384fa7a-d514-3d6a-a0ea-3a711f66d0d8","2abff0bd-544d-31c3-899b-fba2f60d53dd"],"factsetIdentifier":"000C7F-E","leiCode":"HWUPKR0MPOU8FGXBT394"}}'`
 
 
 ### -XGET localhost:8080/{type}/{uuid}
@@ -60,6 +60,8 @@ If the request fails to correctly get written into elasticsearch, the requests w
 The internal read should return what got written. If not found, you'll get a 404 response.
 
 `curl -H "X-Request-Id: 123" localhost:8080/organisations/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8`
+
+The following fields should be returned: Id, ApiUrl, PrefLabel, Types, DirectType, Aliases(if exists).
 
 ### -XDELETE localhost:8080/{type}/{uuid}
 It is not exposed for clients, available only for internal testing.
