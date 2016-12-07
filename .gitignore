@@ -1,3 +1,4 @@
 *.iml
 .idea
 concept-rw-elasticsearch
+*.exe

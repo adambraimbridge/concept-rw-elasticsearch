@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestConvertToESConceptModel(t *testing.T) {
@@ -102,4 +103,39 @@ func TestConvertToESConceptModel(t *testing.T) {
 		assert.Equal(testModel.esConceptModel.Aliases, esModel.Aliases, fmt.Sprintf("Expected Aliases %s differ from actual Aliases %d ", testModel.esConceptModel.Aliases, esModel.Aliases))
 	}
 
+}
+
+func TestReverse(t *testing.T) {
+	assert := assert.New(t)
+
+	tests := []struct {
+		input          []string
+		expectedResult []string
+	}{
+		{
+			input:          []string{},
+			expectedResult: []string{},
+		},
+		{
+			input:          nil,
+			expectedResult: nil,
+		},
+		{
+			input:          []string{"foo"},
+			expectedResult: []string{"foo"},
+		},
+		{
+			input:          []string{"foo", "bar"},
+			expectedResult: []string{"bar", "foo"},
+		},
+		{
+			input:          []string{"foo", "bar", "word"},
+			expectedResult: []string{"word", "bar", "foo"},
+		},
+	}
+
+	for _, testCase := range tests {
+		actualResult := reverse(testCase.input)
+		assert.Equal(testCase.expectedResult, actualResult)
+	}
 }
