@@ -1,6 +1,7 @@
 # Concept Read Writer for Elasticsearch
 
-[![Circle CI](https://circleci.com/gh/Financial-Times/concept-rw-elasticsearch/tree/master.png?style=shield)](https://circleci.com/gh/Financial-Times/concept-rw-elasticsearch/tree/master)
+[![Circle CI](https://circleci.com/gh/Financial-Times/concept-rw-elasticsearch/tree/master.png?style=shield)](https://circleci.com/gh/Financial-Times/concept-rw-elasticsearch/tree/master)[![Go Report Card](https://goreportcard.com/badge/github.com/Financial-Times/concept-rw-elasticsearch)](https://goreportcard.com/report/github.com/Financial-Times/concept-rw-elasticsearch) [![Coverage Status](https://coveralls.io/repos/github/Financial-Times/concept-rw-elasticsearch/badge.svg)](https://coveralls.io/github/Financial-Times/concept-rw-elasticsearch)
+
 
 Writes concepts into Amazon Elasticsearch cluster in batches.
 
