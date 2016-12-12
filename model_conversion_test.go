@@ -29,12 +29,6 @@ func TestConvertToESConceptModel(t *testing.T) {
 					"Apple Computer Inc",
 					"Apple Inc.",
 					"Apple, Inc."},
-				Types: []string{
-					"Thing",
-					"Concept",
-					"Organisation",
-					"Company",
-					"PublicCompany"},
 			},
 			esConceptModel{
 				Id:        "http://api.ft.com/things/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8",
@@ -69,12 +63,6 @@ func TestConvertToESConceptModel(t *testing.T) {
 				DirectType: "PublicCompany",
 				PrefLabel:  "Apple, Inc.",
 				Aliases:    []string{},
-				Types: []string{
-					"Thing",
-					"Concept",
-					"Organisation",
-					"Company",
-					"PublicCompany"},
 			},
 			esConceptModel{
 				Id:        "http://api.ft.com/things/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8",

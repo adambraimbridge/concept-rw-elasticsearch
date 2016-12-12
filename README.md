@@ -12,6 +12,8 @@ The taken approach to access AES (Amazon Elasticsearch Service):
 ).
 - Use https://github.com/olivere/elastic library to any ES request, after passing in the above created client
 
+If you need to set-up your elasticsearch first, please see some instructions [here](https://github.com/Financial-Times/concept-rw-elasticsearch/blob/master/mapping_readme_.md).
+
 ## How to run
 
 ```

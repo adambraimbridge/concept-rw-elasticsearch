@@ -2,7 +2,7 @@ package main
 
 import (
 	"errors"
-	"gopkg.in/olivere/elastic.v2"
+	"gopkg.in/olivere/elastic.v3"
 )
 
 type esHealthService struct {

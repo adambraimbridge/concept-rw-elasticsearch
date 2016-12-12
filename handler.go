@@ -31,7 +31,7 @@ func (service *conceptWriter) loadData(writer http.ResponseWriter, request *http
 
 	defer request.Body.Close()
 
-	if concept.UUID != uuid {
+	if concept.UUID != uuid || concept.DirectType == "" || concept.PrefLabel == "" {
 		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -61,7 +61,7 @@ func (service *conceptWriter) loadBulkData(writer http.ResponseWriter, request *
 
 	defer request.Body.Close()
 
-	if concept.UUID != uuid {
+	if concept.UUID != uuid || concept.DirectType == "" || concept.PrefLabel == "" {
 		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}

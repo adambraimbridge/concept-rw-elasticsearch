@@ -1,7 +1,7 @@
 package main
 
 import (
-	"gopkg.in/olivere/elastic.v2"
+	"gopkg.in/olivere/elastic.v3"
 )
 
 type esService struct {
@@ -11,9 +11,9 @@ type esService struct {
 }
 
 type esServiceI interface {
-	loadData(conceptType string, uuid string, payload interface{}) (*elastic.IndexResult, error)
+	loadData(conceptType string, uuid string, payload interface{}) (*elastic.IndexResponse, error)
 	readData(conceptType string, uuid string) (*elastic.GetResult, error)
-	deleteData(conceptType string, uuid string) (*elastic.DeleteResult, error)
+	deleteData(conceptType string, uuid string) (*elastic.DeleteResponse, error)
 	loadBulkData(conceptType string, uuid string, payload interface{})
 	closeBulkProcessor() error
 }
@@ -22,7 +22,7 @@ func newEsService(client *elastic.Client, indexName string, bulkProcessor *elast
 	return &esService{elasticClient: client, bulkProcessor: bulkProcessor, indexName: indexName}
 }
 
-func (service esService) loadData(conceptType string, uuid string, payload interface{}) (*elastic.IndexResult, error) {
+func (service esService) loadData(conceptType string, uuid string, payload interface{}) (*elastic.IndexResponse, error) {
 	return service.elasticClient.Index().
 		Index(service.indexName).
 		Type(conceptType).
@@ -39,7 +39,7 @@ func (service esService) readData(conceptType string, uuid string) (*elastic.Get
 		Do()
 }
 
-func (service esService) deleteData(conceptType string, uuid string) (*elastic.DeleteResult, error) {
+func (service esService) deleteData(conceptType string, uuid string) (*elastic.DeleteResponse, error) {
 	return service.elasticClient.Delete().
 		Index(service.indexName).
 		Type(conceptType).

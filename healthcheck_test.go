@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"github.com/docker/docker/pkg/testutil/assert"
 	"github.com/pkg/errors"
-	"gopkg.in/olivere/elastic.v2"
+	"gopkg.in/olivere/elastic.v3"
 	"net/http"
 	"net/http/httptest"
 	"testing"

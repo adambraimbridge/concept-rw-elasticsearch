@@ -1,4 +1,4 @@
-How to set-up elasticsearch
+# How to set-up elasticsearch
 
 Before loading the data, please ensure that the concept type and the required mappings are applied over your index.
 

@@ -6,7 +6,7 @@ import (
 	"github.com/docker/docker/pkg/testutil/assert"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
-	"gopkg.in/olivere/elastic.v2"
+	"gopkg.in/olivere/elastic.v3"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -14,7 +14,7 @@ import (
 
 func TestLoadData(t *testing.T) {
 
-	payload := `{"uuid":"8ff7dfef-0330-3de0-b37a-2d6aa9c98580","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report","type":"Genre","types":["Thing","Concept","Classification","Genre"]}`
+	payload := `{"uuid":"8ff7dfef-0330-3de0-b37a-2d6aa9c98580","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report","type":"Genre"}`
 	req, err := http.NewRequest("PUT", "/organisations/8ff7dfef-0330-3de0-b37a-2d6aa9c98580", bytes.NewReader([]byte(payload)))
 	if err != nil {
 		t.Fatal(err)
@@ -42,7 +42,63 @@ func TestLoadData(t *testing.T) {
 
 func TestLoadDataBadRequest(t *testing.T) {
 
-	payload := `{"uuid":"different-uuid","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report","type":"Genre","types":["Thing","Concept","Classification","Genre"]}`
+	payload := `{"uuid":"different-uuid","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report","type":"Genre"}`
+	req, err := http.NewRequest("PUT", "/organisations/8ff7dfef-0330-3de0-b37a-2d6aa9c98580", bytes.NewReader([]byte(payload)))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+
+	var dummyEsService esServiceI = &dummyEsService{returnsError: false}
+	writerService := newESWriter(&dummyEsService)
+
+	servicesRouter := mux.NewRouter()
+	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.loadData).Methods("PUT")
+	servicesRouter.ServeHTTP(rr, req)
+
+	// Check the status code is what we expect.
+	if status := rr.Code; status != http.StatusBadRequest {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusBadRequest)
+	}
+
+	if rr.Body.Bytes() != nil {
+		t.Errorf("Response body should be empty")
+	}
+}
+
+func TestLoadDataBadRequestForEmptyType(t *testing.T) {
+
+	payload := `{"uuid":"8ff7dfef-0330-3de0-b37a-2d6aa9c98580","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report"}`
+	req, err := http.NewRequest("PUT", "/organisations/8ff7dfef-0330-3de0-b37a-2d6aa9c98580", bytes.NewReader([]byte(payload)))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+
+	var dummyEsService esServiceI = &dummyEsService{returnsError: false}
+	writerService := newESWriter(&dummyEsService)
+
+	servicesRouter := mux.NewRouter()
+	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.loadData).Methods("PUT")
+	servicesRouter.ServeHTTP(rr, req)
+
+	// Check the status code is what we expect.
+	if status := rr.Code; status != http.StatusBadRequest {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusBadRequest)
+	}
+
+	if rr.Body.Bytes() != nil {
+		t.Errorf("Response body should be empty")
+	}
+}
+
+func TestLoadDataBadRequestForEmptyPrefLabel(t *testing.T) {
+
+	payload := `{"uuid":"8ff7dfef-0330-3de0-b37a-2d6aa9c98580","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"type":"Genre"}`
 	req, err := http.NewRequest("PUT", "/organisations/8ff7dfef-0330-3de0-b37a-2d6aa9c98580", bytes.NewReader([]byte(payload)))
 	if err != nil {
 		t.Fatal(err)
@@ -70,7 +126,7 @@ func TestLoadDataBadRequest(t *testing.T) {
 
 func TestLoadDataEsClientServerErrors(t *testing.T) {
 
-	payload := `{"uuid":"8ff7dfef-0330-3de0-b37a-2d6aa9c98580","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report","type":"Genre","types":["Thing","Concept","Classification","Genre"]}`
+	payload := `{"uuid":"8ff7dfef-0330-3de0-b37a-2d6aa9c98580","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report","type":"Genre"}`
 	req, err := http.NewRequest("PUT", "/organisations/8ff7dfef-0330-3de0-b37a-2d6aa9c98580", bytes.NewReader([]byte(payload)))
 	if err != nil {
 		t.Fatal(err)
@@ -154,7 +210,7 @@ func TestLoadBulkDataIncorrectPayload(t *testing.T) {
 
 func TestLoadBulkDataBadRequest(t *testing.T) {
 
-	payload := `{"uuid":"different-uuid","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report","type":"Genre","types":["Thing","Concept","Classification","Genre"]}`
+	payload := `{"uuid":"different-uuid","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report","type":"Genre"}`
 	req, err := http.NewRequest("PUT", "/bulk/organisations/8ff7dfef-0330-3de0-b37a-2d6aa9c98580", bytes.NewReader([]byte(payload)))
 	if err != nil {
 		t.Fatal(err)
@@ -187,7 +243,6 @@ func TestReadData(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-
 	esModel := &esConceptModel{
 		Id:         "http://api.ft.com/things/8ff7dfef-0330-3de0-b37a-2d6aa9c98580",
 		ApiUrl:     "http://api.ft.com/things/8ff7dfef-0330-3de0-b37a-2d6aa9c98580",
@@ -368,11 +423,11 @@ type dummyEsService struct {
 	source       *json.RawMessage
 }
 
-func (service *dummyEsService) loadData(conceptType string, uuid string, payload interface{}) (*elastic.IndexResult, error) {
+func (service *dummyEsService) loadData(conceptType string, uuid string, payload interface{}) (*elastic.IndexResponse, error) {
 	if service.returnsError {
 		return nil, errors.New("Error")
 	} else {
-		return &elastic.IndexResult{}, nil
+		return &elastic.IndexResponse{}, nil
 	}
 }
 
@@ -384,11 +439,11 @@ func (service *dummyEsService) readData(conceptType string, uuid string) (*elast
 	}
 }
 
-func (service *dummyEsService) deleteData(conceptType string, uuid string) (*elastic.DeleteResult, error) {
+func (service *dummyEsService) deleteData(conceptType string, uuid string) (*elastic.DeleteResponse, error) {
 	if service.returnsError {
 		return nil, errors.New("Error")
 	} else {
-		return &elastic.DeleteResult{Found: service.found}, nil
+		return &elastic.DeleteResponse{Found: service.found}, nil
 	}
 }
 

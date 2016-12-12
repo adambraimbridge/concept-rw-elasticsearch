@@ -7,7 +7,6 @@ type conceptModel struct {
 	DirectType string   `json:"type"`
 	PrefLabel  string   `json:"prefLabel"`
 	Aliases    []string `json:"aliases,omitempty"`
-	Types      []string `json:"types,omitempty"`
 }
 
 type esConceptModel struct {

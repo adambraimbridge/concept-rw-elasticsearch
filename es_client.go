@@ -2,7 +2,7 @@ package main
 
 import (
 	awsauth "github.com/smartystreets/go-aws-auth"
-	"gopkg.in/olivere/elastic.v2"
+	"gopkg.in/olivere/elastic.v3"
 	"net/http"
 )
 
