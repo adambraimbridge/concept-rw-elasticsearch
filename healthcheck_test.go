@@ -2,8 +2,8 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/docker/docker/pkg/testutil/assert"
 	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
 	"gopkg.in/olivere/elastic.v3"
 	"net/http"
 	"net/http/httptest"

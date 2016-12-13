@@ -3,12 +3,13 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/docker/docker/pkg/testutil/assert"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
 	"gopkg.in/olivere/elastic.v3"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
 )
 
@@ -280,7 +281,7 @@ func TestReadData(t *testing.T) {
 		t.Errorf("Unmarshalling request response failed. %v", err)
 	}
 
-	assert.DeepEqual(t, respObject, esModel)
+	assert.True(t, reflect.DeepEqual(respObject, esModel))
 
 }
 
