@@ -148,8 +148,8 @@ func TestHealthServiceConnectivityChecker(t *testing.T) {
 	healthService := newHealthService(&dummyEsHealthService)
 	message, err := healthService.connectivityChecker()
 
-	assert.Equal(t, message, "Successfully connected to the cluster")
-	assert.Equal(t, err, nil)
+	assert.Equal(t, "Successfully connected to the cluster", message)
+	assert.Equal(t, nil, err)
 
 }
 
@@ -159,7 +159,7 @@ func TestHealthServiceConnectivityCheckerForFailedConnection(t *testing.T) {
 	healthService := newHealthService(&dummyEsHealthService)
 	message, err := healthService.connectivityChecker()
 
-	assert.Equal(t, message, "Could not connect to elasticsearch")
+	assert.Equal(t, "Could not connect to elasticsearch", message)
 	assert.NotNil(t, err)
 
 }
