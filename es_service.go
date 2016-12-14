@@ -32,19 +32,32 @@ func (service esService) loadData(conceptType string, uuid string, payload inter
 }
 
 func (service esService) readData(conceptType string, uuid string) (*elastic.GetResult, error) {
-	return service.elasticClient.Get().
+	resp, err := service.elasticClient.Get().
 		Index(service.indexName).
 		Type(conceptType).
 		Id(uuid).
+		IgnoreErrorsOnGeneratedFields(false).
 		Do()
+
+	if elastic.IsNotFound(err) {
+		return &elastic.GetResult{Found:false}, nil
+	} else {
+		return resp, err
+	}
 }
 
 func (service esService) deleteData(conceptType string, uuid string) (*elastic.DeleteResponse, error) {
-	return service.elasticClient.Delete().
+	resp, err := service.elasticClient.Delete().
 		Index(service.indexName).
 		Type(conceptType).
 		Id(uuid).
 		Do()
+
+	if elastic.IsNotFound(err) {
+		return &elastic.DeleteResponse{Found:false}, nil
+	} else {
+		return resp, err
+	}
 }
 
 func (service esService) loadBulkData(conceptType string, uuid string, payload interface{}) {
