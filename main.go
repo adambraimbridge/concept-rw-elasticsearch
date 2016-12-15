@@ -10,6 +10,7 @@ import (
 	"gopkg.in/olivere/elastic.v3"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -77,6 +78,12 @@ func main() {
 		EnvVar: "ELASTICSEARCH_FLUSH_INTERVAL",
 	})
 
+	elasticsearchWhitelistedConceptTypes := app.String(cli.StringOpt{
+		Name:   "whitelisted-concepts",
+		Desc:   "List which are currently supported by elasticsearch (already have mapping associated)",
+		EnvVar: "ELASTICSEARCH_WHITELISTED_CONCEPTS",
+	})
+
 	accessConfig := esAccessConfig{
 		accessKey:  *accessKey,
 		secretKey:  *secretKey,
@@ -89,6 +96,9 @@ func main() {
 		bulkSize:      *elasticsearchBulkSize,
 		flushInterval: time.Duration(*elasticsearchFlushInterval) * time.Second,
 	}
+
+	log.SetLevel(log.InfoLevel)
+	log.Infof("[Startup] The writer handles the following concept types: %v\n", *elasticsearchWhitelistedConceptTypes)
 
 	app.Action = func() {
 		var elasticClient *elastic.Client
@@ -109,7 +119,8 @@ func main() {
 
 		//create writer service
 		var esService esServiceI = newEsService(elasticClient, *indexName, bulkProcessor)
-		conceptWriter := newESWriter(&esService)
+		var allowedConceptTypes []string = strings.Split(*elasticsearchWhitelistedConceptTypes, ",")
+		conceptWriter := newESWriter(&esService, allowedConceptTypes)
 		defer (*conceptWriter.elasticService).closeBulkProcessor()
 
 		//create health service
@@ -119,7 +130,6 @@ func main() {
 		routeRequests(port, conceptWriter, healthService)
 	}
 
-	log.SetLevel(log.InfoLevel)
 	err := app.Run(os.Args)
 	if err != nil {
 		log.Errorf("App could not start, error=[%s]\n", err)
@@ -128,7 +138,6 @@ func main() {
 }
 
 func routeRequests(port *string, conceptWriter *conceptWriter, healthService *healthService) {
-
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/bulk/{concept-type}/{id}", conceptWriter.loadBulkData).Methods("PUT")
 	servicesRouter.HandleFunc("/{concept-type}/{id}", conceptWriter.loadData).Methods("PUT")
@@ -148,5 +157,4 @@ func routeRequests(port *string, conceptWriter *conceptWriter, healthService *he
 	if err := http.ListenAndServe(":"+*port, nil); err != nil {
 		log.Fatalf("Unable to start: %v", err)
 	}
-
 }
