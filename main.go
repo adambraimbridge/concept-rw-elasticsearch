@@ -80,6 +80,7 @@ func main() {
 
 	elasticsearchWhitelistedConceptTypes := app.String(cli.StringOpt{
 		Name:   "whitelisted-concepts",
+		Value:  "genres,topics,sections,subjects,locations,brands,organisations,people",
 		Desc:   "List which are currently supported by elasticsearch (already have mapping associated)",
 		EnvVar: "ELASTICSEARCH_WHITELISTED_CONCEPTS",
 	})

@@ -52,9 +52,7 @@ func TestLoadData(t *testing.T) {
 			status, http.StatusOK)
 	}
 
-	if rr.Body.Bytes() != nil {
-		t.Errorf("Response body should be empty")
-	}
+	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
 }
 
 func TestLoadDataBadRequest(t *testing.T) {
@@ -80,9 +78,7 @@ func TestLoadDataBadRequest(t *testing.T) {
 			status, http.StatusBadRequest)
 	}
 
-	if rr.Body.Bytes() != nil {
-		t.Errorf("Response body should be empty")
-	}
+	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
 }
 
 func TestLoadDataBadRequestForUnsupportedType(t *testing.T) {
@@ -108,9 +104,7 @@ func TestLoadDataBadRequestForUnsupportedType(t *testing.T) {
 			status, http.StatusOK)
 	}
 
-	if rr.Body.Bytes() != nil {
-		t.Errorf("Response body should be empty")
-	}
+	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
 }
 
 func TestLoadDataBadRequestForEmptyType(t *testing.T) {
@@ -136,9 +130,7 @@ func TestLoadDataBadRequestForEmptyType(t *testing.T) {
 			status, http.StatusBadRequest)
 	}
 
-	if rr.Body.Bytes() != nil {
-		t.Errorf("Response body should be empty")
-	}
+	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
 }
 
 func TestLoadDataBadRequestForEmptyPrefLabel(t *testing.T) {
@@ -164,9 +156,7 @@ func TestLoadDataBadRequestForEmptyPrefLabel(t *testing.T) {
 			status, http.StatusBadRequest)
 	}
 
-	if rr.Body.Bytes() != nil {
-		t.Errorf("Response body should be empty")
-	}
+	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
 }
 
 func TestLoadDataEsClientServerErrors(t *testing.T) {
@@ -192,9 +182,7 @@ func TestLoadDataEsClientServerErrors(t *testing.T) {
 			status, http.StatusInternalServerError)
 	}
 
-	if rr.Body.Bytes() != nil {
-		t.Errorf("Response body should be empty")
-	}
+	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
 }
 
 func TestLoadDataIncorrectPayload(t *testing.T) {
@@ -220,9 +208,7 @@ func TestLoadDataIncorrectPayload(t *testing.T) {
 			status, http.StatusInternalServerError)
 	}
 
-	if rr.Body.Bytes() != nil {
-		t.Errorf("Response body should be empty")
-	}
+	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
 }
 
 func TestLoadBulkDataIncorrectPayload(t *testing.T) {
@@ -248,9 +234,7 @@ func TestLoadBulkDataIncorrectPayload(t *testing.T) {
 			status, http.StatusInternalServerError)
 	}
 
-	if rr.Body.Bytes() != nil {
-		t.Errorf("Response body should be empty")
-	}
+	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
 }
 
 func TestLoadBulkDataBadRequest(t *testing.T) {
@@ -276,9 +260,7 @@ func TestLoadBulkDataBadRequest(t *testing.T) {
 			status, http.StatusBadRequest)
 	}
 
-	if rr.Body.Bytes() != nil {
-		t.Errorf("Response body should be empty")
-	}
+	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
 }
 
 func TestReadData(t *testing.T) {
@@ -350,9 +332,7 @@ func TestReadDataNotFound(t *testing.T) {
 			status, http.StatusNotFound)
 	}
 
-	if rr.Body.Bytes() != nil {
-		t.Errorf("Response body should be empty")
-	}
+	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
 }
 
 func TestReadDataEsServerError(t *testing.T) {
@@ -376,9 +356,7 @@ func TestReadDataEsServerError(t *testing.T) {
 			status, http.StatusInternalServerError)
 	}
 
-	if rr.Body.Bytes() != nil {
-		t.Errorf("Response body should be empty")
-	}
+	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
 }
 
 func TestDeleteData(t *testing.T) {
@@ -403,9 +381,7 @@ func TestDeleteData(t *testing.T) {
 			status, http.StatusOK)
 	}
 
-	if rr.Body.Bytes() != nil {
-		t.Errorf("Response body should be empty")
-	}
+	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
 }
 
 func TestDeleteDataNotFound(t *testing.T) {
@@ -430,9 +406,7 @@ func TestDeleteDataNotFound(t *testing.T) {
 			status, http.StatusNotFound)
 	}
 
-	if rr.Body.Bytes() != nil {
-		t.Errorf("Response body should be empty")
-	}
+	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
 }
 
 func TestDeleteDataEsServerError(t *testing.T) {
@@ -457,9 +431,7 @@ func TestDeleteDataEsServerError(t *testing.T) {
 			status, http.StatusInternalServerError)
 	}
 
-	if rr.Body.Bytes() != nil {
-		t.Errorf("Response body should be empty")
-	}
+	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
 }
 
 type dummyEsService struct {
