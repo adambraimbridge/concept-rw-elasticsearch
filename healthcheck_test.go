@@ -80,7 +80,7 @@ func TestHealthDetailsReturnsError(t *testing.T) {
 	}
 
 	if rr.Body.Bytes() != nil {
-		t.Errorf("Response body should be empty")
+		t.Error("Response body should be empty")
 	}
 }
 
@@ -109,7 +109,7 @@ func TestGoodToGoHealthyCluster(t *testing.T) {
 	}
 
 	if rr.Body.Bytes() != nil {
-		t.Errorf("Response body should be empty")
+		t.Error("Response body should be empty")
 	}
 }
 
@@ -138,7 +138,7 @@ func TestGoodToGoUnhealthyCluster(t *testing.T) {
 	}
 
 	if rr.Body.Bytes() != nil {
-		t.Errorf("Response body should be empty")
+		t.Error("Response body should be empty")
 	}
 }
 

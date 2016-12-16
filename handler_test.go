@@ -13,6 +13,22 @@ import (
 	"testing"
 )
 
+func TestCreateNewESWriter(t *testing.T) {
+	var dummyEsService esServiceI = &dummyEsService{returnsError: false}
+	allowedTypes := []string{"organisations", "genres"}
+	writerService := newESWriter(&dummyEsService, allowedTypes)
+	assert.True(t, writerService.allowedConceptTypes["organisations"])
+	assert.True(t, writerService.allowedConceptTypes["genres"])
+	assert.False(t, writerService.allowedConceptTypes["something else"])
+}
+
+func TestCreateNewESWriterWithEmptyWhitelist(t *testing.T) {
+	var dummyEsService esServiceI = &dummyEsService{returnsError: false}
+	allowedTypes := []string{}
+	writerService := newESWriter(&dummyEsService, allowedTypes)
+	assert.Equal(t, 0, len(writerService.allowedConceptTypes))
+}
+
 func TestLoadData(t *testing.T) {
 
 	payload := `{"uuid":"8ff7dfef-0330-3de0-b37a-2d6aa9c98580","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report","type":"Genre"}`
@@ -24,7 +40,7 @@ func TestLoadData(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	var dummyEsService esServiceI = &dummyEsService{returnsError: false}
-	writerService := newESWriter(&dummyEsService)
+	writerService := newESWriter(&dummyEsService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.loadData).Methods("PUT")
@@ -36,9 +52,7 @@ func TestLoadData(t *testing.T) {
 			status, http.StatusOK)
 	}
 
-	if rr.Body.Bytes() != nil {
-		t.Errorf("Response body should be empty")
-	}
+	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
 }
 
 func TestLoadDataBadRequest(t *testing.T) {
@@ -52,7 +66,7 @@ func TestLoadDataBadRequest(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	var dummyEsService esServiceI = &dummyEsService{returnsError: false}
-	writerService := newESWriter(&dummyEsService)
+	writerService := newESWriter(&dummyEsService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.loadData).Methods("PUT")
@@ -64,9 +78,33 @@ func TestLoadDataBadRequest(t *testing.T) {
 			status, http.StatusBadRequest)
 	}
 
-	if rr.Body.Bytes() != nil {
-		t.Errorf("Response body should be empty")
+	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
+}
+
+func TestLoadDataBadRequestForUnsupportedType(t *testing.T) {
+
+	payload := `{"uuid":"different-uuid","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report","type":"Genre"}`
+	req, err := http.NewRequest("PUT", "/organisation/8ff7dfef-0330-3de0-b37a-2d6aa9c98580", bytes.NewReader([]byte(payload)))
+	if err != nil {
+		t.Fatal(err)
 	}
+
+	rr := httptest.NewRecorder()
+
+	var dummyEsService esServiceI = &dummyEsService{returnsError: false}
+	writerService := newESWriter(&dummyEsService, []string{"organisations", "people", "genres"})
+
+	servicesRouter := mux.NewRouter()
+	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.loadData).Methods("PUT")
+	servicesRouter.ServeHTTP(rr, req)
+
+	// For Bad Request the status code should be 400 - but for unsupported concept types the writer returns 200 - without further processing
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+
+	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
 }
 
 func TestLoadDataBadRequestForEmptyType(t *testing.T) {
@@ -80,7 +118,7 @@ func TestLoadDataBadRequestForEmptyType(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	var dummyEsService esServiceI = &dummyEsService{returnsError: false}
-	writerService := newESWriter(&dummyEsService)
+	writerService := newESWriter(&dummyEsService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.loadData).Methods("PUT")
@@ -92,9 +130,7 @@ func TestLoadDataBadRequestForEmptyType(t *testing.T) {
 			status, http.StatusBadRequest)
 	}
 
-	if rr.Body.Bytes() != nil {
-		t.Errorf("Response body should be empty")
-	}
+	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
 }
 
 func TestLoadDataBadRequestForEmptyPrefLabel(t *testing.T) {
@@ -108,7 +144,7 @@ func TestLoadDataBadRequestForEmptyPrefLabel(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	var dummyEsService esServiceI = &dummyEsService{returnsError: false}
-	writerService := newESWriter(&dummyEsService)
+	writerService := newESWriter(&dummyEsService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.loadData).Methods("PUT")
@@ -120,9 +156,7 @@ func TestLoadDataBadRequestForEmptyPrefLabel(t *testing.T) {
 			status, http.StatusBadRequest)
 	}
 
-	if rr.Body.Bytes() != nil {
-		t.Errorf("Response body should be empty")
-	}
+	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
 }
 
 func TestLoadDataEsClientServerErrors(t *testing.T) {
@@ -136,7 +170,7 @@ func TestLoadDataEsClientServerErrors(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	var dummyEsService esServiceI = &dummyEsService{returnsError: true}
-	writerService := newESWriter(&dummyEsService)
+	writerService := newESWriter(&dummyEsService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.loadData).Methods("PUT")
@@ -148,9 +182,7 @@ func TestLoadDataEsClientServerErrors(t *testing.T) {
 			status, http.StatusInternalServerError)
 	}
 
-	if rr.Body.Bytes() != nil {
-		t.Errorf("Response body should be empty")
-	}
+	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
 }
 
 func TestLoadDataIncorrectPayload(t *testing.T) {
@@ -164,7 +196,7 @@ func TestLoadDataIncorrectPayload(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	var dummyEsService esServiceI = &dummyEsService{returnsError: false}
-	writerService := newESWriter(&dummyEsService)
+	writerService := newESWriter(&dummyEsService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.loadData).Methods("PUT")
@@ -176,9 +208,7 @@ func TestLoadDataIncorrectPayload(t *testing.T) {
 			status, http.StatusInternalServerError)
 	}
 
-	if rr.Body.Bytes() != nil {
-		t.Errorf("Response body should be empty")
-	}
+	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
 }
 
 func TestLoadBulkDataIncorrectPayload(t *testing.T) {
@@ -192,7 +222,7 @@ func TestLoadBulkDataIncorrectPayload(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	var dummyEsService esServiceI = &dummyEsService{returnsError: false}
-	writerService := newESWriter(&dummyEsService)
+	writerService := newESWriter(&dummyEsService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/bulk/{concept-type}/{id}", writerService.loadBulkData).Methods("PUT")
@@ -204,9 +234,7 @@ func TestLoadBulkDataIncorrectPayload(t *testing.T) {
 			status, http.StatusInternalServerError)
 	}
 
-	if rr.Body.Bytes() != nil {
-		t.Errorf("Response body should be empty")
-	}
+	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
 }
 
 func TestLoadBulkDataBadRequest(t *testing.T) {
@@ -220,7 +248,7 @@ func TestLoadBulkDataBadRequest(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	var dummyEsService esServiceI = &dummyEsService{returnsError: false}
-	writerService := newESWriter(&dummyEsService)
+	writerService := newESWriter(&dummyEsService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/bulk/{concept-type}/{id}", writerService.loadBulkData).Methods("PUT")
@@ -232,13 +260,11 @@ func TestLoadBulkDataBadRequest(t *testing.T) {
 			status, http.StatusBadRequest)
 	}
 
-	if rr.Body.Bytes() != nil {
-		t.Errorf("Response body should be empty")
-	}
+	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
 }
 
 func TestReadData(t *testing.T) {
-	req, err := http.NewRequest("GET", "/organisations/8ff7dfef-0330-3de0-b37a-2d6aa9c98580", nil)
+	req, err := http.NewRequest("GET", "/genres/8ff7dfef-0330-3de0-b37a-2d6aa9c98580", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -258,7 +284,7 @@ func TestReadData(t *testing.T) {
 
 	var rawmsg json.RawMessage = json.RawMessage(rawModel)
 	var dummyEsService esServiceI = &dummyEsService{returnsError: false, found: true, source: &rawmsg}
-	writerService := newESWriter(&dummyEsService)
+	writerService := newESWriter(&dummyEsService, []string{"genres"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.readData).Methods("GET")
@@ -294,7 +320,7 @@ func TestReadDataNotFound(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	var dummyEsService esServiceI = &dummyEsService{returnsError: false, found: false}
-	writerService := newESWriter(&dummyEsService)
+	writerService := newESWriter(&dummyEsService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.readData).Methods("GET")
@@ -306,9 +332,7 @@ func TestReadDataNotFound(t *testing.T) {
 			status, http.StatusNotFound)
 	}
 
-	if rr.Body.Bytes() != nil {
-		t.Errorf("Response body should be empty")
-	}
+	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
 }
 
 func TestReadDataEsServerError(t *testing.T) {
@@ -320,7 +344,7 @@ func TestReadDataEsServerError(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	var dummyEsService esServiceI = &dummyEsService{returnsError: true}
-	writerService := newESWriter(&dummyEsService)
+	writerService := newESWriter(&dummyEsService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.readData).Methods("GET")
@@ -332,9 +356,7 @@ func TestReadDataEsServerError(t *testing.T) {
 			status, http.StatusInternalServerError)
 	}
 
-	if rr.Body.Bytes() != nil {
-		t.Errorf("Response body should be empty")
-	}
+	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
 }
 
 func TestDeleteData(t *testing.T) {
@@ -347,7 +369,7 @@ func TestDeleteData(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	var dummyEsService esServiceI = &dummyEsService{returnsError: false, found: true}
-	writerService := newESWriter(&dummyEsService)
+	writerService := newESWriter(&dummyEsService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.deleteData).Methods("DELETE")
@@ -359,9 +381,7 @@ func TestDeleteData(t *testing.T) {
 			status, http.StatusOK)
 	}
 
-	if rr.Body.Bytes() != nil {
-		t.Errorf("Response body should be empty")
-	}
+	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
 }
 
 func TestDeleteDataNotFound(t *testing.T) {
@@ -374,7 +394,7 @@ func TestDeleteDataNotFound(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	var dummyEsService esServiceI = &dummyEsService{returnsError: false, found: false}
-	writerService := newESWriter(&dummyEsService)
+	writerService := newESWriter(&dummyEsService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.deleteData).Methods("DELETE")
@@ -386,9 +406,7 @@ func TestDeleteDataNotFound(t *testing.T) {
 			status, http.StatusNotFound)
 	}
 
-	if rr.Body.Bytes() != nil {
-		t.Errorf("Response body should be empty")
-	}
+	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
 }
 
 func TestDeleteDataEsServerError(t *testing.T) {
@@ -401,7 +419,7 @@ func TestDeleteDataEsServerError(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	var dummyEsService esServiceI = &dummyEsService{returnsError: true}
-	writerService := newESWriter(&dummyEsService)
+	writerService := newESWriter(&dummyEsService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.deleteData).Methods("DELETE")
@@ -413,9 +431,7 @@ func TestDeleteDataEsServerError(t *testing.T) {
 			status, http.StatusInternalServerError)
 	}
 
-	if rr.Body.Bytes() != nil {
-		t.Errorf("Response body should be empty")
-	}
+	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
 }
 
 type dummyEsService struct {

@@ -8,17 +8,28 @@ import (
 )
 
 type conceptWriter struct {
-	elasticService *esServiceI
+	elasticService      *esServiceI
+	allowedConceptTypes map[string]bool
 }
 
-func newESWriter(elasticService *esServiceI) (service *conceptWriter) {
-	return &conceptWriter{elasticService: elasticService}
+func newESWriter(elasticService *esServiceI, allowedConceptTypes []string) (service *conceptWriter) {
+
+	allowedTypes := make(map[string]bool)
+	for _, v := range allowedConceptTypes {
+		allowedTypes[v] = true
+	}
+
+	return &conceptWriter{elasticService: elasticService, allowedConceptTypes: allowedTypes}
 }
 
 func (service *conceptWriter) loadData(writer http.ResponseWriter, request *http.Request) {
 
 	uuid := mux.Vars(request)["id"]
 	conceptType := mux.Vars(request)["concept-type"]
+
+	if !service.allowedConceptTypes[conceptType] {
+		return
+	}
 
 	var concept conceptModel
 	decoder := json.NewDecoder(request.Body)
@@ -28,7 +39,6 @@ func (service *conceptWriter) loadData(writer http.ResponseWriter, request *http
 		writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
 	defer request.Body.Close()
 
 	if concept.UUID != uuid || concept.DirectType == "" || concept.PrefLabel == "" {
@@ -49,6 +59,10 @@ func (service *conceptWriter) loadData(writer http.ResponseWriter, request *http
 func (service *conceptWriter) loadBulkData(writer http.ResponseWriter, request *http.Request) {
 	uuid := mux.Vars(request)["id"]
 	conceptType := mux.Vars(request)["concept-type"]
+
+	if !service.allowedConceptTypes[conceptType] {
+		return
+	}
 
 	var concept conceptModel
 	decoder := json.NewDecoder(request.Body)

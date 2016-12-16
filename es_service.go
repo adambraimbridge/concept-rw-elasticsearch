@@ -40,7 +40,7 @@ func (service esService) readData(conceptType string, uuid string) (*elastic.Get
 		Do()
 
 	if elastic.IsNotFound(err) {
-		return &elastic.GetResult{Found:false}, nil
+		return &elastic.GetResult{Found: false}, nil
 	} else {
 		return resp, err
 	}
@@ -54,7 +54,7 @@ func (service esService) deleteData(conceptType string, uuid string) (*elastic.D
 		Do()
 
 	if elastic.IsNotFound(err) {
-		return &elastic.DeleteResponse{Found:false}, nil
+		return &elastic.DeleteResponse{Found: false}, nil
 	} else {
 		return resp, err
 	}
