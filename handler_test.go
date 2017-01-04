@@ -263,6 +263,32 @@ func TestLoadBulkDataBadRequest(t *testing.T) {
 	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
 }
 
+func TestLoadBulkDataAccepted(t *testing.T) {
+
+	payload := `{"uuid":"8ff7dfef-0330-3de0-b37a-2d6aa9c98580","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report","type":"Genre"}`
+	req, err := http.NewRequest("PUT", "/bulk/organisations/8ff7dfef-0330-3de0-b37a-2d6aa9c98580", bytes.NewReader([]byte(payload)))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+
+	var dummyEsService esServiceI = &dummyEsService{returnsError: false}
+	writerService := newESWriter(&dummyEsService, []string{"organisations"})
+
+	servicesRouter := mux.NewRouter()
+	servicesRouter.HandleFunc("/bulk/{concept-type}/{id}", writerService.loadBulkData).Methods("PUT")
+	servicesRouter.ServeHTTP(rr, req)
+
+	// Check the status code is what we expect.
+	if status := rr.Code; status != http.StatusAccepted {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusAccepted)
+	}
+
+	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
+}
+
 func TestReadData(t *testing.T) {
 	req, err := http.NewRequest("GET", "/genres/8ff7dfef-0330-3de0-b37a-2d6aa9c98580", nil)
 	if err != nil {
