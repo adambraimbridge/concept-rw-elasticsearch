@@ -82,6 +82,7 @@ func (service *conceptWriter) loadBulkData(writer http.ResponseWriter, request *
 
 	payload := convertToESConceptModel(concept, conceptType)
 	(*service.elasticService).loadBulkData(conceptType, uuid, payload)
+	writer.WriteHeader(http.StatusAccepted)
 }
 
 func (service *conceptWriter) readData(writer http.ResponseWriter, request *http.Request) {

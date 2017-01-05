@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"gopkg.in/olivere/elastic.v3"
 	"time"
@@ -31,6 +32,7 @@ func handleBulkFailures(executionId int64, requests []elastic.BulkableRequest, r
 	}
 
 	for _, failedItem := range response.Failed() {
-		log.Errorf("Concept with uuid %s failed with the following details: %v", failedItem.Id, failedItem)
+		errorDetails := fmt.Sprintf("elastic: %s [type=%s] caused by %s, failed shard details: %v", failedItem.Error.Reason, failedItem.Error.Type, failedItem.Error.CausedBy, failedItem.Error.FailedShards)
+		log.Errorf("Concept %s with uuid %s failed with status code %d and the following details: %v", failedItem.Type, failedItem.Id, failedItem.Status, errorDetails)
 	}
 }
