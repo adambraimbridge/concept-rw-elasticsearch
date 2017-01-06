@@ -54,6 +54,7 @@ func (service *conceptWriter) loadData(writer http.ResponseWriter, request *http
 		writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	writer.WriteHeader(http.StatusOK)
 }
 
 func (service *conceptWriter) loadBulkData(writer http.ResponseWriter, request *http.Request) {
@@ -82,7 +83,7 @@ func (service *conceptWriter) loadBulkData(writer http.ResponseWriter, request *
 
 	payload := convertToESConceptModel(concept, conceptType)
 	(*service.elasticService).loadBulkData(conceptType, uuid, payload)
-	writer.WriteHeader(http.StatusAccepted)
+	writer.WriteHeader(http.StatusOK)
 }
 
 func (service *conceptWriter) readData(writer http.ResponseWriter, request *http.Request) {
@@ -126,4 +127,6 @@ func (service *conceptWriter) deleteData(writer http.ResponseWriter, request *ht
 		writer.WriteHeader(http.StatusNotFound)
 		return
 	}
+
+	writer.WriteHeader(http.StatusOK)
 }

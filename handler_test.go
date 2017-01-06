@@ -281,9 +281,9 @@ func TestLoadBulkDataAccepted(t *testing.T) {
 	servicesRouter.ServeHTTP(rr, req)
 
 	// Check the status code is what we expect.
-	if status := rr.Code; status != http.StatusAccepted {
+	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusAccepted)
+			status, http.StatusOK)
 	}
 
 	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
