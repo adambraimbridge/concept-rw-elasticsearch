@@ -1,6 +1,7 @@
 # How to set-up elasticsearch
 
 Before loading the data, please ensure that the index with its related mapping types are already created.
+If you do this for an Amazon Elasticsearch domain, consider using Postman with AWS credentials for each of the calls below. The service name is "es". 
 
 ## Create new index for elasticsearch
 
