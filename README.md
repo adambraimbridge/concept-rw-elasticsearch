@@ -14,11 +14,19 @@ The taken approach to access AES (Amazon Elasticsearch Service):
 
 If you need to set-up your elasticsearch first, please see some instructions [here](https://github.com/Financial-Times/concept-rw-elasticsearch/blob/master/mapping_readme.md).
 
+## How to build
+
+```
+go get -u github.com/kardianos/govendor
+go get github.com/Financial-Times/concept-rw-elasticsearch
+cd $GOPATH/src/github.com/Financial-Times/concept-rw-elasticsearch
+govendor sync
+go build
+```
+
 ## How to run
 
 ```
-go get -u github.com/Financial-Times/concept-rw-elasticsearch
-go build
 ./concept-rw-elasticsearch --aws-access-key="{access key}" --aws-secret-access-key="{secret key}"
 ```
 It is also possible to provide the elasticsearch endpoint, region and the port you expect the app to run on.
