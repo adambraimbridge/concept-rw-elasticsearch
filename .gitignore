@@ -2,3 +2,6 @@
 .idea
 concept-rw-elasticsearch
 *.exe
+/.project
+/vendor/*/
+!/vendor/vendor.json
