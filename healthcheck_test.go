@@ -19,7 +19,7 @@ func TestHealthDetailsHealthyCluster(t *testing.T) {
 	}
 
 	var dummyEsHealthService esHealthServiceI = &dummyEsHealthService{healthy: true, returnsError: false}
-	healthService := newHealthService(&dummyEsHealthService)
+	healthService := newHealthService(dummyEsHealthService)
 
 	//create a responseRecorder
 	rr := httptest.NewRecorder()
@@ -58,7 +58,7 @@ func TestHealthDetailsReturnsError(t *testing.T) {
 		t.Fatal(err)
 	}
 	var dummyEsHealthService esHealthServiceI = &dummyEsHealthService{returnsError: true}
-	healthService := newHealthService(&dummyEsHealthService)
+	healthService := newHealthService(dummyEsHealthService)
 
 	//create a responseRecorder
 	rr := httptest.NewRecorder()
@@ -92,7 +92,7 @@ func TestGoodToGoHealthyCluster(t *testing.T) {
 		t.Fatal(err)
 	}
 	var dummyEsHealthService esHealthServiceI = &dummyEsHealthService{returnsError: true}
-	healthService := newHealthService(&dummyEsHealthService)
+	healthService := newHealthService(dummyEsHealthService)
 
 	//create a responseRecorder
 	rr := httptest.NewRecorder()
@@ -121,7 +121,7 @@ func TestGoodToGoUnhealthyCluster(t *testing.T) {
 		t.Fatal(err)
 	}
 	var dummyEsHealthService esHealthServiceI = &dummyEsHealthService{healthy: true, returnsError: false}
-	healthService := newHealthService(&dummyEsHealthService)
+	healthService := newHealthService(dummyEsHealthService)
 
 	//create a responseRecorder
 	rr := httptest.NewRecorder()
@@ -145,7 +145,7 @@ func TestGoodToGoUnhealthyCluster(t *testing.T) {
 func TestHealthServiceConnectivityChecker(t *testing.T) {
 
 	var dummyEsHealthService esHealthServiceI = &dummyEsHealthService{healthy: true, returnsError: false}
-	healthService := newHealthService(&dummyEsHealthService)
+	healthService := newHealthService(dummyEsHealthService)
 	message, err := healthService.connectivityChecker()
 
 	assert.Equal(t, "Successfully connected to the cluster", message)
@@ -156,7 +156,7 @@ func TestHealthServiceConnectivityChecker(t *testing.T) {
 func TestHealthServiceConnectivityCheckerForFailedConnection(t *testing.T) {
 
 	var dummyEsHealthService esHealthServiceI = &dummyEsHealthService{returnsError: true}
-	healthService := newHealthService(&dummyEsHealthService)
+	healthService := newHealthService(dummyEsHealthService)
 	message, err := healthService.connectivityChecker()
 
 	assert.Equal(t, "Could not connect to elasticsearch", message)

@@ -120,14 +120,13 @@ func main() {
 		}
 
 		//create writer service
-		var esService esServiceI = newEsService(elasticClient, *indexName, bulkProcessor)
+		esService := newEsService(elasticClient, *indexName, bulkProcessor)
 		var allowedConceptTypes []string = strings.Split(*elasticsearchWhitelistedConceptTypes, ",")
-		conceptWriter := newESWriter(&esService, allowedConceptTypes)
-		defer (*conceptWriter.elasticService).closeBulkProcessor()
+		conceptWriter := newESWriter(esService, allowedConceptTypes)
+		defer conceptWriter.elasticService.closeBulkProcessor()
 
 		//create health service
-		var esHealthService esHealthServiceI = newEsHealthService(elasticClient)
-		healthService := newHealthService(&esHealthService)
+		healthService := newHealthService(esService)
 
 		routeRequests(port, conceptWriter, healthService)
 	}

@@ -16,7 +16,7 @@ import (
 func TestCreateNewESWriter(t *testing.T) {
 	var dummyEsService esServiceI = &dummyEsService{returnsError: false}
 	allowedTypes := []string{"organisations", "genres"}
-	writerService := newESWriter(&dummyEsService, allowedTypes)
+	writerService := newESWriter(dummyEsService, allowedTypes)
 	assert.True(t, writerService.allowedConceptTypes["organisations"])
 	assert.True(t, writerService.allowedConceptTypes["genres"])
 	assert.False(t, writerService.allowedConceptTypes["something else"])
@@ -25,7 +25,7 @@ func TestCreateNewESWriter(t *testing.T) {
 func TestCreateNewESWriterWithEmptyWhitelist(t *testing.T) {
 	var dummyEsService esServiceI = &dummyEsService{returnsError: false}
 	allowedTypes := []string{}
-	writerService := newESWriter(&dummyEsService, allowedTypes)
+	writerService := newESWriter(dummyEsService, allowedTypes)
 	assert.Equal(t, 0, len(writerService.allowedConceptTypes))
 }
 
@@ -40,7 +40,7 @@ func TestLoadData(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	var dummyEsService esServiceI = &dummyEsService{returnsError: false}
-	writerService := newESWriter(&dummyEsService, []string{"organisations"})
+	writerService := newESWriter(dummyEsService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.loadData).Methods("PUT")
@@ -66,7 +66,7 @@ func TestLoadDataBadRequest(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	var dummyEsService esServiceI = &dummyEsService{returnsError: false}
-	writerService := newESWriter(&dummyEsService, []string{"organisations"})
+	writerService := newESWriter(dummyEsService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.loadData).Methods("PUT")
@@ -92,7 +92,7 @@ func TestLoadDataBadRequestForUnsupportedType(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	var dummyEsService esServiceI = &dummyEsService{returnsError: false}
-	writerService := newESWriter(&dummyEsService, []string{"organisations", "people", "genres"})
+	writerService := newESWriter(dummyEsService, []string{"organisations", "people", "genres"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.loadData).Methods("PUT")
@@ -118,7 +118,7 @@ func TestLoadDataBadRequestForEmptyType(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	var dummyEsService esServiceI = &dummyEsService{returnsError: false}
-	writerService := newESWriter(&dummyEsService, []string{"organisations"})
+	writerService := newESWriter(dummyEsService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.loadData).Methods("PUT")
@@ -144,7 +144,7 @@ func TestLoadDataBadRequestForEmptyPrefLabel(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	var dummyEsService esServiceI = &dummyEsService{returnsError: false}
-	writerService := newESWriter(&dummyEsService, []string{"organisations"})
+	writerService := newESWriter(dummyEsService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.loadData).Methods("PUT")
@@ -170,7 +170,7 @@ func TestLoadDataEsClientServerErrors(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	var dummyEsService esServiceI = &dummyEsService{returnsError: true}
-	writerService := newESWriter(&dummyEsService, []string{"organisations"})
+	writerService := newESWriter(dummyEsService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.loadData).Methods("PUT")
@@ -196,7 +196,7 @@ func TestLoadDataIncorrectPayload(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	var dummyEsService esServiceI = &dummyEsService{returnsError: false}
-	writerService := newESWriter(&dummyEsService, []string{"organisations"})
+	writerService := newESWriter(dummyEsService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.loadData).Methods("PUT")
@@ -222,7 +222,7 @@ func TestLoadBulkDataIncorrectPayload(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	var dummyEsService esServiceI = &dummyEsService{returnsError: false}
-	writerService := newESWriter(&dummyEsService, []string{"organisations"})
+	writerService := newESWriter(dummyEsService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/bulk/{concept-type}/{id}", writerService.loadBulkData).Methods("PUT")
@@ -248,7 +248,7 @@ func TestLoadBulkDataBadRequest(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	var dummyEsService esServiceI = &dummyEsService{returnsError: false}
-	writerService := newESWriter(&dummyEsService, []string{"organisations"})
+	writerService := newESWriter(dummyEsService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/bulk/{concept-type}/{id}", writerService.loadBulkData).Methods("PUT")
@@ -274,7 +274,7 @@ func TestLoadBulkDataAccepted(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	var dummyEsService esServiceI = &dummyEsService{returnsError: false}
-	writerService := newESWriter(&dummyEsService, []string{"organisations"})
+	writerService := newESWriter(dummyEsService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/bulk/{concept-type}/{id}", writerService.loadBulkData).Methods("PUT")
@@ -310,7 +310,7 @@ func TestReadData(t *testing.T) {
 
 	var rawmsg json.RawMessage = json.RawMessage(rawModel)
 	var dummyEsService esServiceI = &dummyEsService{returnsError: false, found: true, source: &rawmsg}
-	writerService := newESWriter(&dummyEsService, []string{"genres"})
+	writerService := newESWriter(dummyEsService, []string{"genres"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.readData).Methods("GET")
@@ -346,7 +346,7 @@ func TestReadDataNotFound(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	var dummyEsService esServiceI = &dummyEsService{returnsError: false, found: false}
-	writerService := newESWriter(&dummyEsService, []string{"organisations"})
+	writerService := newESWriter(dummyEsService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.readData).Methods("GET")
@@ -370,7 +370,7 @@ func TestReadDataEsServerError(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	var dummyEsService esServiceI = &dummyEsService{returnsError: true}
-	writerService := newESWriter(&dummyEsService, []string{"organisations"})
+	writerService := newESWriter(dummyEsService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.readData).Methods("GET")
@@ -395,7 +395,7 @@ func TestDeleteData(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	var dummyEsService esServiceI = &dummyEsService{returnsError: false, found: true}
-	writerService := newESWriter(&dummyEsService, []string{"organisations"})
+	writerService := newESWriter(dummyEsService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.deleteData).Methods("DELETE")
@@ -420,7 +420,7 @@ func TestDeleteDataNotFound(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	var dummyEsService esServiceI = &dummyEsService{returnsError: false, found: false}
-	writerService := newESWriter(&dummyEsService, []string{"organisations"})
+	writerService := newESWriter(dummyEsService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.deleteData).Methods("DELETE")
@@ -445,7 +445,7 @@ func TestDeleteDataEsServerError(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	var dummyEsService esServiceI = &dummyEsService{returnsError: true}
-	writerService := newESWriter(&dummyEsService, []string{"organisations"})
+	writerService := newESWriter(dummyEsService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.deleteData).Methods("DELETE")

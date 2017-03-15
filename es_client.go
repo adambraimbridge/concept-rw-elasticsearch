@@ -1,9 +1,11 @@
 package main
 
 import (
+	"net/http"
+
+	log "github.com/Sirupsen/logrus"
 	awsauth "github.com/smartystreets/go-aws-auth"
 	"gopkg.in/olivere/elastic.v3"
-	"net/http"
 )
 
 type esAccessConfig struct {
@@ -33,6 +35,7 @@ func newAmazonClient(config esAccessConfig) (*elastic.Client, error) {
 	}
 	signingClient := &http.Client{Transport: http.RoundTripper(signingTransport)}
 
+	log.Infof("connecting with AWSSigningTransport to %s", config.esEndpoint)
 	return elastic.NewClient(
 		elastic.SetURL(config.esEndpoint),
 		elastic.SetScheme("https"),
@@ -42,6 +45,7 @@ func newAmazonClient(config esAccessConfig) (*elastic.Client, error) {
 }
 
 func newSimpleClient(config esAccessConfig) (*elastic.Client, error) {
+	log.Infof("connecting with default transport to %s", config.esEndpoint)
 	return elastic.NewClient(
 		elastic.SetURL(config.esEndpoint),
 		elastic.SetSniff(false),

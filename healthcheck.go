@@ -11,10 +11,10 @@ import (
 )
 
 type healthService struct {
-	esHealthService *esHealthServiceI
+	esHealthService esHealthServiceI
 }
 
-func newHealthService(esHealthService *esHealthServiceI) *healthService {
+func newHealthService(esHealthService esHealthServiceI) *healthService {
 	return &healthService{esHealthService: esHealthService}
 }
 
@@ -30,7 +30,7 @@ func (service *healthService) clusterIsHealthyCheck() v1a.Check {
 }
 
 func (service *healthService) healthChecker() (string, error) {
-	output, err := (*service.esHealthService).getClusterHealth()
+	output, err := service.esHealthService.getClusterHealth()
 	if err != nil {
 		return "Cluster is not healthy: ", err
 	} else if output.Status != "green" {
@@ -53,7 +53,7 @@ func (service *healthService) connectivityHealthyCheck() v1a.Check {
 
 func (service *healthService) connectivityChecker() (string, error) {
 
-	_, err := (*service.esHealthService).getClusterHealth()
+	_, err := service.esHealthService.getClusterHealth()
 	if err != nil {
 		return "Could not connect to elasticsearch", err
 	}
@@ -73,7 +73,7 @@ func (service *healthService) HealthDetails(writer http.ResponseWriter, req *htt
 
 	writer.Header().Set("Content-Type", "application/json")
 
-	output, err := (*service.esHealthService).getClusterHealth()
+	output, err := service.esHealthService.getClusterHealth()
 	if err != nil {
 		writer.WriteHeader(http.StatusInternalServerError)
 		return

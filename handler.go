@@ -8,11 +8,11 @@ import (
 )
 
 type conceptWriter struct {
-	elasticService      *esServiceI
+	elasticService      esServiceI
 	allowedConceptTypes map[string]bool
 }
 
-func newESWriter(elasticService *esServiceI, allowedConceptTypes []string) (service *conceptWriter) {
+func newESWriter(elasticService esServiceI, allowedConceptTypes []string) (service *conceptWriter) {
 
 	allowedTypes := make(map[string]bool)
 	for _, v := range allowedConceptTypes {
@@ -48,7 +48,7 @@ func (service *conceptWriter) loadData(writer http.ResponseWriter, request *http
 
 	payload := convertToESConceptModel(concept, conceptType)
 
-	_, err = (*service.elasticService).loadData(conceptType, uuid, payload)
+	_, err = service.elasticService.loadData(conceptType, uuid, payload)
 	if err != nil {
 		log.Errorf(err.Error())
 		writer.WriteHeader(http.StatusInternalServerError)
@@ -82,7 +82,7 @@ func (service *conceptWriter) loadBulkData(writer http.ResponseWriter, request *
 	}
 
 	payload := convertToESConceptModel(concept, conceptType)
-	(*service.elasticService).loadBulkData(conceptType, uuid, payload)
+	service.elasticService.loadBulkData(conceptType, uuid, payload)
 	writer.WriteHeader(http.StatusOK)
 }
 
@@ -91,7 +91,7 @@ func (service *conceptWriter) readData(writer http.ResponseWriter, request *http
 	uuid := mux.Vars(request)["id"]
 	conceptType := mux.Vars(request)["concept-type"]
 
-	getResult, err := (*service.elasticService).readData(conceptType, uuid)
+	getResult, err := service.elasticService.readData(conceptType, uuid)
 
 	if err != nil {
 		log.Errorf(err.Error())
@@ -115,7 +115,7 @@ func (service *conceptWriter) deleteData(writer http.ResponseWriter, request *ht
 	uuid := mux.Vars(request)["id"]
 	conceptType := mux.Vars(request)["concept-type"]
 
-	res, err := (*service.elasticService).deleteData(conceptType, uuid)
+	res, err := service.elasticService.deleteData(conceptType, uuid)
 
 	if err != nil {
 		log.Errorf(err.Error())
