@@ -6,6 +6,10 @@ import (
 	"gopkg.in/olivere/elastic.v3"
 )
 
+var (
+	ErrNoElasticClient error = errors.New("No ElasticSearch client available")
+)
+
 type esService struct {
 	elasticClient *elastic.Client
 	bulkProcessor *elastic.BulkProcessor
@@ -29,14 +33,18 @@ func newEsService(client *elastic.Client, indexName string, bulkProcessor *elast
 }
 
 func (esService *esService) getClusterHealth() (*elastic.ClusterHealthResponse, error) {
-	if esService.elasticClient == nil {
-		return nil, errors.New("Client could not be created, please check the application parameters/env variables, and restart the service.")
+	if err := esService.checkElasticClient(); err != nil {
+		return nil, err
 	}
 
 	return esService.elasticClient.ClusterHealth().Do()
 }
 
 func (service *esService) loadData(conceptType string, uuid string, payload interface{}) (*elastic.IndexResponse, error) {
+	if err := service.checkElasticClient(); err != nil {
+		return nil, err
+	}
+
 	return service.elasticClient.Index().
 		Index(service.indexName).
 		Type(conceptType).
@@ -45,7 +53,19 @@ func (service *esService) loadData(conceptType string, uuid string, payload inte
 		Do()
 }
 
+func (service *esService) checkElasticClient() error {
+	if service.elasticClient == nil {
+		return ErrNoElasticClient
+	}
+
+	return nil
+}
+
 func (service *esService) readData(conceptType string, uuid string) (*elastic.GetResult, error) {
+	if err := service.checkElasticClient(); err != nil {
+		return nil, err
+	}
+
 	resp, err := service.elasticClient.Get().
 		Index(service.indexName).
 		Type(conceptType).
@@ -61,6 +81,10 @@ func (service *esService) readData(conceptType string, uuid string) (*elastic.Ge
 }
 
 func (service *esService) deleteData(conceptType string, uuid string) (*elastic.DeleteResponse, error) {
+	if err := service.checkElasticClient(); err != nil {
+		return nil, err
+	}
+
 	resp, err := service.elasticClient.Delete().
 		Index(service.indexName).
 		Type(conceptType).

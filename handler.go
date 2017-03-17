@@ -95,7 +95,13 @@ func (service *conceptWriter) readData(writer http.ResponseWriter, request *http
 
 	if err != nil {
 		log.Errorf(err.Error())
-		writer.WriteHeader(http.StatusInternalServerError)
+
+		if err == ErrNoElasticClient {
+			writer.WriteHeader(http.StatusServiceUnavailable)
+		} else {
+			writer.WriteHeader(http.StatusInternalServerError)
+		}
+
 		return
 	}
 
