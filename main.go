@@ -8,6 +8,7 @@ import (
 
 	"github.com/Financial-Times/go-fthealth/v1a"
 	"github.com/Financial-Times/http-handlers-go/httphandlers"
+	status "github.com/Financial-Times/service-status-go/httphandlers"
 	log "github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
 	"github.com/jawher/mow.cli"
@@ -154,7 +155,8 @@ func routeRequests(port *string, conceptWriter *conceptWriter, healthService *he
 
 	http.HandleFunc("/__health", v1a.Handler("Amazon Elasticsearch Service Healthcheck", "Checks for AES", healthService.connectivityHealthyCheck(), healthService.clusterIsHealthyCheck()))
 	http.HandleFunc("/__health-details", healthService.HealthDetails)
-	http.HandleFunc("/__gtg", healthService.GoodToGo)
+	http.HandleFunc(status.GTGPath, healthService.GoodToGo)
+	http.HandleFunc(status.BuildInfoPath, status.BuildInfoHandler)
 
 	http.Handle("/", monitoringRouter)
 
