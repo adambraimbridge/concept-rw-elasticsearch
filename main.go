@@ -1,6 +1,11 @@
 package main
 
 import (
+	"net/http"
+	"os"
+	"strings"
+	"time"
+
 	"github.com/Financial-Times/go-fthealth/v1a"
 	"github.com/Financial-Times/http-handlers-go/httphandlers"
 	log "github.com/Sirupsen/logrus"
@@ -8,10 +13,6 @@ import (
 	"github.com/jawher/mow.cli"
 	"github.com/rcrowley/go-metrics"
 	"gopkg.in/olivere/elastic.v3"
-	"net/http"
-	"os"
-	"strings"
-	"time"
 )
 
 func main() {
@@ -92,35 +93,37 @@ func main() {
 		esEndpoint: *esEndpoint,
 	}
 
-	bulkProcessorConfig := bulkProcessorConfig{
-		nrWorkers:     *nrOfElasticsearchWorkers,
-		nrOfRequests:  *nrOfElasticsearchRequests,
-		bulkSize:      *elasticsearchBulkSize,
-		flushInterval: time.Duration(*elasticsearchFlushInterval) * time.Second,
-	}
-
 	log.SetLevel(log.InfoLevel)
 	log.Infof("[Startup] The writer handles the following concept types: %v\n", *elasticsearchWhitelistedConceptTypes)
 
+	// It seems that once we have a connection, we can lose and reconnect to Elastic OK
+	// so just keep going until successful
 	app.Action = func() {
-		var elasticClient *elastic.Client
-		var err error
-		if *esRegion == "local" {
-			elasticClient, err = newSimpleClient(accessConfig)
-		} else {
-			elasticClient, err = newAmazonClient(accessConfig)
-		}
-		if err != nil {
-			log.Fatalf("Creating elasticsearch client failed with error=[%v]\n", err)
-		}
-
-		bulkProcessor, err := newBulkProcessor(elasticClient, &bulkProcessorConfig)
-		if err != nil {
-			log.Fatalf("Creating bulk processor failed with error=[%v]\n", err)
-		}
+		ecc := make(chan *elastic.Client)
+		go func() {
+			defer close(ecc)
+			for {
+				ec, err := newElasticClient(*esRegion, accessConfig)
+				if err == nil {
+					log.Infof("connected to ElasticSearch")
+					ecc <- ec
+					return
+				} else {
+					log.Errorf("could not connect to ElasticSearch: %s", err.Error())
+					time.Sleep(time.Minute)
+				}
+			}
+		}()
 
 		//create writer service
-		esService := newEsService(elasticClient, *indexName, bulkProcessor)
+		bulkProcessorConfig := &bulkProcessorConfig{
+			nrWorkers:     *nrOfElasticsearchWorkers,
+			nrOfRequests:  *nrOfElasticsearchRequests,
+			bulkSize:      *elasticsearchBulkSize,
+			flushInterval: time.Duration(*elasticsearchFlushInterval) * time.Second,
+		}
+
+		esService := newEsService(ecc, *indexName, bulkProcessorConfig)
 		var allowedConceptTypes []string = strings.Split(*elasticsearchWhitelistedConceptTypes, ",")
 		conceptWriter := newESWriter(esService, allowedConceptTypes)
 		defer conceptWriter.elasticService.closeBulkProcessor()

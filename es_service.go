@@ -2,7 +2,9 @@ package main
 
 import (
 	"errors"
+	"sync"
 
+	log "github.com/Sirupsen/logrus"
 	"gopkg.in/olivere/elastic.v3"
 )
 
@@ -11,9 +13,11 @@ var (
 )
 
 type esService struct {
-	elasticClient *elastic.Client
-	bulkProcessor *elastic.BulkProcessor
-	indexName     string
+	sync.RWMutex
+	elasticClient       *elastic.Client
+	bulkProcessor       *elastic.BulkProcessor
+	indexName           string
+	bulkProcessorConfig *bulkProcessorConfig
 }
 
 type esServiceI interface {
@@ -28,46 +32,77 @@ type esHealthServiceI interface {
 	getClusterHealth() (*elastic.ClusterHealthResponse, error)
 }
 
-func newEsService(client *elastic.Client, indexName string, bulkProcessor *elastic.BulkProcessor) *esService {
-	return &esService{elasticClient: client, bulkProcessor: bulkProcessor, indexName: indexName}
+func newEsService(ch chan *elastic.Client, indexName string, bulkProcessorConfig *bulkProcessorConfig) *esService {
+	es := &esService{bulkProcessorConfig: bulkProcessorConfig, indexName: indexName}
+	go func() {
+		for ec := range ch {
+			es.setElasticClient(ec)
+		}
+	}()
+	return es
 }
 
-func (esService *esService) getClusterHealth() (*elastic.ClusterHealthResponse, error) {
-	if err := esService.checkElasticClient(); err != nil {
+func (es *esService) setElasticClient(ec *elastic.Client) {
+	es.Lock()
+	defer es.Unlock()
+
+	es.elasticClient = ec
+
+	if es.bulkProcessor != nil {
+		es.closeBulkProcessor()
+	}
+
+	if es.bulkProcessorConfig != nil {
+		bulkProcessor, err := newBulkProcessor(ec, es.bulkProcessorConfig)
+		if err != nil {
+			log.Errorf("Creating bulk processor failed with error=[%v]", err)
+		}
+		es.bulkProcessor = bulkProcessor
+	}
+}
+
+func (es *esService) getClusterHealth() (*elastic.ClusterHealthResponse, error) {
+	es.RLock()
+	defer es.RUnlock()
+
+	if err := es.checkElasticClient(); err != nil {
 		return nil, err
 	}
 
-	return esService.elasticClient.ClusterHealth().Do()
+	return es.elasticClient.ClusterHealth().Do()
 }
 
-func (service *esService) loadData(conceptType string, uuid string, payload interface{}) (*elastic.IndexResponse, error) {
-	if err := service.checkElasticClient(); err != nil {
+func (es *esService) loadData(conceptType string, uuid string, payload interface{}) (*elastic.IndexResponse, error) {
+	if err := es.checkElasticClient(); err != nil {
 		return nil, err
 	}
 
-	return service.elasticClient.Index().
-		Index(service.indexName).
+	return es.elasticClient.Index().
+		Index(es.indexName).
 		Type(conceptType).
 		Id(uuid).
 		BodyJson(payload).
 		Do()
 }
 
-func (service *esService) checkElasticClient() error {
-	if service.elasticClient == nil {
+func (es *esService) checkElasticClient() error {
+	if es.elasticClient == nil {
 		return ErrNoElasticClient
 	}
 
 	return nil
 }
 
-func (service *esService) readData(conceptType string, uuid string) (*elastic.GetResult, error) {
-	if err := service.checkElasticClient(); err != nil {
+func (es *esService) readData(conceptType string, uuid string) (*elastic.GetResult, error) {
+	es.RLock()
+	defer es.RUnlock()
+
+	if err := es.checkElasticClient(); err != nil {
 		return nil, err
 	}
 
-	resp, err := service.elasticClient.Get().
-		Index(service.indexName).
+	resp, err := es.elasticClient.Get().
+		Index(es.indexName).
 		Type(conceptType).
 		Id(uuid).
 		IgnoreErrorsOnGeneratedFields(false).
@@ -80,13 +115,13 @@ func (service *esService) readData(conceptType string, uuid string) (*elastic.Ge
 	}
 }
 
-func (service *esService) deleteData(conceptType string, uuid string) (*elastic.DeleteResponse, error) {
-	if err := service.checkElasticClient(); err != nil {
+func (es *esService) deleteData(conceptType string, uuid string) (*elastic.DeleteResponse, error) {
+	if err := es.checkElasticClient(); err != nil {
 		return nil, err
 	}
 
-	resp, err := service.elasticClient.Delete().
-		Index(service.indexName).
+	resp, err := es.elasticClient.Delete().
+		Index(es.indexName).
 		Type(conceptType).
 		Id(uuid).
 		Do()
@@ -98,11 +133,11 @@ func (service *esService) deleteData(conceptType string, uuid string) (*elastic.
 	}
 }
 
-func (service *esService) loadBulkData(conceptType string, uuid string, payload interface{}) {
-	r := elastic.NewBulkIndexRequest().Index(service.indexName).Type(conceptType).Id(uuid).Doc(payload)
-	service.bulkProcessor.Add(r)
+func (es *esService) loadBulkData(conceptType string, uuid string, payload interface{}) {
+	r := elastic.NewBulkIndexRequest().Index(es.indexName).Type(conceptType).Id(uuid).Doc(payload)
+	es.bulkProcessor.Add(r)
 }
 
-func (service *esService) closeBulkProcessor() error {
-	return service.bulkProcessor.Close()
+func (es *esService) closeBulkProcessor() error {
+	return es.bulkProcessor.Close()
 }

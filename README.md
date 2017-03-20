@@ -23,6 +23,13 @@ cd $GOPATH/src/github.com/Financial-Times/concept-rw-elasticsearch
 govendor sync
 go build
 ```
+## How to test
+
+```
+go test -race ./...
+```
+
+Either set the environment variable `ELASTICSEARCH_TEST_URL` to the URL of an ElasticSearch instance, or run with `-short` to skip integration tests.
 
 ## How to run
 

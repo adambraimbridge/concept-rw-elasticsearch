@@ -51,3 +51,11 @@ func newSimpleClient(config esAccessConfig) (*elastic.Client, error) {
 		elastic.SetSniff(false),
 	)
 }
+
+func newElasticClient(region string, config esAccessConfig) (*elastic.Client, error) {
+	if region == "local" {
+		return newSimpleClient(config)
+	} else {
+		return newAmazonClient(config)
+	}
+}
