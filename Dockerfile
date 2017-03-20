@@ -10,6 +10,8 @@ RUN apk add --update bash \
   && mv concept-rw-elasticsearch/* $GOPATH/src/${REPO_PATH} \
   && rm -r concept-rw-elasticsearch \
   && cd $GOPATH/src/${REPO_PATH} \
+  && go get -u github.com/kardianos/govendor \
+  && $GOPATH/bin/govendor sync \
   && go get -t ./... \
   && go build \
   && mv concept-rw-elasticsearch /concept-rw-elasticsearch \
