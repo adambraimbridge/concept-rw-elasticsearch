@@ -6,7 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Financial-Times/go-fthealth/v1a"
+	"github.com/Financial-Times/concept-rw-elasticsearch/health"
+	"github.com/Financial-Times/concept-rw-elasticsearch/resources"
+	"github.com/Financial-Times/concept-rw-elasticsearch/service"
+	fthealth "github.com/Financial-Times/go-fthealth/v1a"
 	"github.com/Financial-Times/http-handlers-go/httphandlers"
 	status "github.com/Financial-Times/service-status-go/httphandlers"
 	log "github.com/Sirupsen/logrus"
@@ -88,11 +91,7 @@ func main() {
 		EnvVar: "ELASTICSEARCH_WHITELISTED_CONCEPTS",
 	})
 
-	accessConfig := esAccessConfig{
-		accessKey:  *accessKey,
-		secretKey:  *secretKey,
-		esEndpoint: *esEndpoint,
-	}
+	accessConfig := service.NewAccessConfig(*accessKey, *secretKey, *esEndpoint)
 
 	log.SetLevel(log.InfoLevel)
 	log.Infof("[Startup] The writer handles the following concept types: %v\n", *elasticsearchWhitelistedConceptTypes)
@@ -104,7 +103,7 @@ func main() {
 		go func() {
 			defer close(ecc)
 			for {
-				ec, err := newElasticClient(*esRegion, accessConfig)
+				ec, err := service.NewElasticClient(*esRegion, accessConfig)
 				if err == nil {
 					log.Infof("connected to ElasticSearch")
 					ecc <- ec
@@ -117,22 +116,17 @@ func main() {
 		}()
 
 		//create writer service
-		bulkProcessorConfig := &bulkProcessorConfig{
-			nrWorkers:     *nrOfElasticsearchWorkers,
-			nrOfRequests:  *nrOfElasticsearchRequests,
-			bulkSize:      *elasticsearchBulkSize,
-			flushInterval: time.Duration(*elasticsearchFlushInterval) * time.Second,
-		}
+		bulkProcessorConfig := service.NewBulkProcessorConfig(*nrOfElasticsearchWorkers, *nrOfElasticsearchRequests, *elasticsearchBulkSize, time.Duration(*elasticsearchFlushInterval)*time.Second)
 
-		esService := newEsService(ecc, *indexName, bulkProcessorConfig)
+		esService := service.NewEsService(ecc, *indexName, &bulkProcessorConfig)
 		var allowedConceptTypes []string = strings.Split(*elasticsearchWhitelistedConceptTypes, ",")
-		conceptWriter := newESWriter(esService, allowedConceptTypes)
-		defer conceptWriter.elasticService.closeBulkProcessor()
+		handler := resources.NewHandler(esService, allowedConceptTypes)
+		defer handler.Close()
 
 		//create health service
-		healthService := newHealthService(esService)
+		healthService := health.NewHealthService(esService)
 
-		routeRequests(port, conceptWriter, healthService)
+		routeRequests(port, handler, healthService)
 	}
 
 	err := app.Run(os.Args)
@@ -142,18 +136,18 @@ func main() {
 	}
 }
 
-func routeRequests(port *string, conceptWriter *conceptWriter, healthService *healthService) {
+func routeRequests(port *string, handler *resources.Handler, healthService *health.HealthService) {
 	servicesRouter := mux.NewRouter()
-	servicesRouter.HandleFunc("/bulk/{concept-type}/{id}", conceptWriter.loadBulkData).Methods("PUT")
-	servicesRouter.HandleFunc("/{concept-type}/{id}", conceptWriter.loadData).Methods("PUT")
-	servicesRouter.HandleFunc("/{concept-type}/{id}", conceptWriter.readData).Methods("GET")
-	servicesRouter.HandleFunc("/{concept-type}/{id}", conceptWriter.deleteData).Methods("DELETE")
+	servicesRouter.HandleFunc("/bulk/{concept-type}/{id}", handler.LoadBulkData).Methods("PUT")
+	servicesRouter.HandleFunc("/{concept-type}/{id}", handler.LoadData).Methods("PUT")
+	servicesRouter.HandleFunc("/{concept-type}/{id}", handler.ReadData).Methods("GET")
+	servicesRouter.HandleFunc("/{concept-type}/{id}", handler.DeleteData).Methods("DELETE")
 
 	var monitoringRouter http.Handler = servicesRouter
 	monitoringRouter = httphandlers.TransactionAwareRequestLoggingHandler(log.StandardLogger(), monitoringRouter)
 	monitoringRouter = httphandlers.HTTPMetricsHandler(metrics.DefaultRegistry, monitoringRouter)
 
-	http.HandleFunc("/__health", v1a.Handler("Amazon Elasticsearch Service Healthcheck", "Checks for AES", healthService.connectivityHealthyCheck(), healthService.clusterIsHealthyCheck()))
+	http.HandleFunc("/__health", fthealth.Handler("Amazon Elasticsearch Service Healthcheck", "Checks for AES", healthService.ConnectivityHealthyCheck(), healthService.ClusterIsHealthyCheck()))
 	http.HandleFunc("/__health-details", healthService.HealthDetails)
 	http.HandleFunc(status.GTGPath, healthService.GoodToGo)
 	http.HandleFunc(status.BuildInfoPath, status.BuildInfoHandler)

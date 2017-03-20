@@ -1,15 +1,15 @@
-package main
+package service
 
 import "github.com/Financial-Times/neo-model-utils-go/mapper"
 
-type conceptModel struct {
+type ConceptModel struct {
 	UUID       string   `json:"uuid"`
 	DirectType string   `json:"type"`
 	PrefLabel  string   `json:"prefLabel"`
 	Aliases    []string `json:"aliases,omitempty"`
 }
 
-type esConceptModel struct {
+type EsConceptModel struct {
 	Id         string   `json:"id"`
 	ApiUrl     string   `json:"apiUrl"`
 	PrefLabel  string   `json:"prefLabel"`
@@ -18,8 +18,8 @@ type esConceptModel struct {
 	Aliases    []string `json:"aliases,omitempty"`
 }
 
-func convertToESConceptModel(concept conceptModel, conceptType string) esConceptModel {
-	esModel := esConceptModel{}
+func ConvertToESConceptModel(concept ConceptModel, conceptType string) EsConceptModel {
+	esModel := EsConceptModel{}
 	esModel.ApiUrl = mapper.APIURL(concept.UUID, []string{concept.DirectType}, "")
 	esModel.Id = mapper.IDURL(concept.UUID)
 	esModel.Types = mapper.TypeURIs(getTypes(concept.DirectType))

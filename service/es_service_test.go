@@ -1,4 +1,4 @@
-package main
+package service
 
 import (
 	"encoding/json"
@@ -15,7 +15,7 @@ import (
 func TestNoElasticClient(t *testing.T) {
 	service := esService{sync.RWMutex{}, nil, nil, "test", nil}
 
-	_, err := service.readData("any", "any")
+	_, err := service.ReadData("any", "any")
 
 	assert.Equal(t, ErrNoElasticClient, err, "error response")
 }
@@ -44,7 +44,7 @@ func TestRead(t *testing.T) {
 
 	service := esService{sync.RWMutex{}, ec, nil, "concept", nil}
 
-	resp, err := service.readData("organisations", "2384fa7a-d514-3d6a-a0ea-3a711f66d0d8")
+	resp, err := service.ReadData("organisations", "2384fa7a-d514-3d6a-a0ea-3a711f66d0d8")
 
 	assert.NoError(t, err, "expected no error for ES read")
 	assert.True(t, resp.Found, "should find a result")
@@ -60,7 +60,7 @@ func TestPassClientThroughChannel(t *testing.T) {
 	ecc := make(chan *elastic.Client)
 	defer close(ecc)
 
-	service := newEsService(ecc, "concept", nil)
+	service := NewEsService(ecc, "concept", nil)
 
 	ec, err := elastic.NewClient(
 		elastic.SetURL(esURL),
@@ -72,7 +72,7 @@ func TestPassClientThroughChannel(t *testing.T) {
 
 	waitForClientInjection(service)
 
-	resp, err := service.readData("organisations", "2384fa7a-d514-3d6a-a0ea-3a711f66d0d8")
+	resp, err := service.ReadData("organisations", "2384fa7a-d514-3d6a-a0ea-3a711f66d0d8")
 
 	assert.NoError(t, err, "expected no error for ES read")
 	assert.True(t, resp.Found, "should find a result")
@@ -85,7 +85,7 @@ func TestPassClientThroughChannel(t *testing.T) {
 
 func waitForClientInjection(service *esService) {
 	for i := 0; i < 10; i++ {
-		_, err := service.getClusterHealth()
+		_, err := service.GetClusterHealth()
 		if err == nil {
 			break
 		}

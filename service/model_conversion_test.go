@@ -1,4 +1,4 @@
-package main
+package service
 
 import (
 	"fmt"
@@ -10,11 +10,11 @@ func TestConvertToESConceptModel(t *testing.T) {
 	assert := assert.New(t)
 
 	tests := []struct {
-		conceptModel   conceptModel
-		esConceptModel esConceptModel
+		conceptModel   ConceptModel
+		esConceptModel EsConceptModel
 	}{
 		{
-			conceptModel{
+			ConceptModel{
 				UUID:       "2384fa7a-d514-3d6a-a0ea-3a711f66d0d8",
 				DirectType: "PublicCompany",
 				PrefLabel:  "Apple, Inc.",
@@ -29,7 +29,7 @@ func TestConvertToESConceptModel(t *testing.T) {
 					"Apple Inc.",
 					"Apple, Inc."},
 			},
-			esConceptModel{
+			EsConceptModel{
 				Id:        "http://api.ft.com/things/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8",
 				ApiUrl:    "http://api.ft.com/organisations/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8",
 				PrefLabel: "Apple, Inc.",
@@ -57,13 +57,13 @@ func TestConvertToESConceptModel(t *testing.T) {
 			},
 		},
 		{
-			conceptModel{
+			ConceptModel{
 				UUID:       "2384fa7a-d514-3d6a-a0ea-3a711f66d0d8",
 				DirectType: "PublicCompany",
 				PrefLabel:  "Apple, Inc.",
 				Aliases:    []string{},
 			},
-			esConceptModel{
+			EsConceptModel{
 				Id:        "http://api.ft.com/things/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8",
 				ApiUrl:    "http://api.ft.com/organisations/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8",
 				PrefLabel: "Apple, Inc.",
@@ -81,7 +81,7 @@ func TestConvertToESConceptModel(t *testing.T) {
 	}
 
 	for _, testModel := range tests {
-		esModel := convertToESConceptModel(testModel.conceptModel, "organisations")
+		esModel := ConvertToESConceptModel(testModel.conceptModel, "organisations")
 		assert.Equal(testModel.esConceptModel.Id, esModel.Id, fmt.Sprintf("Expected Id %s differs from actual id %s ", testModel.esConceptModel.Id, esModel.Id))
 		assert.Equal(testModel.esConceptModel.ApiUrl, esModel.ApiUrl, fmt.Sprintf("Expected ApiUrl %s differs from actual ApiUrl %s ", testModel.esConceptModel.ApiUrl, esModel.ApiUrl))
 		assert.Equal(testModel.esConceptModel.DirectType, esModel.DirectType, fmt.Sprintf("Expected DirectType %s differs from actual DirectType %s ", testModel.esConceptModel.DirectType, esModel.DirectType))

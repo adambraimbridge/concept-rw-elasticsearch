@@ -1,4 +1,4 @@
-package main
+package service
 
 import (
 	"errors"
@@ -17,22 +17,22 @@ type esService struct {
 	elasticClient       *elastic.Client
 	bulkProcessor       *elastic.BulkProcessor
 	indexName           string
-	bulkProcessorConfig *bulkProcessorConfig
+	bulkProcessorConfig *BulkProcessorConfig
 }
 
-type esServiceI interface {
-	loadData(conceptType string, uuid string, payload interface{}) (*elastic.IndexResponse, error)
-	readData(conceptType string, uuid string) (*elastic.GetResult, error)
-	deleteData(conceptType string, uuid string) (*elastic.DeleteResponse, error)
-	loadBulkData(conceptType string, uuid string, payload interface{})
-	closeBulkProcessor() error
+type EsServiceI interface {
+	LoadData(conceptType string, uuid string, payload interface{}) (*elastic.IndexResponse, error)
+	ReadData(conceptType string, uuid string) (*elastic.GetResult, error)
+	DeleteData(conceptType string, uuid string) (*elastic.DeleteResponse, error)
+	LoadBulkData(conceptType string, uuid string, payload interface{})
+	CloseBulkProcessor() error
 }
 
-type esHealthServiceI interface {
-	getClusterHealth() (*elastic.ClusterHealthResponse, error)
+type EsHealthServiceI interface {
+	GetClusterHealth() (*elastic.ClusterHealthResponse, error)
 }
 
-func newEsService(ch chan *elastic.Client, indexName string, bulkProcessorConfig *bulkProcessorConfig) *esService {
+func NewEsService(ch chan *elastic.Client, indexName string, bulkProcessorConfig *BulkProcessorConfig) *esService {
 	es := &esService{bulkProcessorConfig: bulkProcessorConfig, indexName: indexName}
 	go func() {
 		for ec := range ch {
@@ -49,7 +49,7 @@ func (es *esService) setElasticClient(ec *elastic.Client) {
 	es.elasticClient = ec
 
 	if es.bulkProcessor != nil {
-		es.closeBulkProcessor()
+		es.CloseBulkProcessor()
 	}
 
 	if es.bulkProcessorConfig != nil {
@@ -61,7 +61,7 @@ func (es *esService) setElasticClient(ec *elastic.Client) {
 	}
 }
 
-func (es *esService) getClusterHealth() (*elastic.ClusterHealthResponse, error) {
+func (es *esService) GetClusterHealth() (*elastic.ClusterHealthResponse, error) {
 	es.RLock()
 	defer es.RUnlock()
 
@@ -72,7 +72,7 @@ func (es *esService) getClusterHealth() (*elastic.ClusterHealthResponse, error) 
 	return es.elasticClient.ClusterHealth().Do()
 }
 
-func (es *esService) loadData(conceptType string, uuid string, payload interface{}) (*elastic.IndexResponse, error) {
+func (es *esService) LoadData(conceptType string, uuid string, payload interface{}) (*elastic.IndexResponse, error) {
 	if err := es.checkElasticClient(); err != nil {
 		return nil, err
 	}
@@ -93,7 +93,7 @@ func (es *esService) checkElasticClient() error {
 	return nil
 }
 
-func (es *esService) readData(conceptType string, uuid string) (*elastic.GetResult, error) {
+func (es *esService) ReadData(conceptType string, uuid string) (*elastic.GetResult, error) {
 	es.RLock()
 	defer es.RUnlock()
 
@@ -115,7 +115,7 @@ func (es *esService) readData(conceptType string, uuid string) (*elastic.GetResu
 	}
 }
 
-func (es *esService) deleteData(conceptType string, uuid string) (*elastic.DeleteResponse, error) {
+func (es *esService) DeleteData(conceptType string, uuid string) (*elastic.DeleteResponse, error) {
 	if err := es.checkElasticClient(); err != nil {
 		return nil, err
 	}
@@ -133,11 +133,11 @@ func (es *esService) deleteData(conceptType string, uuid string) (*elastic.Delet
 	}
 }
 
-func (es *esService) loadBulkData(conceptType string, uuid string, payload interface{}) {
+func (es *esService) LoadBulkData(conceptType string, uuid string, payload interface{}) {
 	r := elastic.NewBulkIndexRequest().Index(es.indexName).Type(conceptType).Id(uuid).Doc(payload)
 	es.bulkProcessor.Add(r)
 }
 
-func (es *esService) closeBulkProcessor() error {
+func (es *esService) CloseBulkProcessor() error {
 	return es.bulkProcessor.Close()
 }

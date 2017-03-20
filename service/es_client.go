@@ -1,4 +1,4 @@
-package main
+package service
 
 import (
 	"net/http"
@@ -8,10 +8,14 @@ import (
 	"gopkg.in/olivere/elastic.v3"
 )
 
-type esAccessConfig struct {
+type EsAccessConfig struct {
 	accessKey  string
 	secretKey  string
 	esEndpoint string
+}
+
+func NewAccessConfig(accessKey string, secretKey string, endpoint string) EsAccessConfig {
+	return EsAccessConfig{accessKey: accessKey, secretKey: secretKey, esEndpoint: endpoint}
 }
 
 type AWSSigningTransport struct {
@@ -24,7 +28,7 @@ func (a AWSSigningTransport) RoundTrip(req *http.Request) (*http.Response, error
 	return a.HTTPClient.Do(awsauth.Sign4(req, a.Credentials))
 }
 
-func newAmazonClient(config esAccessConfig) (*elastic.Client, error) {
+func newAmazonClient(config EsAccessConfig) (*elastic.Client, error) {
 
 	signingTransport := AWSSigningTransport{
 		Credentials: awsauth.Credentials{
@@ -44,7 +48,7 @@ func newAmazonClient(config esAccessConfig) (*elastic.Client, error) {
 	)
 }
 
-func newSimpleClient(config esAccessConfig) (*elastic.Client, error) {
+func newSimpleClient(config EsAccessConfig) (*elastic.Client, error) {
 	log.Infof("connecting with default transport to %s", config.esEndpoint)
 	return elastic.NewClient(
 		elastic.SetURL(config.esEndpoint),
@@ -52,7 +56,7 @@ func newSimpleClient(config esAccessConfig) (*elastic.Client, error) {
 	)
 }
 
-func newElasticClient(region string, config esAccessConfig) (*elastic.Client, error) {
+func NewElasticClient(region string, config EsAccessConfig) (*elastic.Client, error) {
 	if region == "local" {
 		return newSimpleClient(config)
 	} else {
