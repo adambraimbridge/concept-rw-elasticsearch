@@ -15,7 +15,7 @@ test:
   override:
     - mkdir -p $CIRCLE_TEST_REPORTS/golang
     - go test -short -race -v ./... | go-junit-report > $CIRCLE_TEST_REPORTS/golang/junit.xml
-    - go test -short -v -cover -race -coverprofile=$CIRCLE_ARTIFACTS/$CIRCLE_PROJECT_REPONAME.out .
+    - go test -short -v -cover -race -coverprofile=$CIRCLE_ARTIFACTS/$CIRCLE_PROJECT_REPONAME.out ./...
     - cd $CIRCLE_ARTIFACTS && sed -i '1d' *.out
     - |
       echo "mode: atomic" > $CIRCLE_ARTIFACTS/overall-coverage.result
