@@ -2,14 +2,22 @@ package service
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/olivere/elastic.v3"
+)
+
+const (
+	apiBaseUrl  = "http://test.api.ft.com"
+	indexName   = "concept"
+	conceptType = "organisation"
 )
 
 func TestNoElasticClient(t *testing.T) {
@@ -33,6 +41,41 @@ func getElasticSearchTestURL(t *testing.T) string {
 	return esURL
 }
 
+func writeDocument(es *esService, t string, u string) (EsConceptModel, *elastic.IndexResponse, error) {
+	payload := EsConceptModel{
+		Id:         u,
+		ApiUrl:     fmt.Sprintf("%s/%ss/%s", apiBaseUrl, t, u),
+		PrefLabel:  fmt.Sprintf("Test concept %s %s", t, u),
+		Types:      []string{},
+		DirectType: "",
+		Aliases:    []string{},
+	}
+
+	resp, err := es.LoadData(t+"s", u, payload)
+	return payload, resp, err
+}
+
+func TestWrite(t *testing.T) {
+	esURL := getElasticSearchTestURL(t)
+
+	ec, err := elastic.NewClient(
+		elastic.SetURL(esURL),
+		elastic.SetSniff(false),
+	)
+	assert.NoError(t, err, "expected no error for ES client")
+
+	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
+
+	testUuid := uuid.NewV4().String()
+	_, resp, err := writeDocument(service, conceptType, testUuid)
+	assert.NoError(t, err, "expected successful write")
+
+	assert.Equal(t, true, resp.Created, "document should have been created")
+	assert.Equal(t, indexName, resp.Index, "index name")
+	assert.Equal(t, conceptType+"s", resp.Type, "concept type")
+	assert.Equal(t, testUuid, resp.Id, "document id")
+}
+
 func TestRead(t *testing.T) {
 	esURL := getElasticSearchTestURL(t)
 
@@ -42,16 +85,21 @@ func TestRead(t *testing.T) {
 	)
 	assert.NoError(t, err, "expected no error for ES client")
 
-	service := esService{sync.RWMutex{}, ec, nil, "concept", nil}
+	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
 
-	resp, err := service.ReadData("organisations", "2384fa7a-d514-3d6a-a0ea-3a711f66d0d8")
+	testUuid := uuid.NewV4().String()
+	payload, _, err := writeDocument(service, conceptType, testUuid)
+	assert.NoError(t, err, "expected successful write")
+
+	resp, err := service.ReadData(conceptType+"s", testUuid)
 
 	assert.NoError(t, err, "expected no error for ES read")
 	assert.True(t, resp.Found, "should find a result")
 
 	obj := make(map[string]interface{})
 	err = json.Unmarshal(*resp.Source, &obj)
-	assert.Equal(t, "http://api.ft.com/organisations/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8", obj["apiUrl"], "apiUrl")
+	assert.Equal(t, payload.ApiUrl, obj["apiUrl"], "apiUrl")
+	assert.Equal(t, payload.PrefLabel, obj["prefLabel"], "prefLabel")
 }
 
 func TestPassClientThroughChannel(t *testing.T) {
@@ -60,7 +108,7 @@ func TestPassClientThroughChannel(t *testing.T) {
 	ecc := make(chan *elastic.Client)
 	defer close(ecc)
 
-	service := NewEsService(ecc, "concept", nil)
+	service := NewEsService(ecc, indexName, nil)
 
 	ec, err := elastic.NewClient(
 		elastic.SetURL(esURL),
@@ -72,7 +120,11 @@ func TestPassClientThroughChannel(t *testing.T) {
 
 	waitForClientInjection(service)
 
-	resp, err := service.ReadData("organisations", "2384fa7a-d514-3d6a-a0ea-3a711f66d0d8")
+	testUuid := uuid.NewV4().String()
+	payload, _, err := writeDocument(service, conceptType, testUuid)
+	assert.NoError(t, err, "expected successful write")
+
+	resp, err := service.ReadData(conceptType+"s", testUuid)
 
 	assert.NoError(t, err, "expected no error for ES read")
 	assert.True(t, resp.Found, "should find a result")
@@ -80,7 +132,9 @@ func TestPassClientThroughChannel(t *testing.T) {
 	obj := make(map[string]interface{})
 	err = json.Unmarshal(*resp.Source, &obj)
 
-	assert.Equal(t, "http://api.ft.com/organisations/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8", obj["apiUrl"], "apiUrl")
+	assert.Equal(t, fmt.Sprintf("%s/%ss/%s", apiBaseUrl, conceptType, testUuid), obj["apiUrl"], "apiUrl")
+	assert.Equal(t, payload.ApiUrl, obj["apiUrl"], "apiUrl")
+	assert.Equal(t, payload.PrefLabel, obj["prefLabel"], "prefLabel")
 }
 
 func waitForClientInjection(service *esService) {
