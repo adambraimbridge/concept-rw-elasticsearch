@@ -23,6 +23,25 @@ cd $GOPATH/src/github.com/Financial-Times/concept-rw-elasticsearch
 govendor sync
 go build
 ```
+## How to test
+
+```
+go test -race ./...
+```
+
+Either set the environment variable `ELASTICSEARCH_TEST_URL` to the URL of an ElasticSearch instance, or run with `-short` to skip integration tests.
+
+Writing data to the ElasticSearch instance will create shards. If running a fresh ElasticSearch instance, this may turn the ElasticSearch status YELLOW. To make it GREEN, make a PUT request to `/_settings` with the following JSON:
+
+```
+{
+    "index" : {
+        "number_of_replicas" : 0
+    }
+}
+```
+
+There is no ElasticSearch log message to say that the status is GREEN, but the application's health check will return healthy once this change is made.
 
 ## How to run
 

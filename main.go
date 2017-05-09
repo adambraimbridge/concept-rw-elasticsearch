@@ -1,17 +1,22 @@
 package main
 
 import (
-	"github.com/Financial-Times/go-fthealth/v1a"
+	"net/http"
+	"os"
+	"strings"
+	"time"
+
+	"github.com/Financial-Times/concept-rw-elasticsearch/health"
+	"github.com/Financial-Times/concept-rw-elasticsearch/resources"
+	"github.com/Financial-Times/concept-rw-elasticsearch/service"
+	fthealth "github.com/Financial-Times/go-fthealth/v1a"
 	"github.com/Financial-Times/http-handlers-go/httphandlers"
+	status "github.com/Financial-Times/service-status-go/httphandlers"
 	log "github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
 	"github.com/jawher/mow.cli"
 	"github.com/rcrowley/go-metrics"
 	"gopkg.in/olivere/elastic.v3"
-	"net/http"
-	"os"
-	"strings"
-	"time"
 )
 
 func main() {
@@ -86,50 +91,42 @@ func main() {
 		EnvVar: "ELASTICSEARCH_WHITELISTED_CONCEPTS",
 	})
 
-	accessConfig := esAccessConfig{
-		accessKey:  *accessKey,
-		secretKey:  *secretKey,
-		esEndpoint: *esEndpoint,
-	}
-
-	bulkProcessorConfig := bulkProcessorConfig{
-		nrWorkers:     *nrOfElasticsearchWorkers,
-		nrOfRequests:  *nrOfElasticsearchRequests,
-		bulkSize:      *elasticsearchBulkSize,
-		flushInterval: time.Duration(*elasticsearchFlushInterval) * time.Second,
-	}
+	accessConfig := service.NewAccessConfig(*accessKey, *secretKey, *esEndpoint)
 
 	log.SetLevel(log.InfoLevel)
 	log.Infof("[Startup] The writer handles the following concept types: %v\n", *elasticsearchWhitelistedConceptTypes)
 
+	// It seems that once we have a connection, we can lose and reconnect to Elastic OK
+	// so just keep going until successful
 	app.Action = func() {
-		var elasticClient *elastic.Client
-		var err error
-		if *esRegion == "local" {
-			elasticClient, err = newSimpleClient(accessConfig)
-		} else {
-			elasticClient, err = newAmazonClient(accessConfig)
-		}
-		if err != nil {
-			log.Fatalf("Creating elasticsearch client failed with error=[%v]\n", err)
-		}
-
-		bulkProcessor, err := newBulkProcessor(elasticClient, &bulkProcessorConfig)
-		if err != nil {
-			log.Fatalf("Creating bulk processor failed with error=[%v]\n", err)
-		}
+		ecc := make(chan *elastic.Client)
+		go func() {
+			defer close(ecc)
+			for {
+				ec, err := service.NewElasticClient(*esRegion, accessConfig)
+				if err == nil {
+					log.Infof("connected to ElasticSearch")
+					ecc <- ec
+					return
+				} else {
+					log.Errorf("could not connect to ElasticSearch: %s", err.Error())
+					time.Sleep(time.Minute)
+				}
+			}
+		}()
 
 		//create writer service
-		var esService esServiceI = newEsService(elasticClient, *indexName, bulkProcessor)
+		bulkProcessorConfig := service.NewBulkProcessorConfig(*nrOfElasticsearchWorkers, *nrOfElasticsearchRequests, *elasticsearchBulkSize, time.Duration(*elasticsearchFlushInterval)*time.Second)
+
+		esService := service.NewEsService(ecc, *indexName, &bulkProcessorConfig)
 		var allowedConceptTypes []string = strings.Split(*elasticsearchWhitelistedConceptTypes, ",")
-		conceptWriter := newESWriter(&esService, allowedConceptTypes)
-		defer (*conceptWriter.elasticService).closeBulkProcessor()
+		handler := resources.NewHandler(esService, allowedConceptTypes)
+		defer handler.Close()
 
 		//create health service
-		var esHealthService esHealthServiceI = newEsHealthService(elasticClient)
-		healthService := newHealthService(&esHealthService)
+		healthService := health.NewHealthService(esService)
 
-		routeRequests(port, conceptWriter, healthService)
+		routeRequests(port, handler, healthService)
 	}
 
 	err := app.Run(os.Args)
@@ -139,20 +136,21 @@ func main() {
 	}
 }
 
-func routeRequests(port *string, conceptWriter *conceptWriter, healthService *healthService) {
+func routeRequests(port *string, handler *resources.Handler, healthService *health.HealthService) {
 	servicesRouter := mux.NewRouter()
-	servicesRouter.HandleFunc("/bulk/{concept-type}/{id}", conceptWriter.loadBulkData).Methods("PUT")
-	servicesRouter.HandleFunc("/{concept-type}/{id}", conceptWriter.loadData).Methods("PUT")
-	servicesRouter.HandleFunc("/{concept-type}/{id}", conceptWriter.readData).Methods("GET")
-	servicesRouter.HandleFunc("/{concept-type}/{id}", conceptWriter.deleteData).Methods("DELETE")
+	servicesRouter.HandleFunc("/bulk/{concept-type}/{id}", handler.LoadBulkData).Methods("PUT")
+	servicesRouter.HandleFunc("/{concept-type}/{id}", handler.LoadData).Methods("PUT")
+	servicesRouter.HandleFunc("/{concept-type}/{id}", handler.ReadData).Methods("GET")
+	servicesRouter.HandleFunc("/{concept-type}/{id}", handler.DeleteData).Methods("DELETE")
 
 	var monitoringRouter http.Handler = servicesRouter
 	monitoringRouter = httphandlers.TransactionAwareRequestLoggingHandler(log.StandardLogger(), monitoringRouter)
 	monitoringRouter = httphandlers.HTTPMetricsHandler(metrics.DefaultRegistry, monitoringRouter)
 
-	http.HandleFunc("/__health", v1a.Handler("Amazon Elasticsearch Service Healthcheck", "Checks for AES", healthService.connectivityHealthyCheck(), healthService.clusterIsHealthyCheck()))
+	http.HandleFunc("/__health", fthealth.Handler("Amazon Elasticsearch Service Healthcheck", "Checks for AES", healthService.ConnectivityHealthyCheck(), healthService.ClusterIsHealthyCheck()))
 	http.HandleFunc("/__health-details", healthService.HealthDetails)
-	http.HandleFunc("/__gtg", healthService.GoodToGo)
+	http.HandleFunc(status.GTGPath, healthService.GoodToGo)
+	http.HandleFunc(status.BuildInfoPath, status.BuildInfoHandler)
 
 	http.Handle("/", monitoringRouter)
 

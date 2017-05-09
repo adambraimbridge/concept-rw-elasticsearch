@@ -1,37 +1,39 @@
-package main
+package resources
 
 import (
 	"encoding/json"
+	"net/http"
+
+	"github.com/Financial-Times/concept-rw-elasticsearch/service"
 	log "github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
-	"net/http"
 )
 
-type conceptWriter struct {
-	elasticService      *esServiceI
+type Handler struct {
+	elasticService      service.EsServiceI
 	allowedConceptTypes map[string]bool
 }
 
-func newESWriter(elasticService *esServiceI, allowedConceptTypes []string) (service *conceptWriter) {
+func NewHandler(elasticService service.EsServiceI, allowedConceptTypes []string) (service *Handler) {
 
 	allowedTypes := make(map[string]bool)
 	for _, v := range allowedConceptTypes {
 		allowedTypes[v] = true
 	}
 
-	return &conceptWriter{elasticService: elasticService, allowedConceptTypes: allowedTypes}
+	return &Handler{elasticService: elasticService, allowedConceptTypes: allowedTypes}
 }
 
-func (service *conceptWriter) loadData(writer http.ResponseWriter, request *http.Request) {
+func (h *Handler) LoadData(writer http.ResponseWriter, request *http.Request) {
 
 	uuid := mux.Vars(request)["id"]
 	conceptType := mux.Vars(request)["concept-type"]
 
-	if !service.allowedConceptTypes[conceptType] {
+	if !h.allowedConceptTypes[conceptType] {
 		return
 	}
 
-	var concept conceptModel
+	var concept service.ConceptModel
 	decoder := json.NewDecoder(request.Body)
 	err := decoder.Decode(&concept)
 	if err != nil {
@@ -46,9 +48,9 @@ func (service *conceptWriter) loadData(writer http.ResponseWriter, request *http
 		return
 	}
 
-	payload := convertToESConceptModel(concept, conceptType)
+	payload := service.ConvertToESConceptModel(concept, conceptType)
 
-	_, err = (*service.elasticService).loadData(conceptType, uuid, payload)
+	_, err = h.elasticService.LoadData(conceptType, uuid, payload)
 	if err != nil {
 		log.Errorf(err.Error())
 		writer.WriteHeader(http.StatusInternalServerError)
@@ -57,15 +59,15 @@ func (service *conceptWriter) loadData(writer http.ResponseWriter, request *http
 	writer.WriteHeader(http.StatusOK)
 }
 
-func (service *conceptWriter) loadBulkData(writer http.ResponseWriter, request *http.Request) {
+func (h *Handler) LoadBulkData(writer http.ResponseWriter, request *http.Request) {
 	uuid := mux.Vars(request)["id"]
 	conceptType := mux.Vars(request)["concept-type"]
 
-	if !service.allowedConceptTypes[conceptType] {
+	if !h.allowedConceptTypes[conceptType] {
 		return
 	}
 
-	var concept conceptModel
+	var concept service.ConceptModel
 	decoder := json.NewDecoder(request.Body)
 	err := decoder.Decode(&concept)
 	if err != nil {
@@ -81,21 +83,27 @@ func (service *conceptWriter) loadBulkData(writer http.ResponseWriter, request *
 		return
 	}
 
-	payload := convertToESConceptModel(concept, conceptType)
-	(*service.elasticService).loadBulkData(conceptType, uuid, payload)
+	payload := service.ConvertToESConceptModel(concept, conceptType)
+	h.elasticService.LoadBulkData(conceptType, uuid, payload)
 	writer.WriteHeader(http.StatusOK)
 }
 
-func (service *conceptWriter) readData(writer http.ResponseWriter, request *http.Request) {
+func (h *Handler) ReadData(writer http.ResponseWriter, request *http.Request) {
 
 	uuid := mux.Vars(request)["id"]
 	conceptType := mux.Vars(request)["concept-type"]
 
-	getResult, err := (*service.elasticService).readData(conceptType, uuid)
+	getResult, err := h.elasticService.ReadData(conceptType, uuid)
 
 	if err != nil {
 		log.Errorf(err.Error())
-		writer.WriteHeader(http.StatusInternalServerError)
+
+		if err == service.ErrNoElasticClient {
+			writer.WriteHeader(http.StatusServiceUnavailable)
+		} else {
+			writer.WriteHeader(http.StatusInternalServerError)
+		}
+
 		return
 	}
 
@@ -110,12 +118,12 @@ func (service *conceptWriter) readData(writer http.ResponseWriter, request *http
 
 }
 
-func (service *conceptWriter) deleteData(writer http.ResponseWriter, request *http.Request) {
+func (h *Handler) DeleteData(writer http.ResponseWriter, request *http.Request) {
 
 	uuid := mux.Vars(request)["id"]
 	conceptType := mux.Vars(request)["concept-type"]
 
-	res, err := (*service.elasticService).deleteData(conceptType, uuid)
+	res, err := h.elasticService.DeleteData(conceptType, uuid)
 
 	if err != nil {
 		log.Errorf(err.Error())
@@ -129,4 +137,8 @@ func (service *conceptWriter) deleteData(writer http.ResponseWriter, request *ht
 	}
 
 	writer.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) Close() {
+	h.elasticService.CloseBulkProcessor()
 }

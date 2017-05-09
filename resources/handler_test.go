@@ -1,31 +1,37 @@
-package main
+package resources
 
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/gorilla/mux"
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
-	"gopkg.in/olivere/elastic.v3"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"testing"
+
+	"github.com/Financial-Times/concept-rw-elasticsearch/service"
+	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
+	"gopkg.in/olivere/elastic.v3"
+)
+
+var (
+	testError error = errors.New("test error")
 )
 
 func TestCreateNewESWriter(t *testing.T) {
-	var dummyEsService esServiceI = &dummyEsService{returnsError: false}
+	dummyEsService := &dummyEsService{}
 	allowedTypes := []string{"organisations", "genres"}
-	writerService := newESWriter(&dummyEsService, allowedTypes)
+	writerService := NewHandler(dummyEsService, allowedTypes)
 	assert.True(t, writerService.allowedConceptTypes["organisations"])
 	assert.True(t, writerService.allowedConceptTypes["genres"])
 	assert.False(t, writerService.allowedConceptTypes["something else"])
 }
 
 func TestCreateNewESWriterWithEmptyWhitelist(t *testing.T) {
-	var dummyEsService esServiceI = &dummyEsService{returnsError: false}
+	dummyEsService := &dummyEsService{}
 	allowedTypes := []string{}
-	writerService := newESWriter(&dummyEsService, allowedTypes)
+	writerService := NewHandler(dummyEsService, allowedTypes)
 	assert.Equal(t, 0, len(writerService.allowedConceptTypes))
 }
 
@@ -39,11 +45,11 @@ func TestLoadData(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	var dummyEsService esServiceI = &dummyEsService{returnsError: false}
-	writerService := newESWriter(&dummyEsService, []string{"organisations"})
+	dummyEsService := &dummyEsService{}
+	writerService := NewHandler(dummyEsService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
-	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.loadData).Methods("PUT")
+	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.LoadData).Methods("PUT")
 	servicesRouter.ServeHTTP(rr, req)
 
 	// Check the status code is what we expect.
@@ -65,11 +71,11 @@ func TestLoadDataBadRequest(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	var dummyEsService esServiceI = &dummyEsService{returnsError: false}
-	writerService := newESWriter(&dummyEsService, []string{"organisations"})
+	dummyEsService := &dummyEsService{}
+	writerService := NewHandler(dummyEsService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
-	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.loadData).Methods("PUT")
+	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.LoadData).Methods("PUT")
 	servicesRouter.ServeHTTP(rr, req)
 
 	// Check the status code is what we expect.
@@ -91,11 +97,11 @@ func TestLoadDataBadRequestForUnsupportedType(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	var dummyEsService esServiceI = &dummyEsService{returnsError: false}
-	writerService := newESWriter(&dummyEsService, []string{"organisations", "people", "genres"})
+	dummyEsService := &dummyEsService{}
+	writerService := NewHandler(dummyEsService, []string{"organisations", "people", "genres"})
 
 	servicesRouter := mux.NewRouter()
-	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.loadData).Methods("PUT")
+	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.LoadData).Methods("PUT")
 	servicesRouter.ServeHTTP(rr, req)
 
 	// For Bad Request the status code should be 400 - but for unsupported concept types the writer returns 200 - without further processing
@@ -117,11 +123,11 @@ func TestLoadDataBadRequestForEmptyType(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	var dummyEsService esServiceI = &dummyEsService{returnsError: false}
-	writerService := newESWriter(&dummyEsService, []string{"organisations"})
+	dummyEsService := &dummyEsService{}
+	writerService := NewHandler(dummyEsService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
-	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.loadData).Methods("PUT")
+	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.LoadData).Methods("PUT")
 	servicesRouter.ServeHTTP(rr, req)
 
 	// Check the status code is what we expect.
@@ -143,11 +149,11 @@ func TestLoadDataBadRequestForEmptyPrefLabel(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	var dummyEsService esServiceI = &dummyEsService{returnsError: false}
-	writerService := newESWriter(&dummyEsService, []string{"organisations"})
+	dummyEsService := &dummyEsService{}
+	writerService := NewHandler(dummyEsService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
-	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.loadData).Methods("PUT")
+	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.LoadData).Methods("PUT")
 	servicesRouter.ServeHTTP(rr, req)
 
 	// Check the status code is what we expect.
@@ -169,11 +175,11 @@ func TestLoadDataEsClientServerErrors(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	var dummyEsService esServiceI = &dummyEsService{returnsError: true}
-	writerService := newESWriter(&dummyEsService, []string{"organisations"})
+	dummyEsService := &dummyEsService{returnsError: testError}
+	writerService := NewHandler(dummyEsService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
-	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.loadData).Methods("PUT")
+	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.LoadData).Methods("PUT")
 	servicesRouter.ServeHTTP(rr, req)
 
 	// Check the status code is what we expect.
@@ -195,11 +201,11 @@ func TestLoadDataIncorrectPayload(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	var dummyEsService esServiceI = &dummyEsService{returnsError: false}
-	writerService := newESWriter(&dummyEsService, []string{"organisations"})
+	dummyEsService := &dummyEsService{}
+	writerService := NewHandler(dummyEsService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
-	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.loadData).Methods("PUT")
+	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.LoadData).Methods("PUT")
 	servicesRouter.ServeHTTP(rr, req)
 
 	// Check the status code is what we expect.
@@ -221,11 +227,11 @@ func TestLoadBulkDataIncorrectPayload(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	var dummyEsService esServiceI = &dummyEsService{returnsError: false}
-	writerService := newESWriter(&dummyEsService, []string{"organisations"})
+	dummyEsService := &dummyEsService{}
+	writerService := NewHandler(dummyEsService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
-	servicesRouter.HandleFunc("/bulk/{concept-type}/{id}", writerService.loadBulkData).Methods("PUT")
+	servicesRouter.HandleFunc("/bulk/{concept-type}/{id}", writerService.LoadBulkData).Methods("PUT")
 	servicesRouter.ServeHTTP(rr, req)
 
 	// Check the status code is what we expect.
@@ -247,11 +253,11 @@ func TestLoadBulkDataBadRequest(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	var dummyEsService esServiceI = &dummyEsService{returnsError: false}
-	writerService := newESWriter(&dummyEsService, []string{"organisations"})
+	dummyEsService := &dummyEsService{}
+	writerService := NewHandler(dummyEsService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
-	servicesRouter.HandleFunc("/bulk/{concept-type}/{id}", writerService.loadBulkData).Methods("PUT")
+	servicesRouter.HandleFunc("/bulk/{concept-type}/{id}", writerService.LoadBulkData).Methods("PUT")
 	servicesRouter.ServeHTTP(rr, req)
 
 	// Check the status code is what we expect.
@@ -273,11 +279,11 @@ func TestLoadBulkDataAccepted(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	var dummyEsService esServiceI = &dummyEsService{returnsError: false}
-	writerService := newESWriter(&dummyEsService, []string{"organisations"})
+	dummyEsService := &dummyEsService{}
+	writerService := NewHandler(dummyEsService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
-	servicesRouter.HandleFunc("/bulk/{concept-type}/{id}", writerService.loadBulkData).Methods("PUT")
+	servicesRouter.HandleFunc("/bulk/{concept-type}/{id}", writerService.LoadBulkData).Methods("PUT")
 	servicesRouter.ServeHTTP(rr, req)
 
 	// Check the status code is what we expect.
@@ -296,7 +302,7 @@ func TestReadData(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	esModel := &esConceptModel{
+	esModel := &service.EsConceptModel{
 		Id:         "http://api.ft.com/things/8ff7dfef-0330-3de0-b37a-2d6aa9c98580",
 		ApiUrl:     "http://api.ft.com/things/8ff7dfef-0330-3de0-b37a-2d6aa9c98580",
 		PrefLabel:  "Market Report",
@@ -309,11 +315,11 @@ func TestReadData(t *testing.T) {
 	}
 
 	var rawmsg json.RawMessage = json.RawMessage(rawModel)
-	var dummyEsService esServiceI = &dummyEsService{returnsError: false, found: true, source: &rawmsg}
-	writerService := newESWriter(&dummyEsService, []string{"genres"})
+	dummyEsService := &dummyEsService{found: true, source: &rawmsg}
+	writerService := NewHandler(dummyEsService, []string{"genres"})
 
 	servicesRouter := mux.NewRouter()
-	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.readData).Methods("GET")
+	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.ReadData).Methods("GET")
 	servicesRouter.ServeHTTP(rr, req)
 
 	// Check the status code is what we expect.
@@ -327,7 +333,7 @@ func TestReadData(t *testing.T) {
 			contentType, "application/json")
 	}
 
-	var respObject *esConceptModel
+	var respObject *service.EsConceptModel
 	err = json.Unmarshal(rr.Body.Bytes(), &respObject)
 	if err != nil {
 		t.Errorf("Unmarshalling request response failed. %v", err)
@@ -345,11 +351,11 @@ func TestReadDataNotFound(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	var dummyEsService esServiceI = &dummyEsService{returnsError: false, found: false}
-	writerService := newESWriter(&dummyEsService, []string{"organisations"})
+	dummyEsService := &dummyEsService{found: false}
+	writerService := NewHandler(dummyEsService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
-	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.readData).Methods("GET")
+	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.ReadData).Methods("GET")
 	servicesRouter.ServeHTTP(rr, req)
 
 	// Check the status code is what we expect.
@@ -369,11 +375,11 @@ func TestReadDataEsServerError(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	var dummyEsService esServiceI = &dummyEsService{returnsError: true}
-	writerService := newESWriter(&dummyEsService, []string{"organisations"})
+	dummyEsService := &dummyEsService{returnsError: testError}
+	writerService := NewHandler(dummyEsService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
-	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.readData).Methods("GET")
+	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.ReadData).Methods("GET")
 	servicesRouter.ServeHTTP(rr, req)
 
 	// Check the status code is what we expect.
@@ -385,6 +391,24 @@ func TestReadDataEsServerError(t *testing.T) {
 	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
 }
 
+func TestReadDataEsServerUnavailable(t *testing.T) {
+	req, err := http.NewRequest("GET", "/organisations/8ff7dfef-0330-3de0-b37a-2d6aa9c98580", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+
+	dummyEsService := &dummyEsService{returnsError: service.ErrNoElasticClient}
+	writerService := NewHandler(dummyEsService, []string{"organisations"})
+
+	servicesRouter := mux.NewRouter()
+	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.ReadData).Methods("GET")
+	servicesRouter.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusServiceUnavailable, rr.Code, "HTTP status")
+}
+
 func TestDeleteData(t *testing.T) {
 
 	req, err := http.NewRequest("DELETE", "/organisations/8ff7dfef-0330-3de0-b37a-2d6aa9c98580", nil)
@@ -394,11 +418,11 @@ func TestDeleteData(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	var dummyEsService esServiceI = &dummyEsService{returnsError: false, found: true}
-	writerService := newESWriter(&dummyEsService, []string{"organisations"})
+	dummyEsService := &dummyEsService{found: true}
+	writerService := NewHandler(dummyEsService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
-	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.deleteData).Methods("DELETE")
+	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.DeleteData).Methods("DELETE")
 	servicesRouter.ServeHTTP(rr, req)
 
 	// Check the status code is what we expect.
@@ -419,11 +443,11 @@ func TestDeleteDataNotFound(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	var dummyEsService esServiceI = &dummyEsService{returnsError: false, found: false}
-	writerService := newESWriter(&dummyEsService, []string{"organisations"})
+	dummyEsService := &dummyEsService{found: false}
+	writerService := NewHandler(dummyEsService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
-	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.deleteData).Methods("DELETE")
+	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.DeleteData).Methods("DELETE")
 	servicesRouter.ServeHTTP(rr, req)
 
 	// Check the status code is what we expect.
@@ -444,11 +468,11 @@ func TestDeleteDataEsServerError(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	var dummyEsService esServiceI = &dummyEsService{returnsError: true}
-	writerService := newESWriter(&dummyEsService, []string{"organisations"})
+	dummyEsService := &dummyEsService{returnsError: testError}
+	writerService := NewHandler(dummyEsService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
-	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.deleteData).Methods("DELETE")
+	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.DeleteData).Methods("DELETE")
 	servicesRouter.ServeHTTP(rr, req)
 
 	// Check the status code is what we expect.
@@ -461,42 +485,42 @@ func TestDeleteDataEsServerError(t *testing.T) {
 }
 
 type dummyEsService struct {
-	returnsError bool
+	returnsError error
 	found        bool
 	source       *json.RawMessage
 }
 
-func (service *dummyEsService) loadData(conceptType string, uuid string, payload interface{}) (*elastic.IndexResponse, error) {
-	if service.returnsError {
-		return nil, errors.New("Error")
+func (service *dummyEsService) LoadData(conceptType string, uuid string, payload service.EsConceptModel) (*elastic.IndexResponse, error) {
+	if service.returnsError != nil {
+		return nil, service.returnsError
 	} else {
 		return &elastic.IndexResponse{}, nil
 	}
 }
 
-func (service *dummyEsService) readData(conceptType string, uuid string) (*elastic.GetResult, error) {
-	if service.returnsError {
-		return nil, errors.New("Error")
+func (service *dummyEsService) ReadData(conceptType string, uuid string) (*elastic.GetResult, error) {
+	if service.returnsError != nil {
+		return nil, service.returnsError
 	} else {
 		return &elastic.GetResult{Found: service.found, Source: service.source}, nil
 	}
 }
 
-func (service *dummyEsService) deleteData(conceptType string, uuid string) (*elastic.DeleteResponse, error) {
-	if service.returnsError {
-		return nil, errors.New("Error")
+func (service *dummyEsService) DeleteData(conceptType string, uuid string) (*elastic.DeleteResponse, error) {
+	if service.returnsError != nil {
+		return nil, service.returnsError
 	} else {
 		return &elastic.DeleteResponse{Found: service.found}, nil
 	}
 }
 
-func (service *dummyEsService) loadBulkData(conceptType string, uuid string, payload interface{}) {
+func (service *dummyEsService) LoadBulkData(conceptType string, uuid string, payload service.EsConceptModel) {
 
 }
 
-func (service *dummyEsService) closeBulkProcessor() error {
-	if service.returnsError {
-		return errors.New("Error")
+func (service *dummyEsService) CloseBulkProcessor() error {
+	if service.returnsError != nil {
+		return service.returnsError
 	} else {
 		return nil
 	}

@@ -1,4 +1,4 @@
-package main
+package service
 
 import (
 	"fmt"
@@ -7,14 +7,18 @@ import (
 	"time"
 )
 
-type bulkProcessorConfig struct {
+type BulkProcessorConfig struct {
 	nrWorkers     int
 	nrOfRequests  int
 	bulkSize      int
 	flushInterval time.Duration
 }
 
-func newBulkProcessor(client *elastic.Client, bulkConfig *bulkProcessorConfig) (*elastic.BulkProcessor, error) {
+func NewBulkProcessorConfig(nrWorkers int, nrOfRequests int, bulkSize int, flushInterval time.Duration) BulkProcessorConfig {
+	return BulkProcessorConfig{nrWorkers: nrWorkers, nrOfRequests: nrOfRequests, bulkSize: bulkSize, flushInterval: flushInterval}
+}
+
+func newBulkProcessor(client *elastic.Client, bulkConfig *BulkProcessorConfig) (*elastic.BulkProcessor, error) {
 	return client.BulkProcessor().Name("BackgroundWorker-1").
 		Workers(bulkConfig.nrWorkers).
 		BulkActions(bulkConfig.nrOfRequests).

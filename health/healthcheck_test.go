@@ -1,4 +1,4 @@
-package main
+package health
 
 import (
 	"encoding/json"
@@ -18,8 +18,8 @@ func TestHealthDetailsHealthyCluster(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var dummyEsHealthService esHealthServiceI = &dummyEsHealthService{healthy: true, returnsError: false}
-	healthService := newHealthService(&dummyEsHealthService)
+	dummyEsHealthService := &dummyEsHealthService{healthy: true, returnsError: false}
+	healthService := NewHealthService(dummyEsHealthService)
 
 	//create a responseRecorder
 	rr := httptest.NewRecorder()
@@ -57,8 +57,8 @@ func TestHealthDetailsReturnsError(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var dummyEsHealthService esHealthServiceI = &dummyEsHealthService{returnsError: true}
-	healthService := newHealthService(&dummyEsHealthService)
+	dummyEsHealthService := &dummyEsHealthService{returnsError: true}
+	healthService := NewHealthService(dummyEsHealthService)
 
 	//create a responseRecorder
 	rr := httptest.NewRecorder()
@@ -91,8 +91,8 @@ func TestGoodToGoHealthyCluster(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var dummyEsHealthService esHealthServiceI = &dummyEsHealthService{returnsError: true}
-	healthService := newHealthService(&dummyEsHealthService)
+	dummyEsHealthService := &dummyEsHealthService{returnsError: true}
+	healthService := NewHealthService(dummyEsHealthService)
 
 	//create a responseRecorder
 	rr := httptest.NewRecorder()
@@ -120,8 +120,8 @@ func TestGoodToGoUnhealthyCluster(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var dummyEsHealthService esHealthServiceI = &dummyEsHealthService{healthy: true, returnsError: false}
-	healthService := newHealthService(&dummyEsHealthService)
+	dummyEsHealthService := &dummyEsHealthService{healthy: true, returnsError: false}
+	healthService := NewHealthService(dummyEsHealthService)
 
 	//create a responseRecorder
 	rr := httptest.NewRecorder()
@@ -144,8 +144,8 @@ func TestGoodToGoUnhealthyCluster(t *testing.T) {
 
 func TestHealthServiceConnectivityChecker(t *testing.T) {
 
-	var dummyEsHealthService esHealthServiceI = &dummyEsHealthService{healthy: true, returnsError: false}
-	healthService := newHealthService(&dummyEsHealthService)
+	dummyEsHealthService := &dummyEsHealthService{healthy: true, returnsError: false}
+	healthService := NewHealthService(dummyEsHealthService)
 	message, err := healthService.connectivityChecker()
 
 	assert.Equal(t, "Successfully connected to the cluster", message)
@@ -155,8 +155,8 @@ func TestHealthServiceConnectivityChecker(t *testing.T) {
 
 func TestHealthServiceConnectivityCheckerForFailedConnection(t *testing.T) {
 
-	var dummyEsHealthService esHealthServiceI = &dummyEsHealthService{returnsError: true}
-	healthService := newHealthService(&dummyEsHealthService)
+	dummyEsHealthService := &dummyEsHealthService{returnsError: true}
+	healthService := NewHealthService(dummyEsHealthService)
 	message, err := healthService.connectivityChecker()
 
 	assert.Equal(t, "Could not connect to elasticsearch", message)
@@ -169,7 +169,7 @@ type dummyEsHealthService struct {
 	returnsError bool
 }
 
-func (service dummyEsHealthService) getClusterHealth() (*elastic.ClusterHealthResponse, error) {
+func (service dummyEsHealthService) GetClusterHealth() (*elastic.ClusterHealthResponse, error) {
 	if service.returnsError {
 		return nil, errors.New("Request ended up in retuning some internal error")
 	}
