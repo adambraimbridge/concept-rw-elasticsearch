@@ -1,7 +1,7 @@
 version: 2
 jobs:
   build:
-    working_directory: /go/src/github.com/Financial-Times/publish-carousel
+    working_directory: /go/src/github.com/Financial-Times/concept-rw-elasticsearch
     docker:
       - image: golang:1.7.3
         environment:
@@ -47,7 +47,7 @@ jobs:
       - store_test_results:
           path: /tmp/test-results
   dockerfile:
-    working_directory: /publish-carousel
+    working_directory: /concept-rw-elasticsearch
     docker:
       - image: docker:1.12.6-git
     steps:
