@@ -3,7 +3,7 @@
 	"ignore": "test",
 	"package": [
 		{
-			"checksumSHA1": "4gy/7n/lgtdi5efuHXwFcIe1ZI8=",
+			"checksumSHA1": "FUhczVSvt/VQAlWfzATo1YLez2E=",
 			"path": "github.com/Financial-Times/go-fthealth/v1a",
 			"revision": "f9074331b3ab48bca0e6d0afc211a673d88ac925",
 			"revisionTime": "2016-06-16T09:04:59Z",
@@ -11,7 +11,7 @@
 			"versionExact": "0.1.0"
 		},
 		{
-			"checksumSHA1": "lBOK1zbqMz1rLNilYkkjPrjW+Qk=",
+			"checksumSHA1": "zUpINnstJChGK0LAtkt7jBc3RY0=",
 			"path": "github.com/Financial-Times/http-handlers-go/httphandlers",
 			"revision": "bb69c454da9050fe1c4b92fe1345a01583ee70be",
 			"revisionTime": "2016-08-03T10:40:03Z",
@@ -19,7 +19,7 @@
 			"versionExact": "0.1.0"
 		},
 		{
-			"checksumSHA1": "yujq/HW0aQ+Sl9DuxkJNPjIGu20=",
+			"checksumSHA1": "jsMrCUKy7+qiBEGhTj8tbSW/p9o=",
 			"path": "github.com/Financial-Times/neo-model-utils-go/mapper",
 			"revision": "918e3fa4b42fd0293cfdb6749d944ed8e7110066",
 			"revisionTime": "2016-10-10T11:25:58Z",
@@ -27,7 +27,27 @@
 			"versionExact": "0.1.0"
 		},
 		{
-			"checksumSHA1": "I/p6g4/ZiQhlPLRa9fFjzwuevwc=",
+			"checksumSHA1": "fqpohN7Qp2qj7TLMbUxh/cK4oH0=",
+			"path": "github.com/Financial-Times/service-status-go/buildinfo",
+			"revision": "3f5199736a3d7ae52394c63aac36834786825e21",
+			"revisionTime": "2016-03-23T11:15:42Z"
+		},
+		{
+			"checksumSHA1": "2rGNLXdRC3qr5n5ll7BpYt8HCK8=",
+			"path": "github.com/Financial-Times/service-status-go/gtg",
+			"revision": "3f5199736a3d7ae52394c63aac36834786825e21",
+			"revisionTime": "2016-03-23T11:15:42Z"
+		},
+		{
+			"checksumSHA1": "973POGyMCoyaKQuIYX2f7EKFwlQ=",
+			"path": "github.com/Financial-Times/service-status-go/httphandlers",
+			"revision": "3f5199736a3d7ae52394c63aac36834786825e21",
+			"revisionTime": "2016-03-23T11:15:42Z",
+			"version": "0.1.0",
+			"versionExact": "0.1.0"
+		},
+		{
+			"checksumSHA1": "ddLGmQTKn5BeEsKYFOGAH33sEfg=",
 			"path": "github.com/Financial-Times/transactionid-utils-go",
 			"revision": "a2b1163e7c2f6c77add74ca2c7fc7422323a2d78",
 			"revisionTime": "2016-02-12T16:38:35Z",
@@ -35,7 +55,7 @@
 			"versionExact": "0.1.0"
 		},
 		{
-			"checksumSHA1": "LiEF5uTVmXH4Dge8H7BkI+iKF3o=",
+			"checksumSHA1": "YD7op+BalfdUK0lb28y6Yex6cBM=",
 			"path": "github.com/Sirupsen/logrus",
 			"revision": "c078b1e43f58d563c74cebe63c85789e76ddb627",
 			"revisionTime": "2017-02-07T11:49:02Z",
@@ -43,20 +63,20 @@
 			"versionExact": "v0.11.2"
 		},
 		{
-			"checksumSHA1": "VgdO95xKa54YWKwGrKWvVnDXVOc=",
+			"checksumSHA1": "Lf3uUXTkKK5DJ37BxQvxO1Fq+K8=",
 			"origin": "github.com/stretchr/testify/vendor/github.com/davecgh/go-spew/spew",
 			"path": "github.com/davecgh/go-spew/spew",
 			"revision": "69483b4bd14f5845b5a1e55bca19e954e827f1d0",
 			"revisionTime": "2016-09-25T01:54:16Z"
 		},
 		{
-			"checksumSHA1": "IkPM2QLv9urri7S49wzroQx9oXA=",
+			"checksumSHA1": "g/V4qrXjUGG9B+e3hB+4NAYJ5Gs=",
 			"path": "github.com/gorilla/context",
 			"revision": "08b5f424b9271eedf6f9f0ce86cb9396ed337a42",
 			"revisionTime": "2016-08-17T18:46:32Z"
 		},
 		{
-			"checksumSHA1": "pLA4j6v1jGIQExmYHf40KjSfkM4=",
+			"checksumSHA1": "F5dR3/i70EhSIMZfeIV+H8/PtvM=",
 			"path": "github.com/gorilla/mux",
 			"revision": "392c28fe23e1c45ddba891b0320b3b5df220beea",
 			"revisionTime": "2017-01-18T13:43:44Z",
@@ -64,40 +84,46 @@
 			"versionExact": "v1.3.0"
 		},
 		{
-			"checksumSHA1": "kAifcJ9VFmW/qITPM328LCMpXpw=",
+			"checksumSHA1": "tUGxc7rfX0cmhOOUDhMuAZ9rWsA=",
+			"path": "github.com/hashicorp/go-version",
+			"revision": "03c5bf6be031b6dd45afec16b1cf94fc8938bc77",
+			"revisionTime": "2017-02-02T08:07:59Z"
+		},
+		{
+			"checksumSHA1": "lvjAdn0k3UFBN9rbH2cVKmlhgoQ=",
 			"path": "github.com/jawher/mow.cli",
 			"revision": "660b9261e2c80bb92e5a0eaa581596084656140e",
 			"revisionTime": "2016-09-19T11:45:49Z"
 		},
 		{
-			"checksumSHA1": "iwLqOY6Nr1BitBUex4K0Wep3JL8=",
+			"checksumSHA1": "ynJSWoF6v+3zMnh9R0QmmG6iGV8=",
 			"path": "github.com/pkg/errors",
 			"revision": "645ef00459ed84a119197bfb8d8205042c6df63d",
-			"revisionTime": "2016-10-29T09:36:37Z",
+			"revisionTime": "2016-09-29T01:48:01Z",
 			"version": "v0.8.0",
 			"versionExact": "v0.8.0"
 		},
 		{
-			"checksumSHA1": "+oyIJwPyeof36XCkY8awrNfxaNM=",
+			"checksumSHA1": "zKKp5SZ3d3ycKe4EKMNT0BqAWBw=",
 			"origin": "github.com/stretchr/testify/vendor/github.com/pmezard/go-difflib/difflib",
 			"path": "github.com/pmezard/go-difflib/difflib",
 			"revision": "69483b4bd14f5845b5a1e55bca19e954e827f1d0",
 			"revisionTime": "2016-09-25T01:54:16Z"
 		},
 		{
-			"checksumSHA1": "+yZxFRm3leIBDLHJeM8BK6fsUhg=",
+			"checksumSHA1": "GiX6yRUzizn1C+ckgj1xLFLoz8g=",
 			"path": "github.com/rcrowley/go-metrics",
 			"revision": "ab2277b1c5d15c3cba104e9cbddbdfc622df5ad8",
 			"revisionTime": "2016-09-21T19:52:07Z"
 		},
 		{
-			"checksumSHA1": "oNcjSQf1zGY27b9xipsqb2L4/RY=",
+			"checksumSHA1": "iy7TNc01LWFOGwRwD6v0iDRqtLU=",
 			"path": "github.com/smartystreets/go-aws-auth",
 			"revision": "2043e6d0bb7e4c18464a7bba562acbe482e3cabd",
 			"revisionTime": "2016-07-22T04:48:03Z"
 		},
 		{
-			"checksumSHA1": "3fuOD4+Q7k/yYdaklodK+6njEm0=",
+			"checksumSHA1": "q1qqfgDOGwfEuMlbHWNjYf09ACM=",
 			"path": "github.com/stretchr/testify/assert",
 			"revision": "69483b4bd14f5845b5a1e55bca19e954e827f1d0",
 			"revisionTime": "2016-09-25T01:54:16Z",
@@ -123,22 +149,20 @@
 			"revisionTime": "2017-02-01T04:15:14Z"
 		},
 		{
-			"checksumSHA1": "U6PnhQV1Mln+75jakbmlqHnzBHc=",
-			"path": "gopkg.in/olivere/elastic.v3",
-			"revision": "060365a7e27c56c938b234824ef7f9a3a7834b99",
-			"revisionTime": "2016-11-26T12:16:23Z"
+			"checksumSHA1": "jOAJJMO3K2jcr9e5QDP+ehk/3fE=",
+			"path": "gopkg.in/olivere/elastic.v5",
+			"revision": "3f49414dc29d45ba96fde19ba72bc646077dbffd",
+			"revisionTime": "2017-05-15T15:52:10Z",
+			"version": "v5.0.38",
+			"versionExact": "v5.0.38"
 		},
 		{
-			"checksumSHA1": "b7liDBjmSMLu1NpqieKmjXxJt1c=",
-			"path": "gopkg.in/olivere/elastic.v3/backoff",
-			"revision": "060365a7e27c56c938b234824ef7f9a3a7834b99",
-			"revisionTime": "2016-11-26T12:16:23Z"
-		},
-		{
-			"checksumSHA1": "SE3gLpd7K7f59mOFY219BJaJkUE=",
-			"path": "gopkg.in/olivere/elastic.v3/uritemplates",
-			"revision": "060365a7e27c56c938b234824ef7f9a3a7834b99",
-			"revisionTime": "2016-11-26T12:16:23Z"
+			"checksumSHA1": "pCApZfp2CeDnWbNVsyzNO62ZUXA=",
+			"path": "gopkg.in/olivere/elastic.v5/uritemplates",
+			"revision": "3f49414dc29d45ba96fde19ba72bc646077dbffd",
+			"revisionTime": "2017-05-15T15:52:10Z",
+			"version": "v5.0.38",
+			"versionExact": "v5.0.38"
 		}
 	],
 	"rootPath": "github.com/Financial-Times/concept-rw-elasticsearch"

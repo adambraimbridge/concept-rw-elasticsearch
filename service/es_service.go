@@ -1,11 +1,12 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"sync"
 
 	log "github.com/Sirupsen/logrus"
-	"gopkg.in/olivere/elastic.v3"
+	"gopkg.in/olivere/elastic.v5"
 )
 
 var (
@@ -69,7 +70,7 @@ func (es *esService) GetClusterHealth() (*elastic.ClusterHealthResponse, error) 
 		return nil, err
 	}
 
-	return es.elasticClient.ClusterHealth().Do()
+	return es.elasticClient.ClusterHealth().Do(context.Background())
 }
 
 func (es *esService) LoadData(conceptType string, uuid string, payload EsConceptModel) (*elastic.IndexResponse, error) {
@@ -82,7 +83,7 @@ func (es *esService) LoadData(conceptType string, uuid string, payload EsConcept
 		Type(conceptType).
 		Id(uuid).
 		BodyJson(payload).
-		Do()
+		Do(context.Background())
 }
 
 func (es *esService) checkElasticClient() error {
@@ -105,8 +106,7 @@ func (es *esService) ReadData(conceptType string, uuid string) (*elastic.GetResu
 		Index(es.indexName).
 		Type(conceptType).
 		Id(uuid).
-		IgnoreErrorsOnGeneratedFields(false).
-		Do()
+		Do(context.Background())
 
 	if elastic.IsNotFound(err) {
 		return &elastic.GetResult{Found: false}, nil
@@ -124,7 +124,7 @@ func (es *esService) DeleteData(conceptType string, uuid string) (*elastic.Delet
 		Index(es.indexName).
 		Type(conceptType).
 		Id(uuid).
-		Do()
+		Do(context.Background())
 
 	if elastic.IsNotFound(err) {
 		return &elastic.DeleteResponse{Found: false}, nil
