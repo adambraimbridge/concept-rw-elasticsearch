@@ -49,3 +49,56 @@ For our current version of the db, we used the settings from: [mapping.json](htt
 
 ### Delete mapping
 It is only possible to remove a mapping if the index is also deleted.
+
+### Some mapping explanations
+Mapping 1
+`"indexCompletion": {
+  "type": "completion"
+},`
+
+This allows basic typeahead searching across everything across the index.
+See  (https://www.elastic.co/guide/en/elasticsearch/reference/current/search-suggesters.html)
+
+You can query the concepts endpoint on ES like this
+
+POST http://localhost:9200/concepts/_search 
+
+`{
+    "suggest" : {
+      "mySuggestions" : {
+        "text" : "Lucy K",
+        "term" : {
+          "field" : "prefLabel.indexCompletion"
+        }
+      }
+}`
+
+This has been applied on the prefLabel field for example.
+
+Mapping 2
+`"completionByContext": {
+    "type": "completion",
+    "contexts": [{
+         "name" : "typeContext",
+         "type" : "category",
+         "path" : "_type"
+    }]
+}`
+
+This allows a basic typeahead search based on a context (named typeContext) and the defined values (people & brands) based in the values of the field defined in path (_type).
+See (https://www.elastic.co/guide/en/elasticsearch/reference/current/suggester-context.html)
+
+    
+`{
+     "suggest": {
+         "mySuggestions" : {
+             "text" : "Lucy K",
+             "completion" : {
+                 "field" : "prefLabel.completionByContext",
+                 "contexts": {
+                     "typeContext": [ "people", "brands"]
+                 }
+             }
+         }
+     }
+ }`
