@@ -1,0 +1,10 @@
+{
+  "actions" : [
+    {
+      "add" : {
+        "index" : "concepts-0.0.1",
+        "alias" : "concepts"
+      }
+    }
+  ]
+}

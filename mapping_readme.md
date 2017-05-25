@@ -67,10 +67,11 @@ POST http://localhost:9200/concepts/_search
     "suggest" : {
       "mySuggestions" : {
         "text" : "Lucy K",
-        "term" : {
+        "completion" : {
           "field" : "prefLabel.indexCompletion"
         }
       }
+    }
 }`
 
 This has been applied on the prefLabel field for example.
@@ -102,3 +103,44 @@ See (https://www.elastic.co/guide/en/elasticsearch/reference/current/suggester-c
          }
      }
  }`
+ 
+ 
+## Aliases and Reindexing
+
+When applying changes to the mapping the whole index needs to be reindexed.
+
+Create the new index with the new mapping using the ES PUT (as described above)
+and then reindex the old index into the new index. This will timeout your request and you can query the progress with the _tasks endpoint (I have been checking the collections size)
+
+POST http://upp-concepts-dynpub-eu.in.ft.com/_reindex
+
+`{
+  "source": {
+    "index": "concepts"
+  },
+  "dest": {
+    "index": "concepts-0.0.1"
+  }
+}`
+
+Then update the aliases
+
+POST http://upp-concepts-dynpub-eu.in.ft.com/_aliases
+
+`{
+  "actions" : [
+    {
+      "add" : {
+        "index" : "concepts-0.0.1",
+        "alias" : "concepts"
+      }
+    }
+  ]
+}`
+
+aliases.json indicates the current version
+
+
+
+
+
