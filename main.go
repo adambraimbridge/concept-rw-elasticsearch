@@ -16,7 +16,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/jawher/mow.cli"
 	"github.com/rcrowley/go-metrics"
-	"gopkg.in/olivere/elastic.v3"
+	"gopkg.in/olivere/elastic.v5"
 )
 
 func main() {
@@ -51,7 +51,7 @@ func main() {
 	})
 	indexName := app.String(cli.StringOpt{
 		Name:   "index-name",
-		Value:  "concept",
+		Value:  "concepts",
 		Desc:   "The name of the elaticsearch index",
 		EnvVar: "ELASTICSEARCH_INDEX",
 	})

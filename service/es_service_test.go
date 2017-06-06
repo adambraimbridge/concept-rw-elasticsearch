@@ -11,7 +11,7 @@ import (
 
 	"github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
-	"gopkg.in/olivere/elastic.v3"
+	"gopkg.in/olivere/elastic.v5"
 )
 
 const (

@@ -12,7 +12,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
-	"gopkg.in/olivere/elastic.v3"
+	"gopkg.in/olivere/elastic.v5"
 )
 
 var (

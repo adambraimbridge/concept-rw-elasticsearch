@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
-	"gopkg.in/olivere/elastic.v3"
+	"gopkg.in/olivere/elastic.v5"
 	"net/http"
 	"net/http/httptest"
 	"testing"

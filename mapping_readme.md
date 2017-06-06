@@ -49,3 +49,98 @@ For our current version of the db, we used the settings from: [mapping.json](htt
 
 ### Delete mapping
 It is only possible to remove a mapping if the index is also deleted.
+
+### Some mapping explanations
+Mapping 1
+`"indexCompletion": {
+  "type": "completion"
+},`
+
+This allows basic typeahead searching across everything across the index.
+See  (https://www.elastic.co/guide/en/elasticsearch/reference/current/search-suggesters.html)
+
+You can query the concepts endpoint on ES like this
+
+POST http://localhost:9200/concepts/_search 
+
+`{
+    "suggest" : {
+      "mySuggestions" : {
+        "text" : "Lucy K",
+        "completion" : {
+          "field" : "prefLabel.indexCompletion"
+        }
+      }
+    }
+}`
+
+This has been applied on the prefLabel field for example.
+
+Mapping 2
+`"completionByContext": {
+    "type": "completion",
+    "contexts": [{
+         "name" : "typeContext",
+         "type" : "category",
+         "path" : "_type"
+    }]
+}`
+
+This allows a basic typeahead search based on a context (named typeContext) and the defined values (people & brands) based in the values of the field defined in path (_type).
+See (https://www.elastic.co/guide/en/elasticsearch/reference/current/suggester-context.html)
+
+    
+`{
+     "suggest": {
+         "mySuggestions" : {
+             "text" : "Lucy K",
+             "completion" : {
+                 "field" : "prefLabel.completionByContext",
+                 "contexts": {
+                     "typeContext": [ "people", "brands"]
+                 }
+             }
+         }
+     }
+ }`
+ 
+ 
+## Aliases and Reindexing
+
+When applying changes to the mapping the whole index needs to be reindexed.
+
+Create the new index with the new mapping using the ES PUT (as described above)
+and then reindex the old index into the new index. This will timeout your request and you can query the progress with the _tasks endpoint (I have been checking the collections size)
+
+POST http://upp-concepts-dynpub-eu.in.ft.com/_reindex
+
+`{
+  "source": {
+    "index": "concepts"
+  },
+  "dest": {
+    "index": "concepts-0.0.1"
+  }
+}`
+
+Then update the aliases
+
+POST http://upp-concepts-dynpub-eu.in.ft.com/_aliases
+
+`{
+  "actions" : [
+    {
+      "add" : {
+        "index" : "concepts-0.0.1",
+        "alias" : "concepts"
+      }
+    }
+  ]
+}`
+
+aliases.json indicates the current version
+
+
+
+
+

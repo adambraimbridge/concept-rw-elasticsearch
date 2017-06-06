@@ -1,10 +1,12 @@
 package service
 
 import (
+	"context"
 	"fmt"
-	log "github.com/Sirupsen/logrus"
-	"gopkg.in/olivere/elastic.v3"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
+	"gopkg.in/olivere/elastic.v5"
 )
 
 type BulkProcessorConfig struct {
@@ -25,7 +27,7 @@ func newBulkProcessor(client *elastic.Client, bulkConfig *BulkProcessorConfig) (
 		BulkSize(bulkConfig.bulkSize).
 		FlushInterval(bulkConfig.flushInterval).
 		After(handleBulkFailures).
-		Do()
+		Do(context.Background())
 }
 
 func handleBulkFailures(executionId int64, requests []elastic.BulkableRequest, response *elastic.BulkResponse, err error) {

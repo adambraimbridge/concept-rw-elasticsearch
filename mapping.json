@@ -65,6 +65,17 @@
             "raw": {
               "type": "string",
               "index": "not_analyzed"
+            },
+            "indexCompletion": {
+              "type": "completion"
+            },
+            "completionByContext": {
+              "type": "completion",
+              "contexts": [{
+                "name" : "typeContext",
+                "type" : "category",
+                "path" : "_type"
+              }]
             }
           }
         },
@@ -225,6 +236,17 @@
             "raw": {
               "type": "string",
               "index": "not_analyzed"
+            },
+            "indexCompletion": {
+              "type": "completion"
+            },
+            "completionByContext": {
+              "type": "completion",
+              "contexts": [{
+                "name" : "typeContext",
+                "type" : "category",
+                "path" : "_type"
+              }]
             }
           }
         },
