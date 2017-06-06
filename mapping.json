@@ -76,6 +76,30 @@
                 "type" : "category",
                 "path" : "_type"
               }]
+              },          
+            "authorCompletionByContext": {
+              "type": "completion",
+              "contexts": [
+              {
+                "name" : "typeContext",
+                "type" : "category",
+                "path" : "_type"
+              },
+              {
+                "name" : "authorContext",
+                "type" : "category",
+                "path" : "is_ft_author"
+              }]
+            }
+          }
+        },
+        "is_ft_author": {
+          "type": "string",
+          "analyzer": "standard",
+          "fields": {
+            "raw": {
+              "type": "string",
+              "index": "not_analyzed"
             }
           }
         },
