@@ -490,7 +490,7 @@ type dummyEsService struct {
 	source       *json.RawMessage
 }
 
-func (service *dummyEsService) LoadData(conceptType string, uuid string, payload service.EsConceptModel) (*elastic.IndexResponse, error) {
+func (service *dummyEsService) LoadData(conceptType string, uuid string, payload interface{}) (*elastic.IndexResponse, error) {
 	if service.returnsError != nil {
 		return nil, service.returnsError
 	} else {
@@ -514,7 +514,7 @@ func (service *dummyEsService) DeleteData(conceptType string, uuid string) (*ela
 	}
 }
 
-func (service *dummyEsService) LoadBulkData(conceptType string, uuid string, payload service.EsConceptModel) {
+func (service *dummyEsService) LoadBulkData(conceptType string, uuid string, payload interface{}) {
 
 }
 
