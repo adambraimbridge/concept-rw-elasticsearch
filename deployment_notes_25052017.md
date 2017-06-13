@@ -2,7 +2,7 @@
 
 ## 1) Create the new index with version number
 
-POST e.g. http://upp-concepts-dynpub-eu.in.ft.com/concepts-0.0.1
+PUT e.g. http://upp-concepts-dynpub-eu.in.ft.com/concepts-0.0.1
 
 with mappings.json in this project.
 
