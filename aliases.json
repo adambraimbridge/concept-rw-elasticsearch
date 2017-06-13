@@ -2,7 +2,7 @@
   "actions" : [
     {
       "add" : {
-        "index" : "concepts-0.0.1",
+        "index" : "concepts-0.0.2",
         "alias" : "concepts"
       }
     }

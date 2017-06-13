@@ -88,12 +88,12 @@
               {
                 "name" : "authorContext",
                 "type" : "category",
-                "path" : "is_ft_author"
+                "path" : "isFTAuthor"
               }]
             }
           }
         },
-        "is_ft_author": {
+        "isFTAuthor": {
           "type": "string",
           "analyzer": "standard",
           "fields": {
