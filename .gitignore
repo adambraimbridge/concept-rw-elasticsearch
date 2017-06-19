@@ -5,3 +5,4 @@ concept-rw-elasticsearch
 /.project
 /vendor/*/
 !/vendor/vendor.json
+!helm/concept-rw-elasticsearch

@@ -1,0 +1,62 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: {{ .Values.service.name }}
+  labels:
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    visualize: "true"
+    app: {{ .Values.service.name }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.service.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.service.name }}
+        visualize: "true"
+    spec:
+      containers:
+      - name: {{ .Chart.Name }}
+        image: "{{ .Values.image.repository }}:{{required "Please provide a valid docker image version by adding the argument at install '--set image.version=...'" .Values.image.version }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        env:
+        - name: APP_PORT
+          value: "8080"
+        - name: ELASTICSEARCH_WHITELISTED_CONCEPTS
+          value: "genres,topics,sections,subjects,locations,brands,organisations,people"
+        - name: ELASTICSEARCH_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: aws.elasticsearch.endpoint
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: global-secrets
+              key: aws.access_key_id
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: global-secrets
+              key: aws.secret_access_key
+        - name: ELASTICSEARCH_REGION
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: aws.region
+        ports:
+        - containerPort: 8080
+        livenessProbe:
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 10
+        readinessProbe:
+          httpGet:
+            path: "/__gtg"
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 30
+        resources:
+{{ toYaml .Values.resources | indent 12 }}
