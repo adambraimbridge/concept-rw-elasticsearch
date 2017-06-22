@@ -90,6 +90,19 @@ func main() {
 		Desc:   "List which are currently supported by elasticsearch (already have mapping associated)",
 		EnvVar: "ELASTICSEARCH_WHITELISTED_CONCEPTS",
 	})
+	authorIdsURL := app.String(cli.StringOpt{
+		Name:   "authorIdsUrl",
+		Value:  "http://localhost:8080/__v1-authors-transformer/transformers/authors/__ids",
+		Desc:   "The URL of authors ids endpoint  used to identify authors",
+		EnvVar: "AUTHOR_IDS_URL",
+	})
+
+	authorCredKey := app.String(cli.StringOpt{
+		Name:   "pub-cluster-cred-etcd-key",
+		Value:  "",
+		Desc:   "The ETCD key value that specifies the credentials for connection to the publish cluster in the form user:pass",
+		EnvVar: "AUTHOR_TRANSFORMER_CRED_ETCD_KEY",
+	})
 
 	accessConfig := service.NewAccessConfig(*accessKey, *secretKey, *esEndpoint)
 
@@ -120,12 +133,12 @@ func main() {
 
 		esService := service.NewEsService(ecc, *indexName, &bulkProcessorConfig)
 		var allowedConceptTypes []string = strings.Split(*elasticsearchWhitelistedConceptTypes, ",")
-		handler := resources.NewHandler(esService, allowedConceptTypes)
+		authorService := service.NewAuthorService(*authorIdsURL, *authorCredKey, &http.Client{Timeout: time.Second * 30})
+		handler := resources.NewHandler(esService, authorService, allowedConceptTypes)
 		defer handler.Close()
 
 		//create health service
 		healthService := health.NewHealthService(esService)
-
 		routeRequests(port, handler, healthService)
 	}
 

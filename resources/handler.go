@@ -11,17 +11,20 @@ import (
 
 type Handler struct {
 	elasticService      service.EsServiceI
+	modelPopulater      service.ModelPopulater
 	allowedConceptTypes map[string]bool
 }
 
-func NewHandler(elasticService service.EsServiceI, allowedConceptTypes []string) (service *Handler) {
+func NewHandler(elasticService service.EsServiceI, authorService service.AuthorService, allowedConceptTypes []string) *Handler {
 
 	allowedTypes := make(map[string]bool)
 	for _, v := range allowedConceptTypes {
 		allowedTypes[v] = true
 	}
 
-	return &Handler{elasticService: elasticService, allowedConceptTypes: allowedTypes}
+	esModelPopulater := service.NewEsModelPopulater(authorService)
+
+	return &Handler{elasticService: elasticService, modelPopulater: esModelPopulater, allowedConceptTypes: allowedTypes}
 }
 
 func (h *Handler) LoadData(writer http.ResponseWriter, request *http.Request) {
@@ -48,7 +51,7 @@ func (h *Handler) LoadData(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	payload := service.ConvertToESConceptModel(concept, conceptType)
+	payload := h.modelPopulater.ConvertToESConceptModel(concept, conceptType)
 
 	_, err = h.elasticService.LoadData(conceptType, uuid, payload)
 	if err != nil {
@@ -83,7 +86,7 @@ func (h *Handler) LoadBulkData(writer http.ResponseWriter, request *http.Request
 		return
 	}
 
-	payload := service.ConvertToESConceptModel(concept, conceptType)
+	payload := h.modelPopulater.ConvertToESConceptModel(concept, conceptType)
 	h.elasticService.LoadBulkData(conceptType, uuid, payload)
 	writer.WriteHeader(http.StatusOK)
 }

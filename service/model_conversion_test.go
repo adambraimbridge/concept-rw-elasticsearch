@@ -8,6 +8,13 @@ import (
 
 func TestConvertToESConceptModel(t *testing.T) {
 	assert := assert.New(t)
+	testAuthorService := curatedAuthorService{
+		httpClient:   nil,
+		authorIdsURL: "url",
+		authorIds:    []AuthorUUID{{"2916ded0-6d1f-4449-b54c-3805da729c1d"}, {"ddc22d37-624a-4a3d-88e5-ba508e38c8ba"}},
+	}
+
+	testModelPopulater := NewEsModelPopulater(&testAuthorService)
 
 	tests := []struct {
 		conceptModel   ConceptModel
@@ -81,7 +88,7 @@ func TestConvertToESConceptModel(t *testing.T) {
 	}
 
 	for _, testModel := range tests {
-		esModel := ConvertToESConceptModel(testModel.conceptModel, "organisations").(EsConceptModel)
+		esModel := testModelPopulater.ConvertToESConceptModel(testModel.conceptModel, "organisations").(EsConceptModel)
 		assert.Equal(testModel.esConceptModel.Id, esModel.Id, fmt.Sprintf("Expected Id %s differs from actual id %s ", testModel.esConceptModel.Id, esModel.Id))
 		assert.Equal(testModel.esConceptModel.ApiUrl, esModel.ApiUrl, fmt.Sprintf("Expected ApiUrl %s differs from actual ApiUrl %s ", testModel.esConceptModel.ApiUrl, esModel.ApiUrl))
 		assert.Equal(testModel.esConceptModel.DirectType, esModel.DirectType, fmt.Sprintf("Expected DirectType %s differs from actual DirectType %s ", testModel.esConceptModel.DirectType, esModel.DirectType))
@@ -94,6 +101,12 @@ func TestConvertToESConceptModel(t *testing.T) {
 
 func TestConvertPersonToESConceptModel(t *testing.T) {
 	assert := assert.New(t)
+	testAuthorService := curatedAuthorService{
+		httpClient:   nil,
+		authorIdsURL: "url",
+		authorIds:    []AuthorUUID{{"2916ded0-6d1f-4449-b54c-3805da729c1d"}, {"ddc22d37-624a-4a3d-88e5-ba508e38c8ba"}},
+	}
+	testModelPopulater := NewEsModelPopulater(&testAuthorService)
 
 	tests := []struct {
 		conceptModel         ConceptModel
@@ -125,7 +138,7 @@ func TestConvertPersonToESConceptModel(t *testing.T) {
 	}
 
 	for _, testModel := range tests {
-		esModel := ConvertToESConceptModel(testModel.conceptModel, "Person").(EsPersonConceptModel)
+		esModel := testModelPopulater.ConvertToESConceptModel(testModel.conceptModel, "people").(EsPersonConceptModel)
 		assert.Equal(testModel.esPersonConceptModel.Id, esModel.Id, fmt.Sprintf("Expected Id %s differs from actual id %s ", testModel.esPersonConceptModel.Id, esModel.Id))
 		assert.Equal(testModel.esPersonConceptModel.ApiUrl, esModel.ApiUrl, fmt.Sprintf("Expected ApiUrl %s differs from actual ApiUrl %s ", testModel.esPersonConceptModel.ApiUrl, esModel.ApiUrl))
 		assert.Equal(testModel.esPersonConceptModel.DirectType, esModel.DirectType, fmt.Sprintf("Expected DirectType %s differs from actual DirectType %s ", testModel.esPersonConceptModel.DirectType, esModel.DirectType))

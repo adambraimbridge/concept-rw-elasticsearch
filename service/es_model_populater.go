@@ -6,21 +6,33 @@ import (
 )
 
 const (
-	PERSON = "Person"
+	PERSON = "people"
 )
 
-func ConvertToESConceptModel(concept ConceptModel, conceptType string) interface{} {
+type ModelPopulater interface {
+	ConvertToESConceptModel(concept ConceptModel, conceptType string) interface{}
+}
+
+type EsModelPopulater struct {
+	authorService AuthorService
+}
+
+func NewEsModelPopulater(authorService AuthorService) ModelPopulater {
+	return &EsModelPopulater{authorService}
+}
+
+func (mp *EsModelPopulater) ConvertToESConceptModel(concept ConceptModel, conceptType string) interface{} {
 	switch conceptType {
 
 	case PERSON:
-		return ConvertToESPersonConceptModel(concept, conceptType)
+		return mp.convertToESPersonConceptModel(concept, conceptType)
 
 	default:
-		return ConvertToESDefaultConceptModel(concept, conceptType)
+		return convertToESDefaultConceptModel(concept, conceptType)
 	}
 }
 
-func ConvertToESDefaultConceptModel(concept ConceptModel, conceptType string) EsConceptModel {
+func convertToESDefaultConceptModel(concept ConceptModel, conceptType string) EsConceptModel {
 	esModel := EsConceptModel{}
 	esModel.ApiUrl = mapper.APIURL(concept.UUID, []string{concept.DirectType}, "")
 	esModel.Id = mapper.IDURL(concept.UUID)
@@ -35,9 +47,9 @@ func ConvertToESDefaultConceptModel(concept ConceptModel, conceptType string) Es
 	return esModel
 }
 
-func ConvertToESPersonConceptModel(concept ConceptModel, conceptType string) EsPersonConceptModel {
-	esConceptModel := ConvertToESDefaultConceptModel(concept, conceptType)
-	esPersonModel := EsPersonConceptModel{EsConceptModel{esConceptModel.Id, esConceptModel.ApiUrl, esConceptModel.PrefLabel, esConceptModel.Types, esConceptModel.DirectType, esConceptModel.Aliases}, isFTAuthor(concept.UUID)}
+func (mp *EsModelPopulater) convertToESPersonConceptModel(concept ConceptModel, conceptType string) EsPersonConceptModel {
+	esConceptModel := convertToESDefaultConceptModel(concept, conceptType)
+	esPersonModel := EsPersonConceptModel{EsConceptModel{esConceptModel.Id, esConceptModel.ApiUrl, esConceptModel.PrefLabel, esConceptModel.Types, esConceptModel.DirectType, esConceptModel.Aliases}, mp.authorService.IsFTAuthor(concept.UUID)}
 	return esPersonModel
 }
 
