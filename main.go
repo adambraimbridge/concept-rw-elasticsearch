@@ -98,10 +98,10 @@ func main() {
 	})
 
 	authorCredKey := app.String(cli.StringOpt{
-		Name:   "pub-cluster-cred-etcd-key",
+		Name:   "pub-cluster-cred",
 		Value:  "",
 		Desc:   "The ETCD key value that specifies the credentials for connection to the publish cluster in the form user:pass",
-		EnvVar: "AUTHOR_TRANSFORMER_CRED_ETCD_KEY",
+		EnvVar: "AUTHOR_TRANSFORMER_CRED",
 	})
 
 	accessConfig := service.NewAccessConfig(*accessKey, *secretKey, *esEndpoint)
@@ -133,7 +133,11 @@ func main() {
 
 		esService := service.NewEsService(ecc, *indexName, &bulkProcessorConfig)
 		var allowedConceptTypes []string = strings.Split(*elasticsearchWhitelistedConceptTypes, ",")
-		authorService := service.NewAuthorService(*authorIdsURL, *authorCredKey, &http.Client{Timeout: time.Second * 30})
+		authorService, err := service.NewAuthorService(*authorIdsURL, *authorCredKey, &http.Client{Timeout: time.Second * 30})
+		if err != nil {
+			log.Errorf("Could not retrieve author list, error=[%s]\n", err)
+			//TODO we need to stop writing until we have authors
+		}
 		handler := resources.NewHandler(esService, authorService, allowedConceptTypes)
 		defer handler.Close()
 

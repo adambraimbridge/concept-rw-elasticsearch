@@ -31,18 +31,21 @@ type curatedAuthorService struct {
 	publishClusterpassword string
 }
 
-func NewAuthorService(authorIdsURL string, authorCredKey string, client *http.Client) AuthorService {
+func NewAuthorService(authorIdsURL string, authorCredKey string, client *http.Client) (AuthorService, error) {
 	creds := strings.Split(authorCredKey, ":")
 	cas := &curatedAuthorService{client, authorIdsURL, nil, creds[0], creds[1]}
-	cas.LoadAuthorIdentifiers()
-	return cas
+	return cas, cas.LoadAuthorIdentifiers()
 }
 
 func (as *curatedAuthorService) LoadAuthorIdentifiers() error {
 	tid := transactionid.NewTransactionID()
 	req, err := http.NewRequest("GET", as.authorIdsURL, nil)
+	if err != nil {
+		return err
+	}
 	req.Header.Add("Content-Type", contentType)
 	req.Header.Add("X-Request-Id", tid)
+	req.Header.Add("User-Agent", "UPP concept-rw-elasticsearch")
 	req.SetBasicAuth(as.publishClusterUser, as.publishClusterpassword)
 	log.WithField("transaction_id", tid).Info("Requesting author list from v1 authors transformer." + req.RequestURI)
 
@@ -51,13 +54,19 @@ func (as *curatedAuthorService) LoadAuthorIdentifiers() error {
 		return err
 	}
 	if resp.StatusCode != 200 {
-		//TODO
 		return fmt.Errorf("A non 2xx error code from v1 authors transformer! Status: %v", resp.StatusCode)
 	}
+
 	scan := bufio.NewScanner(resp.Body)
+	fmt.Print("HERE1")
+	fmt.Print(scan.Text())
 	for scan.Scan() {
+		fmt.Print("HERE")
 		var id AuthorUUID
 		err = json.Unmarshal(scan.Bytes(), &id)
+		if err != nil {
+			return err
+		}
 		as.authorIds = append(as.authorIds, id)
 	}
 
