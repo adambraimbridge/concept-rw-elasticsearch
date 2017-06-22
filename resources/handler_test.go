@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	testError error = errors.New("test error")
+	testError = errors.New("test error")
 )
 
 func TestCreateNewESWriter(t *testing.T) {
@@ -549,6 +549,7 @@ func (service *dummyEsService) CloseBulkProcessor() error {
 type dummyAuthorService struct {
 	isAuthor  string
 	authorIds []service.AuthorUUID
+	gtg       error
 }
 
 func (service *dummyAuthorService) LoadAuthorIdentifiers() error {
@@ -557,4 +558,8 @@ func (service *dummyAuthorService) LoadAuthorIdentifiers() error {
 
 func (service *dummyAuthorService) IsFTAuthor(UUID string) string {
 	return service.isAuthor
+}
+
+func (service *dummyAuthorService) IsGTG() error {
+	return service.gtg
 }

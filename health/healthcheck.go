@@ -6,21 +6,44 @@ import (
 	"net/http"
 
 	"github.com/Financial-Times/concept-rw-elasticsearch/service"
-	"github.com/Financial-Times/go-fthealth/v1a"
+	fthealth "github.com/Financial-Times/go-fthealth/v1_1"
 	log "github.com/Sirupsen/logrus"
-	"github.com/pkg/errors"
 )
 
 type HealthService struct {
 	esHealthService service.EsHealthServiceI
+	authorService   service.AuthorService
 }
 
-func NewHealthService(esHealthService service.EsHealthServiceI) *HealthService {
-	return &HealthService{esHealthService: esHealthService}
+func NewHealthService(esHealthService service.EsHealthServiceI, authorService service.AuthorService) *HealthService {
+	return &HealthService{
+		esHealthService: esHealthService,
+		authorService:   authorService,
+	}
 }
 
-func (service *HealthService) ClusterIsHealthyCheck() v1a.Check {
-	return v1a.Check{
+func (service *HealthService) HealthCheckHandler() func(http.ResponseWriter, *http.Request) {
+	hc := &fthealth.HealthCheck{
+		SystemCode:  "up-crwes",
+		Name:        "Concept RW Elasticsearch",
+		Description: "Concept RW ElasticSearch is an application that writes concepts into Amazon Elasticsearch cluster in batches",
+		Checks:      service.checks(),
+	}
+
+	return fthealth.Handler(hc)
+}
+
+func (service *HealthService) checks() []fthealth.Check {
+	return []fthealth.Check{
+		service.esClusterIsHealthyCheck(),
+		service.esConnectivityHealthyCheck(),
+		service.v1AuthorsTransformerConnectivityCheck(),
+	}
+}
+
+func (service *HealthService) esClusterIsHealthyCheck() fthealth.Check {
+	return fthealth.Check{
+		ID:               "check-elasticsearch-cluster-health",
 		BusinessImpact:   "Full or partial degradation in serving requests from Elasticsearch",
 		Name:             "Check Elasticsearch cluster health",
 		PanicGuide:       "https://dewey.ft.com/up-crwes.html",
@@ -35,37 +58,59 @@ func (service *HealthService) healthChecker() (string, error) {
 	if err != nil {
 		return "Cluster is not healthy: ", err
 	} else if output.Status != "green" {
-		return "Cluster is not healthy", errors.New(fmt.Sprintf("Cluster is %v", output.Status))
+		return "Cluster is not healthy", fmt.Errorf("Cluster is %v", output.Status)
 	} else {
 		return "Cluster is healthy", nil
 	}
 }
 
-func (service *HealthService) ConnectivityHealthyCheck() v1a.Check {
-	return v1a.Check{
-		BusinessImpact:   "Could not connect to Elasticsearch",
+func (service *HealthService) esConnectivityHealthyCheck() fthealth.Check {
+	return fthealth.Check{
+		ID:               "check-connectivity-to-elasticsearch-cluster",
+		BusinessImpact:   "Concepts could not be written to Elasticsearch",
 		Name:             "Check connectivity to the Elasticsearch cluster",
 		PanicGuide:       "https://dewey.ft.com/up-crwes.html",
 		Severity:         1,
 		TechnicalSummary: "Connection to Elasticsearch cluster could not be created. Please check your AWS credentials.",
-		Checker:          service.connectivityChecker,
+		Checker:          service.esConnectivityChecker,
 	}
 }
 
-func (service *HealthService) connectivityChecker() (string, error) {
-
+func (service *HealthService) esConnectivityChecker() (string, error) {
 	_, err := service.esHealthService.GetClusterHealth()
 	if err != nil {
 		return "Could not connect to elasticsearch", err
 	}
-
 	return "Successfully connected to the cluster", nil
+}
+
+func (service *HealthService) v1AuthorsTransformerConnectivityCheck() fthealth.Check {
+	return fthealth.Check{
+		ID:               "check-connectivity-to-v1-authors-transformer",
+		BusinessImpact:   "It is not possible to identify FT authors in People",
+		Name:             "Check connectivity to v1-authors-transformer",
+		PanicGuide:       "https://dewey.ft.com/up-crwes.html",
+		Severity:         1,
+		TechnicalSummary: "Cannot connect to the v1 authors transformer",
+		Checker:          service.v1AuthorsTransformerConnectivityChecker,
+	}
+}
+
+func (service *HealthService) v1AuthorsTransformerConnectivityChecker() (string, error) {
+	err := service.authorService.IsGTG()
+	if err != nil {
+		return "Could not connect to v1-authors-transformer", err
+	}
+	return "Successfully connected to v1-authors-transformer", nil
 }
 
 //GoodToGo returns a 503 if the healthcheck fails - suitable for use from varnish to check availability of a node
 func (service *HealthService) GoodToGo(writer http.ResponseWriter, req *http.Request) {
-	if _, err := service.healthChecker(); err != nil {
-		writer.WriteHeader(http.StatusServiceUnavailable)
+	for _, c := range service.checks() {
+		if _, err := c.Checker(); err != nil {
+			writer.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
 	}
 }
 
