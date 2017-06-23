@@ -329,7 +329,7 @@ func TestReadData(t *testing.T) {
 
 	rawmsg := json.RawMessage(rawModel)
 	dummyEsService := &dummyEsService{found: true, source: &rawmsg}
-	dummyAuthorService := &dummyAuthorService{isAuthor: "false", authorIds: []service.AuthorUUID{}}
+	dummyAuthorService := &dummyAuthorService{isAuthor: false, authorIds: []service.AuthorUUID{}}
 	writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"genres"})
 
 	servicesRouter := mux.NewRouter()
@@ -543,7 +543,7 @@ func (service *dummyEsService) CloseBulkProcessor() error {
 }
 
 type dummyAuthorService struct {
-	isAuthor  string
+	isAuthor  bool
 	authorIds []service.AuthorUUID
 	gtg       error
 }
@@ -552,7 +552,7 @@ func (service *dummyAuthorService) LoadAuthorIdentifiers() error {
 	return nil
 }
 
-func (service *dummyAuthorService) IsFTAuthor(UUID string) string {
+func (service *dummyAuthorService) IsFTAuthor(UUID string) bool {
 	return service.isAuthor
 }
 
