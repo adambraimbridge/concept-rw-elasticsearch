@@ -146,7 +146,7 @@ func TestConvertPersonToESConceptModel(t *testing.T) {
 		assert.Equal(testModel.esPersonConceptModel.PrefLabel, esModel.PrefLabel, fmt.Sprintf("Expected PrefLabel %s differs from actual PrefLabel %s ", testModel.esPersonConceptModel.PrefLabel, esModel.PrefLabel))
 		assert.Equal(testModel.esPersonConceptModel.Types, esModel.Types, fmt.Sprintf("Expected Types %s differ from actual Types %s ", testModel.esPersonConceptModel.Types, esModel.Types))
 		assert.Equal(testModel.esPersonConceptModel.Aliases, esModel.Aliases, fmt.Sprintf("Expected Aliases %s differ from actual Aliases %s ", testModel.esPersonConceptModel.Aliases, esModel.Aliases))
-		assert.Equal(testModel.esPersonConceptModel.IsFTAuthor, esModel.IsFTAuthor, fmt.Sprintf("Expected Aliases %s differ from actual Aliases %s ", testModel.esPersonConceptModel.IsFTAuthor, esModel.IsFTAuthor))
+		assert.Equal(testModel.esPersonConceptModel.IsFTAuthor, esModel.IsFTAuthor, fmt.Sprintf("Expected IsFTAuthor %s differ from actual IsFTAuthor %s ", testModel.esPersonConceptModel.IsFTAuthor, esModel.IsFTAuthor))
 	}
 
 }
