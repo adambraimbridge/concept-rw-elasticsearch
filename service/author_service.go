@@ -62,10 +62,7 @@ func (as *curatedAuthorService) LoadAuthorIdentifiers() error {
 	}
 
 	scan := bufio.NewScanner(resp.Body)
-	fmt.Print("HERE1")
-	fmt.Print(scan.Text())
 	for scan.Scan() {
-		fmt.Print("HERE")
 		var id AuthorUUID
 		err = json.Unmarshal(scan.Bytes(), &id)
 		if err != nil {
