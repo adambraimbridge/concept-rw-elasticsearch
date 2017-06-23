@@ -10,6 +10,11 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
+var expectedAuthorUUIDs = map[string]struct{}{
+	"2916ded0-6d1f-4449-b54c-3805da729c1d": struct{}{},
+	"ddc22d37-624a-4a3d-88e5-ba508e38c8ba": struct{}{},
+}
+
 func (m *mockAuthorTransformerServer) startMockAuthorTransformerServer(t *testing.T) *httptest.Server {
 	r := mux.NewRouter()
 	r.HandleFunc(idsPath, func(w http.ResponseWriter, req *http.Request) {
@@ -22,8 +27,8 @@ func (m *mockAuthorTransformerServer) startMockAuthorTransformerServer(t *testin
 
 		w.WriteHeader(m.Ids(contentType, user, password))
 
-		authorIds := `{"ID":"004079c8-9193-3e99-8045-2dea1bb7cfe1"}
-{"ID":"005ab900-0897-394a-a79c-dda0932d1f13"}`
+		authorIds := `{"ID":"2916ded0-6d1f-4449-b54c-3805da729c1d"}
+{"ID":"ddc22d37-624a-4a3d-88e5-ba508e38c8ba"}`
 		w.Write([]byte(authorIds))
 
 	}).Methods("GET")
@@ -32,7 +37,6 @@ func (m *mockAuthorTransformerServer) startMockAuthorTransformerServer(t *testin
 }
 
 func TestLoadAuthorIdentifiersResponseSuccess(t *testing.T) {
-	expectedAuthorIds := []AuthorUUID{{"004079c8-9193-3e99-8045-2dea1bb7cfe1"}, {"005ab900-0897-394a-a79c-dda0932d1f13"}}
 	m := new(mockAuthorTransformerServer)
 	m.On("Ids", "application/json", "username", "password").Return(http.StatusOK)
 
@@ -42,11 +46,10 @@ func TestLoadAuthorIdentifiersResponseSuccess(t *testing.T) {
 	as, err := NewAuthorService(testServer.URL, "username:password", &http.Client{})
 	assert.NoError(t, err, "Creation of a new Author sevice should not return an error")
 
-	for _, expectedId := range expectedAuthorIds {
-		assert.Equal(t, "true", as.IsFTAuthor(expectedId.UUID), "The UUID should belong to an author")
+	for expectedUUID := range expectedAuthorUUIDs {
+		assert.True(t, as.IsFTAuthor(expectedUUID), "The UUID should belong to an author")
 	}
 	m.AssertExpectations(t)
-
 }
 
 func TestLoadAuthorIdentifiersResponseNot200(t *testing.T) {
@@ -86,23 +89,22 @@ func TestLoadAuthorIdentifiersResponseError(t *testing.T) {
 
 func TestIsFTAuthorTrue(t *testing.T) {
 	testService := &curatedAuthorService{
-		httpClient: nil,
-		serviceURL: "url",
-		authorIds:  []AuthorUUID{{"2916ded0-6d1f-4449-b54c-3805da729c1d"}, {"ddc22d37-624a-4a3d-88e5-ba508e38c8ba"}},
+		httpClient:  nil,
+		serviceURL:  "url",
+		authorUUIDs: expectedAuthorUUIDs,
 	}
 	isAuthor := testService.IsFTAuthor("2916ded0-6d1f-4449-b54c-3805da729c1d")
-	assert.Equal(t, "true", isAuthor)
+	assert.True(t, isAuthor)
 }
 
 func TestIsIsFTAuthorFalse(t *testing.T) {
 	testService := &curatedAuthorService{
-		httpClient: nil,
-		serviceURL: "url",
-		authorIds:  []AuthorUUID{{"2916ded0-6d1f-4449-b54c-3805da729c1d"}, {"ddc22d37-624a-4a3d-88e5-ba508e38c8ba"}},
+		httpClient:  nil,
+		serviceURL:  "url",
+		authorUUIDs: expectedAuthorUUIDs,
 	}
 	isAuthor := testService.IsFTAuthor("61346cf7-008b-49e0-945a-832a90cd60ac")
-	assert.Equal(t, "false", isAuthor)
-
+	assert.False(t, isAuthor)
 }
 
 type mockAuthorTransformerServer struct {

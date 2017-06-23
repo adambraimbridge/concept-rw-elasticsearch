@@ -2,6 +2,8 @@ package service
 
 import (
 	//	log "github.com/Sirupsen/logrus"
+	"fmt"
+
 	"github.com/Financial-Times/neo-model-utils-go/mapper"
 )
 
@@ -49,7 +51,17 @@ func convertToESDefaultConceptModel(concept ConceptModel, conceptType string) Es
 
 func (mp *EsModelPopulater) convertToESPersonConceptModel(concept ConceptModel, conceptType string) EsPersonConceptModel {
 	esConceptModel := convertToESDefaultConceptModel(concept, conceptType)
-	esPersonModel := EsPersonConceptModel{EsConceptModel{esConceptModel.Id, esConceptModel.ApiUrl, esConceptModel.PrefLabel, esConceptModel.Types, esConceptModel.DirectType, esConceptModel.Aliases}, mp.authorService.IsFTAuthor(concept.UUID)}
+	esPersonModel := EsPersonConceptModel{
+		EsConceptModel{
+			esConceptModel.Id,
+			esConceptModel.ApiUrl,
+			esConceptModel.PrefLabel,
+			esConceptModel.Types,
+			esConceptModel.DirectType,
+			esConceptModel.Aliases,
+		},
+		fmt.Sprintf("%v", mp.authorService.IsFTAuthor(concept.UUID)),
+	}
 	return esPersonModel
 }
 

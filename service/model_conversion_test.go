@@ -10,9 +10,9 @@ import (
 func TestConvertToESConceptModel(t *testing.T) {
 	assert := assert.New(t)
 	testAuthorService := curatedAuthorService{
-		httpClient: nil,
-		serviceURL: "url",
-		authorIds:  []AuthorUUID{{"2916ded0-6d1f-4449-b54c-3805da729c1d"}, {"ddc22d37-624a-4a3d-88e5-ba508e38c8ba"}},
+		httpClient:  nil,
+		serviceURL:  "url",
+		authorUUIDs: expectedAuthorUUIDs,
 	}
 
 	testModelPopulater := NewEsModelPopulater(&testAuthorService)
@@ -103,9 +103,9 @@ func TestConvertToESConceptModel(t *testing.T) {
 func TestConvertPersonToESConceptModel(t *testing.T) {
 	assert := assert.New(t)
 	testAuthorService := curatedAuthorService{
-		httpClient: nil,
-		serviceURL: "url",
-		authorIds:  []AuthorUUID{{"2916ded0-6d1f-4449-b54c-3805da729c1d"}, {"ddc22d37-624a-4a3d-88e5-ba508e38c8ba"}},
+		httpClient:  nil,
+		serviceURL:  "url",
+		authorUUIDs: expectedAuthorUUIDs,
 	}
 	testModelPopulater := NewEsModelPopulater(&testAuthorService)
 

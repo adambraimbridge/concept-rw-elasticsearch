@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 
 	transactionid "github.com/Financial-Times/transactionid-utils-go"
@@ -22,7 +21,7 @@ type AuthorUUID struct {
 
 type AuthorService interface {
 	LoadAuthorIdentifiers() error
-	IsFTAuthor(UUID string) string
+	IsFTAuthor(UUID string) bool
 	IsGTG() error
 }
 
@@ -30,7 +29,7 @@ type AuthorService interface {
 type curatedAuthorService struct {
 	httpClient             *http.Client
 	serviceURL             string
-	authorIds              []AuthorUUID
+	authorUUIDs            map[string]struct{}
 	publishClusterUser     string
 	publishClusterpassword string
 }
@@ -58,8 +57,10 @@ func (as *curatedAuthorService) LoadAuthorIdentifiers() error {
 		return err
 	}
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("A non 2xx error code from v1 authors transformer! Status: %v", resp.StatusCode)
+		return fmt.Errorf("A non-200 error code from v1 authors transformer! Status: %v", resp.StatusCode)
 	}
+
+	as.authorUUIDs = make(map[string]struct{})
 
 	scan := bufio.NewScanner(resp.Body)
 	for scan.Scan() {
@@ -68,21 +69,16 @@ func (as *curatedAuthorService) LoadAuthorIdentifiers() error {
 		if err != nil {
 			return err
 		}
-		as.authorIds = append(as.authorIds, id)
+		as.authorUUIDs[id.UUID] = struct{}{}
 	}
-
-	log.Info("we have authos " + strconv.Itoa(len(as.authorIds)))
+	log.Infof("Found %v authors", len(as.authorUUIDs))
 
 	return nil
 }
 
-func (as *curatedAuthorService) IsFTAuthor(UUID string) string {
-	for _, authorId := range as.authorIds {
-		if UUID == authorId.UUID {
-			return "true"
-		}
-	}
-	return "false"
+func (as *curatedAuthorService) IsFTAuthor(uuid string) bool {
+	_, found := as.authorUUIDs[uuid]
+	return found
 }
 
 func (as *curatedAuthorService) IsGTG() error {
