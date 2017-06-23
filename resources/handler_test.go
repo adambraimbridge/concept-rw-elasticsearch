@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	testError = errors.New("test error")
+	errTest = errors.New("test error")
 )
 
 func TestCreateNewESWriter(t *testing.T) {
@@ -183,7 +183,7 @@ func TestLoadDataEsClientServerErrors(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	dummyEsService := &dummyEsService{returnsError: testError}
+	dummyEsService := &dummyEsService{returnsError: errTest}
 	dummyAuthorService := &dummyAuthorService{}
 	writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"organisations"})
 
@@ -327,7 +327,7 @@ func TestReadData(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var rawmsg json.RawMessage = json.RawMessage(rawModel)
+	rawmsg := json.RawMessage(rawModel)
 	dummyEsService := &dummyEsService{found: true, source: &rawmsg}
 	dummyAuthorService := &dummyAuthorService{isAuthor: "false", authorIds: []service.AuthorUUID{}}
 	writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"genres"})
@@ -390,7 +390,7 @@ func TestReadDataEsServerError(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	dummyEsService := &dummyEsService{returnsError: testError}
+	dummyEsService := &dummyEsService{returnsError: errTest}
 	dummyAuthorService := &dummyAuthorService{}
 	writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"organisations"})
 
@@ -487,7 +487,7 @@ func TestDeleteDataEsServerError(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	dummyEsService := &dummyEsService{returnsError: testError}
+	dummyEsService := &dummyEsService{returnsError: errTest}
 	dummyAuthorService := &dummyAuthorService{}
 	writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"organisations"})
 
@@ -513,25 +513,22 @@ type dummyEsService struct {
 func (service *dummyEsService) LoadData(conceptType string, uuid string, payload interface{}) (*elastic.IndexResponse, error) {
 	if service.returnsError != nil {
 		return nil, service.returnsError
-	} else {
-		return &elastic.IndexResponse{}, nil
 	}
+	return &elastic.IndexResponse{}, nil
 }
 
 func (service *dummyEsService) ReadData(conceptType string, uuid string) (*elastic.GetResult, error) {
 	if service.returnsError != nil {
 		return nil, service.returnsError
-	} else {
-		return &elastic.GetResult{Found: service.found, Source: service.source}, nil
 	}
+	return &elastic.GetResult{Found: service.found, Source: service.source}, nil
 }
 
 func (service *dummyEsService) DeleteData(conceptType string, uuid string) (*elastic.DeleteResponse, error) {
 	if service.returnsError != nil {
 		return nil, service.returnsError
-	} else {
-		return &elastic.DeleteResponse{Found: service.found}, nil
 	}
+	return &elastic.DeleteResponse{Found: service.found}, nil
 }
 
 func (service *dummyEsService) LoadBulkData(conceptType string, uuid string, payload interface{}) {
@@ -541,9 +538,8 @@ func (service *dummyEsService) LoadBulkData(conceptType string, uuid string, pay
 func (service *dummyEsService) CloseBulkProcessor() error {
 	if service.returnsError != nil {
 		return service.returnsError
-	} else {
-		return nil
 	}
+	return nil
 }
 
 type dummyAuthorService struct {
