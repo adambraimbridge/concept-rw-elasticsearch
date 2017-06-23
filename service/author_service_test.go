@@ -12,7 +12,7 @@ import (
 
 func (m *mockAuthorTransformerServer) startMockAuthorTransformerServer(t *testing.T) *httptest.Server {
 	r := mux.NewRouter()
-	r.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
+	r.HandleFunc(idsPath, func(w http.ResponseWriter, req *http.Request) {
 		ua := req.Header.Get("User-Agent")
 		assert.Equal(t, "UPP concept-rw-elasticsearch", ua, "user-agent header")
 		tid := req.Header.Get("X-Request-Id")
@@ -32,15 +32,19 @@ func (m *mockAuthorTransformerServer) startMockAuthorTransformerServer(t *testin
 }
 
 func TestLoadAuthorIdentifiersResponseSuccess(t *testing.T) {
-	//authorIds := []AuthorUUID{{"2916ded0-6d1f-4449-b54c-3805da729c1d"}, {"ddc22d37-624a-4a3d-88e5-ba508e38c8ba"}}
+	expectedAuthorIds := []AuthorUUID{{"004079c8-9193-3e99-8045-2dea1bb7cfe1"}, {"005ab900-0897-394a-a79c-dda0932d1f13"}}
 	m := new(mockAuthorTransformerServer)
 	m.On("Ids", "application/json", "username", "password").Return(http.StatusOK)
 
 	testServer := m.startMockAuthorTransformerServer(t)
 	defer testServer.Close()
 
-	testService, _ := NewAuthorService(testServer.URL, "username:password", &http.Client{})
-	assert.Equal(t, "004079c8-9193-3e99-8045-2dea1bb7cfe1", testService.(*curatedAuthorService).authorIds[0].UUID)
+	as, err := NewAuthorService(testServer.URL, "username:password", &http.Client{})
+	assert.NoError(t, err, "Creation of a new Author sevice should not return an error")
+
+	for _, expectedId := range expectedAuthorIds {
+		assert.Equal(t, "true", as.IsFTAuthor(expectedId.UUID), "The UUID should belong to an author")
+	}
 	m.AssertExpectations(t)
 
 }
