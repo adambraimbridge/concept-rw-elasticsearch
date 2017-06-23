@@ -63,13 +63,6 @@
 			"versionExact": "v0.11.2"
 		},
 		{
-			"checksumSHA1": "Lf3uUXTkKK5DJ37BxQvxO1Fq+K8=",
-			"origin": "github.com/stretchr/testify/vendor/github.com/davecgh/go-spew/spew",
-			"path": "github.com/davecgh/go-spew/spew",
-			"revision": "69483b4bd14f5845b5a1e55bca19e954e827f1d0",
-			"revisionTime": "2016-09-25T01:54:16Z"
-		},
-		{
 			"checksumSHA1": "g/V4qrXjUGG9B+e3hB+4NAYJ5Gs=",
 			"path": "github.com/gorilla/context",
 			"revision": "08b5f424b9271eedf6f9f0ce86cb9396ed337a42",
@@ -146,14 +139,6 @@
 			"checksumSHA1": "Je6cJkYWj2SoaHDMGpE00BGi9sw=",
 			"path": "github.com/stretchr/testify/mock",
 			"revision": "69483b4bd14f5845b5a1e55bca19e954e827f1d0",
-			"revisionTime": "2016-09-25T01:54:16Z",
-			"version": "v1.1.4",
-			"versionExact": "v1.1.4"
-		},
-		{
-			"checksumSHA1": "WGwMB6WljaeGKzuNCX5M4E8LADE=",
-			"path": "github.com/stretchr/testify/mock",
-			"revision": "4d4bfba8f1d1027c4fdbe371823030df51419987",
 			"revisionTime": "2016-09-25T01:54:16Z",
 			"version": "v1.1.4",
 			"versionExact": "v1.1.4"
