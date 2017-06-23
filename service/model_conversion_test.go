@@ -2,16 +2,17 @@ package service
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestConvertToESConceptModel(t *testing.T) {
 	assert := assert.New(t)
 	testAuthorService := curatedAuthorService{
-		httpClient:   nil,
-		authorIdsURL: "url",
-		authorIds:    []AuthorUUID{{"2916ded0-6d1f-4449-b54c-3805da729c1d"}, {"ddc22d37-624a-4a3d-88e5-ba508e38c8ba"}},
+		httpClient: nil,
+		serviceURL: "url",
+		authorIds:  []AuthorUUID{{"2916ded0-6d1f-4449-b54c-3805da729c1d"}, {"ddc22d37-624a-4a3d-88e5-ba508e38c8ba"}},
 	}
 
 	testModelPopulater := NewEsModelPopulater(&testAuthorService)
@@ -102,9 +103,9 @@ func TestConvertToESConceptModel(t *testing.T) {
 func TestConvertPersonToESConceptModel(t *testing.T) {
 	assert := assert.New(t)
 	testAuthorService := curatedAuthorService{
-		httpClient:   nil,
-		authorIdsURL: "url",
-		authorIds:    []AuthorUUID{{"2916ded0-6d1f-4449-b54c-3805da729c1d"}, {"ddc22d37-624a-4a3d-88e5-ba508e38c8ba"}},
+		httpClient: nil,
+		serviceURL: "url",
+		authorIds:  []AuthorUUID{{"2916ded0-6d1f-4449-b54c-3805da729c1d"}, {"ddc22d37-624a-4a3d-88e5-ba508e38c8ba"}},
 	}
 	testModelPopulater := NewEsModelPopulater(&testAuthorService)
 

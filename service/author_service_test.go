@@ -1,12 +1,13 @@
 package service
 
 import (
-	"github.com/gorilla/mux"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/gorilla/mux"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func (m *mockAuthorTransformerServer) startMockAuthorTransformerServer(t *testing.T) *httptest.Server {
@@ -81,9 +82,9 @@ func TestLoadAuthorIdentifiersResponseError(t *testing.T) {
 
 func TestIsFTAuthorTrue(t *testing.T) {
 	testService := &curatedAuthorService{
-		httpClient:   nil,
-		authorIdsURL: "url",
-		authorIds:    []AuthorUUID{{"2916ded0-6d1f-4449-b54c-3805da729c1d"}, {"ddc22d37-624a-4a3d-88e5-ba508e38c8ba"}},
+		httpClient: nil,
+		serviceURL: "url",
+		authorIds:  []AuthorUUID{{"2916ded0-6d1f-4449-b54c-3805da729c1d"}, {"ddc22d37-624a-4a3d-88e5-ba508e38c8ba"}},
 	}
 	isAuthor := testService.IsFTAuthor("2916ded0-6d1f-4449-b54c-3805da729c1d")
 	assert.Equal(t, "true", isAuthor)
@@ -91,9 +92,9 @@ func TestIsFTAuthorTrue(t *testing.T) {
 
 func TestIsIsFTAuthorFalse(t *testing.T) {
 	testService := &curatedAuthorService{
-		httpClient:   nil,
-		authorIdsURL: "url",
-		authorIds:    []AuthorUUID{{"2916ded0-6d1f-4449-b54c-3805da729c1d"}, {"ddc22d37-624a-4a3d-88e5-ba508e38c8ba"}},
+		httpClient: nil,
+		serviceURL: "url",
+		authorIds:  []AuthorUUID{{"2916ded0-6d1f-4449-b54c-3805da729c1d"}, {"ddc22d37-624a-4a3d-88e5-ba508e38c8ba"}},
 	}
 	isAuthor := testService.IsFTAuthor("61346cf7-008b-49e0-945a-832a90cd60ac")
 	assert.Equal(t, "false", isAuthor)

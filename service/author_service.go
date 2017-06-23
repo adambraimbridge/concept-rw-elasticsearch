@@ -4,14 +4,17 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	transactionid "github.com/Financial-Times/transactionid-utils-go"
-	log "github.com/Sirupsen/logrus"
 	"net/http"
 	"strconv"
 	"strings"
+
+	transactionid "github.com/Financial-Times/transactionid-utils-go"
+	log "github.com/Sirupsen/logrus"
 )
 
 const contentType = "application/json"
+const idsPath = "/transformers/authors/__ids"
+const gtgPath = "/__gtg"
 
 type AuthorUUID struct {
 	UUID string `json:"ID"`
@@ -20,12 +23,13 @@ type AuthorUUID struct {
 type AuthorService interface {
 	LoadAuthorIdentifiers() error
 	IsFTAuthor(UUID string) string
+	IsGTG() error
 }
 
 //uses v1 transformer author list
 type curatedAuthorService struct {
 	httpClient             *http.Client
-	authorIdsURL           string
+	serviceURL             string
 	authorIds              []AuthorUUID
 	publishClusterUser     string
 	publishClusterpassword string
@@ -39,7 +43,7 @@ func NewAuthorService(authorIdsURL string, authorCredKey string, client *http.Cl
 
 func (as *curatedAuthorService) LoadAuthorIdentifiers() error {
 	tid := transactionid.NewTransactionID()
-	req, err := http.NewRequest("GET", as.authorIdsURL, nil)
+	req, err := http.NewRequest("GET", as.serviceURL+idsPath, nil)
 	if err != nil {
 		return err
 	}
@@ -82,4 +86,15 @@ func (as *curatedAuthorService) IsFTAuthor(UUID string) string {
 		}
 	}
 	return "false"
+}
+
+func (as *curatedAuthorService) IsGTG() error {
+	resp, err := http.Get(as.serviceURL + gtgPath)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("gtg endpoint returned a non-200 status: %v", resp.StatusCode)
+	}
+	return nil
 }
