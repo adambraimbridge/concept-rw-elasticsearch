@@ -33,6 +33,10 @@ func (m *mockAuthorTransformerServer) startMockAuthorTransformerServer(t *testin
 
 	}).Methods("GET")
 
+	r.HandleFunc(gtgPath, func(w http.ResponseWriter, req *http.Request) {
+		w.WriteHeader(m.GTG())
+	})
+
 	return httptest.NewServer(r)
 }
 
@@ -84,7 +88,6 @@ func TestLoadAuthorIdentifiersResponseError(t *testing.T) {
 	_, err := NewAuthorService(testServer.URL, "username:password", &http.Client{})
 	assert.Error(t, err)
 	m.AssertExpectations(t)
-
 }
 
 func TestIsFTAuthorTrue(t *testing.T) {
@@ -107,11 +110,55 @@ func TestIsIsFTAuthorFalse(t *testing.T) {
 	assert.False(t, isAuthor)
 }
 
+func TestIsGTG(t *testing.T) {
+	m := new(mockAuthorTransformerServer)
+	m.On("Ids", "application/json", "username", "password").Return(http.StatusOK)
+	m.On("GTG").Return(http.StatusOK)
+
+	testServer := m.startMockAuthorTransformerServer(t)
+	defer testServer.Close()
+
+	as, err := NewAuthorService(testServer.URL, "username:password", &http.Client{})
+	assert.NoError(t, err, "Creation of a new Author sevice should not return an error")
+	assert.NoError(t, as.IsGTG(), "No GTG errors")
+}
+
+func TestIsNotGTG(t *testing.T) {
+	m := new(mockAuthorTransformerServer)
+	m.On("Ids", "application/json", "username", "password").Return(http.StatusOK)
+	m.On("GTG").Return(http.StatusServiceUnavailable)
+
+	testServer := m.startMockAuthorTransformerServer(t)
+	defer testServer.Close()
+
+	as, err := NewAuthorService(testServer.URL, "username:password", &http.Client{})
+	assert.NoError(t, err, "Creation of a new Author sevice should not return an error")
+	assert.EqualError(t, as.IsGTG(), "gtg endpoint returned a non-200 status: 503", "GTG should return 503")
+}
+
+func TestGTGConnectionError(t *testing.T) {
+	m := new(mockAuthorTransformerServer)
+	m.On("Ids", "application/json", "username", "password").Return(http.StatusOK)
+	m.On("GTG").Return(http.StatusServiceUnavailable)
+
+	testServer := m.startMockAuthorTransformerServer(t)
+
+	as, err := NewAuthorService(testServer.URL, "username:password", &http.Client{})
+	assert.NoError(t, err, "Creation of a new Author sevice should not return an error")
+	testServer.Close()
+	assert.Error(t, as.IsGTG(), "GTG should return a connection error")
+}
+
 type mockAuthorTransformerServer struct {
 	mock.Mock
 }
 
 func (m *mockAuthorTransformerServer) Ids(contentType string, user string, password string) int {
 	args := m.Called(contentType, user, password)
+	return args.Int(0)
+}
+
+func (m *mockAuthorTransformerServer) GTG() int {
+	args := m.Called()
 	return args.Int(0)
 }
