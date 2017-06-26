@@ -222,7 +222,7 @@ func TestHappyHealthCheck(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rr.Code, "HealthCheck should return HTTP 200 OK")
 
 	checks, err := parseHealthcheck(rr.Body.String())
-	assert.NoError(t, err, "HealthCheck Response BOdy should be consistent")
+	assert.NoError(t, err, "HealthCheck Response Body should be consistent")
 
 	for _, check := range checks {
 		assert.True(t, check.Ok)
@@ -249,7 +249,7 @@ func TestHealthCheckUnhealthyESCluster(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rr.Code, "HealthCheck should return HTTP 200 OK")
 
 	checks, err := parseHealthcheck(rr.Body.String())
-	assert.NoError(t, err, "HealthCheck Response BOdy should be consistent")
+	assert.NoError(t, err, "HealthCheck Response Body should be consistent")
 
 	for _, check := range checks {
 		if check.ID == "check-elasticsearch-cluster-health" {
@@ -280,7 +280,7 @@ func TestHealthCheckNoESClusterConnection(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rr.Code, "HealthCheck should return HTTP 200 OK")
 
 	checks, err := parseHealthcheck(rr.Body.String())
-	assert.NoError(t, err, "HealthCheck Response BOdy should be consistent")
+	assert.NoError(t, err, "HealthCheck Response Body should be consistent")
 
 	for _, check := range checks {
 		if check.ID == "check-elasticsearch-cluster-health" || check.ID == "check-connectivity-to-elasticsearch-cluster" {
@@ -311,7 +311,7 @@ func TestHealthCheckV1AuthorsTransformNotGTG(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rr.Code, "HealthCheck should return HTTP 200 OK")
 
 	checks, err := parseHealthcheck(rr.Body.String())
-	assert.NoError(t, err, "HealthCheck Response BOdy should be consistent")
+	assert.NoError(t, err, "HealthCheck Response Body should be consistent")
 
 	for _, check := range checks {
 		if check.ID == "check-connectivity-to-v1-authors-transformer" {

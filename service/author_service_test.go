@@ -17,18 +17,17 @@ var expectedAuthorUUIDs = map[string]struct{}{
 
 func (m *mockAuthorTransformerServer) startMockAuthorTransformerServer(t *testing.T) *httptest.Server {
 	r := mux.NewRouter()
-	r.HandleFunc(idsPath, func(w http.ResponseWriter, req *http.Request) {
+	r.HandleFunc(authorTransformerIdsPath, func(w http.ResponseWriter, req *http.Request) {
 		ua := req.Header.Get("User-Agent")
 		assert.Equal(t, "UPP concept-rw-elasticsearch", ua, "user-agent header")
 		tid := req.Header.Get("X-Request-Id")
-		assert.NotEmpty(t, tid, "transactio id")
+		assert.NotEmpty(t, tid, "transaction id")
 		contentType := req.Header.Get("Content-Type")
 		user, password, _ := req.BasicAuth()
 
 		w.WriteHeader(m.Ids(contentType, user, password))
 
-		authorIds := `{"ID":"2916ded0-6d1f-4449-b54c-3805da729c1d"}
-{"ID":"ddc22d37-624a-4a3d-88e5-ba508e38c8ba"}`
+		authorIds := "{\"ID\":\"2916ded0-6d1f-4449-b54c-3805da729c1d\"}\n{\"ID\":\"ddc22d37-624a-4a3d-88e5-ba508e38c8ba\"}"
 		w.Write([]byte(authorIds))
 
 	}).Methods("GET")

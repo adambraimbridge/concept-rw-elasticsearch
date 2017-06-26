@@ -12,7 +12,7 @@ import (
 )
 
 const contentType = "application/json"
-const idsPath = "/transformers/authors/__ids"
+const authorTransformerIdsPath = "/__v1-authors-transformer/transformers/authors/__ids"
 const gtgPath = "/__gtg"
 
 type AuthorUUID struct {
@@ -34,15 +34,15 @@ type curatedAuthorService struct {
 	publishClusterpassword string
 }
 
-func NewAuthorService(authorIdsURL string, authorCredKey string, client *http.Client) (AuthorService, error) {
-	creds := strings.Split(authorCredKey, ":")
-	cas := &curatedAuthorService{client, authorIdsURL, nil, creds[0], creds[1]}
+func NewAuthorService(serviceURL string, pubClusterKey string, client *http.Client) (AuthorService, error) {
+	creds := strings.Split(pubClusterKey, ":")
+	cas := &curatedAuthorService{client, serviceURL, nil, creds[0], creds[1]}
 	return cas, cas.LoadAuthorIdentifiers()
 }
 
 func (as *curatedAuthorService) LoadAuthorIdentifiers() error {
 	tid := transactionid.NewTransactionID()
-	req, err := http.NewRequest("GET", as.serviceURL+idsPath, nil)
+	req, err := http.NewRequest("GET", as.serviceURL+authorTransformerIdsPath, nil)
 	if err != nil {
 		return err
 	}

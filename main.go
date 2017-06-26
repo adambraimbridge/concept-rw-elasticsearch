@@ -89,18 +89,18 @@ func main() {
 		Desc:   "List which are currently supported by elasticsearch (already have mapping associated)",
 		EnvVar: "ELASTICSEARCH_WHITELISTED_CONCEPTS",
 	})
-	authorIdsURL := app.String(cli.StringOpt{
-		Name:   "authorIdsUrl",
+	pubClusterReadURL := app.String(cli.StringOpt{
+		Name:   "pub-cluster-read-url",
 		Value:  "http://localhost:8080/__v1-authors-transformer/",
 		Desc:   "The URL of authors ids endpoint  used to identify authors",
-		EnvVar: "AUTHOR_IDS_URL",
+		EnvVar: "PUB_CLUSTER_URL",
 	})
 
-	authorCredKey := app.String(cli.StringOpt{
-		Name:   "pub-cluster-cred",
+	pubClusterCredKey := app.String(cli.StringOpt{
+		Name:   "pub-cluster-credentials",
 		Value:  "",
 		Desc:   "The ETCD key value that specifies the credentials for connection to the publish cluster in the form user:pass",
-		EnvVar: "AUTHOR_TRANSFORMER_CRED",
+		EnvVar: "PUB_CLUSTER_CRED",
 	})
 
 	accessConfig := service.NewAccessConfig(*accessKey, *secretKey, *esEndpoint)
@@ -133,7 +133,7 @@ func main() {
 		esService := service.NewEsService(ecc, *indexName, &bulkProcessorConfig)
 
 		allowedConceptTypes := strings.Split(*elasticsearchWhitelistedConceptTypes, ",")
-		authorService, err := service.NewAuthorService(*authorIdsURL, *authorCredKey, &http.Client{Timeout: time.Second * 30})
+		authorService, err := service.NewAuthorService(*pubClusterReadURL, *pubClusterCredKey, &http.Client{Timeout: time.Second * 30})
 		if err != nil {
 			log.Errorf("Could not retrieve author list, error=[%s]\n", err)
 			//TODO we need to stop writing until we have authors

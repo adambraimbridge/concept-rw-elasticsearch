@@ -1,9 +1,7 @@
 package service
 
 import (
-	//	log "github.com/Sirupsen/logrus"
 	"fmt"
-
 	"github.com/Financial-Times/neo-model-utils-go/mapper"
 )
 
@@ -11,19 +9,19 @@ const (
 	PERSON = "people"
 )
 
-type ModelPopulater interface {
+type ModelPopulator interface {
 	ConvertToESConceptModel(concept ConceptModel, conceptType string) interface{}
 }
 
-type EsModelPopulater struct {
+type EsModelPopulator struct {
 	authorService AuthorService
 }
 
-func NewEsModelPopulater(authorService AuthorService) ModelPopulater {
-	return &EsModelPopulater{authorService}
+func NewEsModelPopulator(authorService AuthorService) ModelPopulator {
+	return &EsModelPopulator{authorService}
 }
 
-func (mp *EsModelPopulater) ConvertToESConceptModel(concept ConceptModel, conceptType string) interface{} {
+func (mp *EsModelPopulator) ConvertToESConceptModel(concept ConceptModel, conceptType string) interface{} {
 	switch conceptType {
 
 	case PERSON:
@@ -49,7 +47,7 @@ func convertToESDefaultConceptModel(concept ConceptModel, conceptType string) Es
 	return esModel
 }
 
-func (mp *EsModelPopulater) convertToESPersonConceptModel(concept ConceptModel, conceptType string) EsPersonConceptModel {
+func (mp *EsModelPopulator) convertToESPersonConceptModel(concept ConceptModel, conceptType string) EsPersonConceptModel {
 	esConceptModel := convertToESDefaultConceptModel(concept, conceptType)
 	esPersonModel := EsPersonConceptModel{
 		EsConceptModel{
@@ -80,7 +78,7 @@ func reverse(strings []string) []string {
 		return nil
 	}
 	if len(strings) == 0 {
-		return []string{}
+		return strings
 	}
 	var reversed []string
 	for i := len(strings) - 1; i >= 0; i = i - 1 {

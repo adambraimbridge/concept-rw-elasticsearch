@@ -87,7 +87,7 @@ func (service *HealthService) esConnectivityChecker() (string, error) {
 func (service *HealthService) v1AuthorsTransformerConnectivityCheck() fthealth.Check {
 	return fthealth.Check{
 		ID:               "check-connectivity-to-v1-authors-transformer",
-		BusinessImpact:   "It is not possible to identify FT authors in People",
+		BusinessImpact:   "Updates that identify FT authors cannot be processed",
 		Name:             "Check connectivity to v1-authors-transformer",
 		PanicGuide:       "https://dewey.ft.com/up-crwes.html",
 		Severity:         1,
