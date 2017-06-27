@@ -13,7 +13,7 @@ import (
 
 const contentType = "application/json"
 const authorTransformerIdsPath = "/__v1-authors-transformer/transformers/authors/__ids"
-const gtgPath = "/__gtg"
+const gtgPath = "/__v1-authors-transformer/__gtg"
 
 type AuthorUUID struct {
 	UUID string `json:"ID"`

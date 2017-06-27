@@ -91,16 +91,16 @@ func main() {
 	})
 	pubClusterReadURL := app.String(cli.StringOpt{
 		Name:   "pub-cluster-read-url",
-		Value:  "http://localhost:8080/__v1-authors-transformer/",
+		Value:  "http://localhost:8080",
 		Desc:   "The URL of authors ids endpoint  used to identify authors",
-		EnvVar: "PUB_CLUSTER_URL",
+		EnvVar: "PUBLISH_CLUSTER_URL",
 	})
 
 	pubClusterCredKey := app.String(cli.StringOpt{
 		Name:   "pub-cluster-credentials",
 		Value:  "",
 		Desc:   "The ETCD key value that specifies the credentials for connection to the publish cluster in the form user:pass",
-		EnvVar: "PUB_CLUSTER_CRED",
+		EnvVar: "PUBLISH_CLUSTER_CREDENTIALS",
 	})
 
 	accessConfig := service.NewAccessConfig(*accessKey, *secretKey, *esEndpoint)

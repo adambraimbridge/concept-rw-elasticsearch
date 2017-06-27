@@ -3,11 +3,10 @@ package health
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
-
 	"github.com/Financial-Times/concept-rw-elasticsearch/service"
 	fthealth "github.com/Financial-Times/go-fthealth/v1_1"
 	log "github.com/Sirupsen/logrus"
+	"net/http"
 )
 
 type HealthService struct {
@@ -109,9 +108,11 @@ func (service *HealthService) GoodToGo(writer http.ResponseWriter, req *http.Req
 	for _, c := range service.checks() {
 		if _, err := c.Checker(); err != nil {
 			writer.WriteHeader(http.StatusServiceUnavailable)
+			writer.Write([]byte(fmt.Sprintf("gtg failed for %v, reason: %v", c.ID, err.Error())))
 			return
 		}
 	}
+
 }
 
 //HealthDetails returns the response from elasticsearch service /__health endpoint - describing the cluster health

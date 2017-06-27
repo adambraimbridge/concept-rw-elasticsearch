@@ -49,8 +49,10 @@
 		{
 			"checksumSHA1": "+sjiZBzrsk91W1A3Md1azCkZadg=",
 			"path": "github.com/Financial-Times/transactionid-utils-go",
-			"revision": "df2f00c734957c9dd651ce23ab0e0902504c7636",
-			"revisionTime": "2017-03-28T16:39:54Z"
+			"revision": "df2f00c734957c9dd651ce23ab0e0902504c7636", 
+			"revisionTime": "2017-03-28T16:39:54Z",
+			"version": "v0.2.0",
+            "versionExact": "v0.2.0"
 		},
 		{
 			"checksumSHA1": "Liv7AJyNinmP3pvwohcXp4R6xY4=",

@@ -128,9 +128,7 @@ func TestGoodToGoUnhealthyESCluster(t *testing.T) {
 			status, http.StatusServiceUnavailable)
 	}
 
-	if rr.Body.Bytes() != nil {
-		t.Error("Response body should be empty")
-	}
+	assert.Equal(t, "gtg failed for check-elasticsearch-cluster-health, reason: computer says no", rr.Body.String())
 
 	esHealthService.AssertExpectations(t)
 	authorService.AssertExpectations(t)
@@ -197,9 +195,7 @@ func TestGoodToGoUnhealthyV1AuthorsTransformer(t *testing.T) {
 			status, http.StatusServiceUnavailable)
 	}
 
-	if rr.Body.Bytes() != nil {
-		t.Error("Response body should be empty")
-	}
+	assert.Equal(t, "gtg failed for check-connectivity-to-v1-authors-transformer, reason: computer says no", rr.Body.String())
 
 	esHealthService.AssertExpectations(t)
 	authorService.AssertExpectations(t)
