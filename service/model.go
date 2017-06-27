@@ -9,6 +9,19 @@ type ConceptModel struct {
 	Aliases    []string `json:"aliases,omitempty"`
 }
 
+type AggregateConceptModel struct {
+	PrefUUID              string          `json:"prefUUID"`
+	DirectType            string          `json:"type"`
+	PrefLabel             string          `json:"prefLabel"`
+	Aliases               []string        `json:"aliases,omitempty"`
+	SourceRepresentations []SourceConcept `json:"sourceRepresentations"`
+}
+
+type SourceConcept struct {
+	UUID      string `json:"uuid"`
+	Authority string `json:"authority"`
+}
+
 type EsConceptModel struct {
 	Id         string   `json:"id"`
 	ApiUrl     string   `json:"apiUrl"`
@@ -18,10 +31,25 @@ type EsConceptModel struct {
 	Aliases    []string `json:"aliases,omitempty"`
 }
 
-func ConvertToESConceptModel(concept ConceptModel, conceptType string) EsConceptModel {
+func ConvertConceptToESConceptModel(concept ConceptModel, conceptType string) EsConceptModel {
 	esModel := EsConceptModel{}
 	esModel.ApiUrl = mapper.APIURL(concept.UUID, []string{concept.DirectType}, "")
 	esModel.Id = mapper.IDURL(concept.UUID)
+	esModel.Types = mapper.TypeURIs(getTypes(concept.DirectType))
+	directTypeArray := mapper.TypeURIs([]string{concept.DirectType})
+	if len(directTypeArray) == 1 {
+		esModel.DirectType = directTypeArray[0]
+	}
+	esModel.Aliases = concept.Aliases
+	esModel.PrefLabel = concept.PrefLabel
+
+	return esModel
+}
+
+func ConvertAggregateConceptToESConceptModel(concept AggregateConceptModel, conceptType string) EsConceptModel {
+	esModel := EsConceptModel{}
+	esModel.ApiUrl = mapper.APIURL(concept.PrefUUID, []string{concept.DirectType}, "")
+	esModel.Id = mapper.IDURL(concept.PrefUUID)
 	esModel.Types = mapper.TypeURIs(getTypes(concept.DirectType))
 	directTypeArray := mapper.TypeURIs([]string{concept.DirectType})
 	if len(directTypeArray) == 1 {

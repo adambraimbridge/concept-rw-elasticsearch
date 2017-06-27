@@ -63,11 +63,11 @@
 			"versionExact": "v0.11.2"
 		},
 		{
-			"checksumSHA1": "Lf3uUXTkKK5DJ37BxQvxO1Fq+K8=",
+			"checksumSHA1": "dvabztWVQX8f6oMLRyv4dLH+TGY=",
 			"origin": "github.com/stretchr/testify/vendor/github.com/davecgh/go-spew/spew",
 			"path": "github.com/davecgh/go-spew/spew",
-			"revision": "69483b4bd14f5845b5a1e55bca19e954e827f1d0",
-			"revisionTime": "2016-09-25T01:54:16Z"
+			"revision": "346938d642f2ec3594ed81d874461961cd0faa76",
+			"revisionTime": "2016-10-29T20:57:26Z"
 		},
 		{
 			"checksumSHA1": "g/V4qrXjUGG9B+e3hB+4NAYJ5Gs=",
@@ -104,11 +104,11 @@
 			"versionExact": "v0.8.0"
 		},
 		{
-			"checksumSHA1": "zKKp5SZ3d3ycKe4EKMNT0BqAWBw=",
+			"checksumSHA1": "LuFv4/jlrmFNnDb/5SCSEPAM9vU=",
 			"origin": "github.com/stretchr/testify/vendor/github.com/pmezard/go-difflib/difflib",
 			"path": "github.com/pmezard/go-difflib/difflib",
-			"revision": "69483b4bd14f5845b5a1e55bca19e954e827f1d0",
-			"revisionTime": "2016-09-25T01:54:16Z"
+			"revision": "792786c7400a136282c1664665ae0a8db921c6c2",
+			"revisionTime": "2016-01-10T10:55:54Z"
 		},
 		{
 			"checksumSHA1": "GiX6yRUzizn1C+ckgj1xLFLoz8g=",
@@ -137,6 +137,14 @@
 			"versionExact": "v1.1.4"
 		},
 		{
+			"checksumSHA1": "P9FJpir2c4G5PA46qEkaWy3l60U=",
+			"path": "github.com/stretchr/testify/require",
+			"revision": "69483b4bd14f5845b5a1e55bca19e954e827f1d0",
+			"revisionTime": "2016-09-25T01:54:16Z",
+			"version": "v1.1.4",
+			"versionExact": "v1.1.4"
+		},
+		{
 			"checksumSHA1": "Y+HGqEkYM15ir+J93MEaHdyFy0c=",
 			"path": "golang.org/x/net/context",
 			"revision": "007e530097ad7f954752df63046b4036f98ba6a6",
@@ -149,7 +157,7 @@
 			"revisionTime": "2017-02-01T22:13:12Z"
 		},
 		{
-			"checksumSHA1": "uTQtOqR0ePMMcvuvAIksiIZxhqU=",
+			"checksumSHA1": "Xhsm+TevJogC8U4sG6FO+czBMps=",
 			"path": "golang.org/x/sys/unix",
 			"revision": "7a6e5648d140666db5d920909e082ca00a87ba2c",
 			"revisionTime": "2017-02-01T04:15:14Z"
