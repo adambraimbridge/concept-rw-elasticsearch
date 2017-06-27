@@ -63,6 +63,12 @@
 			"versionExact": "v0.11.2"
 		},
 		{
+			"checksumSHA1": "pPOSjCWqUKa0LAkYS46vka1lBVk=",
+			"path": "github.com/davecgh/go-spew",
+			"revision": "346938d642f2ec3594ed81d874461961cd0faa76",
+			"revisionTime": "2016-10-29T20:57:26Z"
+		},
+		{
 			"checksumSHA1": "g/V4qrXjUGG9B+e3hB+4NAYJ5Gs=",
 			"path": "github.com/gorilla/context",
 			"revision": "08b5f424b9271eedf6f9f0ce86cb9396ed337a42",
@@ -95,6 +101,12 @@
 			"revisionTime": "2016-09-29T01:48:01Z",
 			"version": "v0.8.0",
 			"versionExact": "v0.8.0"
+		},
+		{
+			"checksumSHA1": "ARw59Ci6XVGydS1b/7u6a31gGg0=",
+			"path": "github.com/pmezard/go-difflib",
+			"revision": "792786c7400a136282c1664665ae0a8db921c6c2",
+			"revisionTime": "2016-01-10T10:55:54Z"
 		},
 		{
 			"checksumSHA1": "GiX6yRUzizn1C+ckgj1xLFLoz8g=",
