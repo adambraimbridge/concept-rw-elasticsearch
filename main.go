@@ -97,7 +97,7 @@ func main() {
 	})
 
 	pubClusterCredKey := app.String(cli.StringOpt{
-		Name:   "pubish-cluster-credentials",
+		Name:   "publish-cluster-credentials",
 		Value:  "",
 		Desc:   "The ETCD key value that specifies the credentials for connection to the publish cluster in the form user:pass",
 		EnvVar: "PUBLISH_CLUSTER_CREDENTIALS",
