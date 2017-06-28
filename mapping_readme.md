@@ -104,6 +104,64 @@ See (https://www.elastic.co/guide/en/elasticsearch/reference/current/suggester-c
      }
  }`
  
+ Mapping author boost:
+ 
+ in type people addition of:
+  "authorCompletionByContext": {
+              "type": "completion",
+              "contexts": [
+              {
+                "name" : "typeContext",
+                "type" : "category",
+                "path" : "_type"
+              },
+              {
+                "name" : "authorContext",
+                "type" : "category",
+                "path" : "isFTAuthor"
+              }]
+            }
+          }
+        },
+        "isFTAuthor": {
+          "type": "string",
+          "analyzer": "standard",
+          "fields": {
+            "raw": {
+              "type": "string",
+              "index": "not_analyzed"
+            }
+          }
+        },
+        
+        
+  this allows boosting the authors on a isFTAuthor=true field. for a boost during type ahead for people the query would be:
+ 
+ {  
+   "suggest":{  
+      "mysuggestion":{  
+         "text":"Lucy ",
+         "completion":{  
+            "field":"prefLabel.authorCompletionByContext",
+            "contexts":{  
+               "authorContext":[  
+                  {  
+                     "context":"true",
+                     "boost":2
+                  }
+               ],
+               "typeContext":[  
+                  {  
+                     "context":"people"
+                  }
+               ]
+            }
+         }
+      }
+   }
+}
+ 
+ 
  
 ## Aliases and Reindexing
 
