@@ -36,7 +36,7 @@ func NewHandler(elasticService service.EsServiceI, allowedConceptTypes []string)
 
 // LoadData processes a single ES concept entity
 func (h *Handler) LoadData(w http.ResponseWriter, r *http.Request) {
-	uuid, conceptType, payload, err := h.processPayload(w, r)
+	uuid, conceptType, concept, payload, err := h.processPayload(w, r)
 	if err == errUnsupportedConceptType || err == errInvalidConceptModel || err == errPathUUID || err == errProcessingBody {
 		writeMessage(w, err.Error(), http.StatusBadRequest)
 		return
@@ -54,90 +54,94 @@ func (h *Handler) LoadData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.elasticService.CleanupData(conceptType, uuid, concept)
+
 	writeMessage(w, "Concept written successfully", http.StatusOK)
 }
 
 // LoadBulkData write a concept to ES via the ES Bulk API
 func (h *Handler) LoadBulkData(w http.ResponseWriter, r *http.Request) {
-	uuid, conceptType, payload, err := h.processPayload(w, r)
+	uuid, conceptType, concept, payload, err := h.processPayload(w, r)
 	if err == errUnsupportedConceptType || err == errInvalidConceptModel || err == errPathUUID || err == errProcessingBody {
 		writeMessage(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	h.elasticService.LoadBulkData(conceptType, uuid, *payload)
+	h.elasticService.CleanupData(conceptType, uuid, concept)
 	writeMessage(w, "Concept written successfully", http.StatusOK)
 }
 
-func (h *Handler) processPayload(w http.ResponseWriter, r *http.Request) (string, string, *service.EsConceptModel, error) {
+func (h *Handler) processPayload(w http.ResponseWriter, r *http.Request) (string, string, service.Concept, *service.EsConceptModel, error) {
 	vars := mux.Vars(r)
 	uuid := vars["id"]
 	conceptType := vars["concept-type"]
 
 	if !h.allowedConceptTypes[conceptType] {
-		return "", "", nil, errUnsupportedConceptType
+		return "", "", nil, nil, errUnsupportedConceptType
 	}
 
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.WithError(err).Error("Failed to read request body")
-		return "", "", nil, errProcessingBody
+		return "", "", nil, nil, errProcessingBody
 	}
 
 	aggConceptModel, err := isAggregateConceptModel(body)
 	if err != nil {
 		log.WithError(err).Error("Failed to check if body json is an aggregate concept model or not")
-		return "", "", nil, errProcessingBody
+		return "", "", nil, nil, errProcessingBody
 	}
 
+	var concept service.Concept
 	var payload *service.EsConceptModel
 	if aggConceptModel {
-		payload, err = processAggregateConceptModel(uuid, conceptType, body)
+		concept, payload, err = processAggregateConceptModel(uuid, conceptType, body)
 	} else {
-		payload, err = processConceptModel(uuid, conceptType, body)
+		concept, payload, err = processConceptModel(uuid, conceptType, body)
 	}
 
-	return uuid, conceptType, payload, err
+	return uuid, conceptType, concept, payload, err
 }
 
-func processConceptModel(uuid string, conceptType string, body []byte) (*service.EsConceptModel, error) {
+func processConceptModel(uuid string, conceptType string, body []byte) (service.Concept, *service.EsConceptModel, error) {
 	var concept service.ConceptModel
 	err := json.Unmarshal(body, &concept)
 	if err != nil {
 		log.WithError(err).Info("Failed to unmarshal body into concept model.")
-		return nil, errProcessingBody
+		return nil, nil, errProcessingBody
 	}
 
 	if concept.UUID != uuid {
-		return nil, errPathUUID
+		return nil, nil, errPathUUID
 	}
 
 	if concept.DirectType == "" || concept.PrefLabel == "" {
-		return nil, errInvalidConceptModel
+		return nil, nil, errInvalidConceptModel
 	}
 
 	payload := service.ConvertConceptToESConceptModel(concept, conceptType)
-	return &payload, nil
+	return concept, &payload, nil
 }
 
-func processAggregateConceptModel(uuid string, conceptType string, body []byte) (*service.EsConceptModel, error) {
+func processAggregateConceptModel(uuid string, conceptType string, body []byte) (service.Concept, *service.EsConceptModel, error) {
 	var concept service.AggregateConceptModel
 	err := json.Unmarshal(body, &concept)
 	if err != nil {
 		log.WithError(err).Info("Failed to unmarshal body into aggregate concept model.")
-		return nil, errProcessingBody
+		return nil, nil, errProcessingBody
 	}
 
 	if concept.PrefUUID != uuid {
-		return nil, errPathUUID
+		return nil, nil, errPathUUID
 	}
 
 	if concept.DirectType == "" || concept.PrefLabel == "" {
-		return nil, errInvalidConceptModel
+		return nil, nil, errInvalidConceptModel
 	}
 
 	payload := service.ConvertAggregateConceptToESConceptModel(concept, conceptType)
-	return &payload, nil
+	return concept, &payload, nil
 }
 
 func (h *Handler) ReadData(writer http.ResponseWriter, request *http.Request) {

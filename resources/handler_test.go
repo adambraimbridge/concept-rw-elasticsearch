@@ -389,6 +389,8 @@ func (service *dummyEsService) LoadData(conceptType string, uuid string, payload
 	}
 }
 
+func (service *dummyEsService) CleanupData(conceptType string, uuid string, concept service.Concept) {}
+
 func (service *dummyEsService) ReadData(conceptType string, uuid string) (*elastic.GetResult, error) {
 	if service.returnsError != nil {
 		return nil, service.returnsError

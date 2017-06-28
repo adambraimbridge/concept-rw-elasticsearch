@@ -11,6 +11,7 @@ import (
 
 	"github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"gopkg.in/olivere/elastic.v5"
 )
 
@@ -135,6 +136,77 @@ func TestPassClientThroughChannel(t *testing.T) {
 	assert.Equal(t, fmt.Sprintf("%s/%ss/%s", apiBaseUrl, conceptType, testUuid), obj["apiUrl"], "apiUrl")
 	assert.Equal(t, payload.ApiUrl, obj["apiUrl"], "apiUrl")
 	assert.Equal(t, payload.PrefLabel, obj["prefLabel"], "prefLabel")
+}
+
+func TestDelete(t *testing.T) {
+	esURL := getElasticSearchTestURL(t)
+
+	ec, err := elastic.NewClient(
+		elastic.SetURL(esURL),
+		elastic.SetSniff(false),
+	)
+	require.NoError(t, err, "expected no error for ES client")
+
+	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
+
+	testUUID := uuid.NewV4().String()
+	_, resp, err := writeDocument(service, conceptType, testUUID)
+	require.NoError(t, err, "expected successful write")
+
+	assert.True(t, resp.Created, "document should have been created")
+	assert.Equal(t, indexName, resp.Index, "index name")
+	assert.Equal(t, conceptType+"s", resp.Type, "concept type")
+	assert.Equal(t, testUUID, resp.Id, "document id")
+
+	deleteResp, err := service.DeleteData(conceptType+"s", testUUID) // don't know why but the writeDocument func appends an "s" to the conceptType
+	require.NoError(t, err)
+	assert.True(t, deleteResp.Found)
+
+	getResp, err := service.ReadData(conceptType, testUUID)
+	assert.NoError(t, err)
+	assert.False(t, getResp.Found)
+}
+
+func TestCleanup(t *testing.T) {
+	esURL := getElasticSearchTestURL(t)
+
+	ec, err := elastic.NewClient(
+		elastic.SetURL(esURL),
+		elastic.SetSniff(false),
+	)
+	require.NoError(t, err, "expected no error for ES client")
+
+	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
+
+	testUUID1 := uuid.NewV4().String()
+	_, resp, err := writeDocument(service, conceptType, testUUID1)
+	require.NoError(t, err, "expected successful write")
+	require.True(t, resp.Created, "document should have been created")
+
+	testUUID2 := uuid.NewV4().String()
+	_, resp, err = writeDocument(service, conceptType, testUUID2)
+	require.NoError(t, err, "expected successful write")
+	require.True(t, resp.Created, "document should have been created")
+
+	concept := AggregateConceptModel{PrefUUID: testUUID2, SourceRepresentations: []SourceConcept{
+		{
+			UUID: testUUID1,
+		},
+		{
+			UUID: testUUID2,
+		},
+	}}
+
+	ct := conceptType + "s" // again the writeDocument func appends an "s" to the conceptType
+	service.CleanupData(ct, testUUID2, concept)
+
+	getResp, err := service.ReadData(ct, testUUID1)
+	assert.NoError(t, err)
+	assert.False(t, getResp.Found)
+
+	getResp, err = service.ReadData(ct, testUUID2)
+	assert.NoError(t, err)
+	assert.True(t, getResp.Found)
 }
 
 func waitForClientInjection(service *esService) {
