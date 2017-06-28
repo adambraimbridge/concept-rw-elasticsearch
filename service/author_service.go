@@ -35,8 +35,11 @@ type curatedAuthorService struct {
 }
 
 func NewAuthorService(serviceURL string, pubClusterKey string, client *http.Client) (AuthorService, error) {
-	creds := strings.Split(pubClusterKey, ":")
-	cas := &curatedAuthorService{client, serviceURL, nil, creds[0], creds[1]}
+	if len(pubClusterKey) == 0 {
+		return nil, fmt.Errorf("credentials missing credentials, author service cannot make request to author transformer")
+	}
+	credentials := strings.Split(pubClusterKey, ":")
+	cas := &curatedAuthorService{client, serviceURL, nil, credentials[0], credentials[1]}
 	return cas, cas.LoadAuthorIdentifiers()
 }
 

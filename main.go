@@ -90,14 +90,14 @@ func main() {
 		EnvVar: "ELASTICSEARCH_WHITELISTED_CONCEPTS",
 	})
 	pubClusterReadURL := app.String(cli.StringOpt{
-		Name:   "pub-cluster-read-url",
+		Name:   "publish-cluster-read-url",
 		Value:  "http://localhost:8080",
-		Desc:   "The URL of authors ids endpoint  used to identify authors",
+		Desc:   "The URL of the publish cluster (used for retreiving author list)",
 		EnvVar: "PUBLISH_CLUSTER_URL",
 	})
 
 	pubClusterCredKey := app.String(cli.StringOpt{
-		Name:   "pub-cluster-credentials",
+		Name:   "pubish-cluster-credentials",
 		Value:  "",
 		Desc:   "The ETCD key value that specifies the credentials for connection to the publish cluster in the form user:pass",
 		EnvVar: "PUBLISH_CLUSTER_CREDENTIALS",
@@ -137,6 +137,7 @@ func main() {
 		if err != nil {
 			log.Errorf("Could not retrieve author list, error=[%s]\n", err)
 			//TODO we need to stop writing until we have authors
+			return
 		}
 
 		handler := resources.NewHandler(esService, authorService, allowedConceptTypes)

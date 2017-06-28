@@ -89,6 +89,16 @@ func TestLoadAuthorIdentifiersResponseError(t *testing.T) {
 	m.AssertExpectations(t)
 }
 
+func TestLoadAuthorServiceMissingRequestCredentials(t *testing.T) {
+	m := new(mockAuthorTransformerServer)
+	testServer := m.startMockAuthorTransformerServer(t)
+	testServer.Close()
+
+	_, err := NewAuthorService(testServer.URL, "", &http.Client{})
+	assert.Error(t, err)
+	m.AssertExpectations(t)
+}
+
 func TestIsFTAuthorTrue(t *testing.T) {
 	testService := &curatedAuthorService{
 		httpClient:  nil,
