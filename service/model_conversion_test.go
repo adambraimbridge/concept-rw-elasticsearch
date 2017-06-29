@@ -9,6 +9,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var testAggregateConceptModelJSON = `{"prefUUID":"56388858-38d6-4dfc-a001-506394259b51","prefLabel":"Smartlogics Brands PrefLabel","type":"Brand","strapline":"Some strapline","descriptionXML":"Some description","_imageUrl":"Some image url","sourceRepresentations":[{"uuid":"4ebbd9c4-3bb7-4d18-a14c-4c45aac5d966","prefLabel":"TMEs PrefLabel","type":"Brand","authority":"TME","authorityValue":"745212"},{"uuid":"56388858-38d6-4dfc-a001-506394259b51","prefLabel":"Smartlogics Brands PrefLabel","type":"Brand","authority":"Smartlogic","authorityValue":"123456789","lastModifiedEpoch":1498127042,"strapline":"Some strapline","descriptionXML":"Some description","_imageUrl":"Some image url"}]}`
+
+var testConceptModelJSON = `{"uuid":"2384fa7a-d514-3d6a-a0ea-3a711f66d0d8","type":"PublicCompany","properName":"Apple, Inc.","prefLabel":"Apple, Inc.","legalName":"Apple Inc.","shortName":"Apple","hiddenLabel":"APPLE INC","alternativeIdentifiers":{"TME":["TnN0ZWluX09OX0ZvcnR1bmVDb21wYW55X0FBUEw=-T04="],"uuids":["2384fa7a-d514-3d6a-a0ea-3a711f66d0d8","2abff0bd-544d-31c3-899b-fba2f60d53dd"],"factsetIdentifier":"000C7F-E","leiCode":"HWUPKR0MPOU8FGXBT394"},"formerNames":["Apple Computer, Inc."],"aliases":["Apple Inc","Apple Computers","Apple","Apple Canada","Apple Computer","Apple Computer, Inc.","APPLE INC","Apple Incorporated","Apple Computer Inc","Apple Inc.","Apple, Inc."],"industryClassification":"7a01c847-a9bd-33be-b991-c6fbd8871a46"}`
+
 func TestConvertToESConceptModel(t *testing.T) {
 	assert := assert.New(t)
 
@@ -192,11 +196,25 @@ func TestConvertAggregateConceptToESConceptModel(t *testing.T) {
 	}
 }
 
-func TestGetAuthoritiesForConceptModel(t *testing.T) {
-	testJSON := `{"uuid":"2384fa7a-d514-3d6a-a0ea-3a711f66d0d8","type":"PublicCompany","properName":"Apple, Inc.","prefLabel":"Apple, Inc.","legalName":"Apple Inc.","shortName":"Apple","hiddenLabel":"APPLE INC","alternativeIdentifiers":{"TME":["TnN0ZWluX09OX0ZvcnR1bmVDb21wYW55X0FBUEw=-T04="],"uuids":["2384fa7a-d514-3d6a-a0ea-3a711f66d0d8","2abff0bd-544d-31c3-899b-fba2f60d53dd"],"factsetIdentifier":"000C7F-E","leiCode":"HWUPKR0MPOU8FGXBT394"},"formerNames":["Apple Computer, Inc."],"aliases":["Apple Inc","Apple Computers","Apple","Apple Canada","Apple Computer","Apple Computer, Inc.","APPLE INC","Apple Incorporated","Apple Computer Inc","Apple Inc.","Apple, Inc."],"industryClassification":"7a01c847-a9bd-33be-b991-c6fbd8871a46"}`
+func TestGetPreferredUUIDForAggregateConceptModel(t *testing.T) {
+	concept := AggregateConceptModel{}
+	err := json.Unmarshal([]byte(testAggregateConceptModelJSON), &concept)
+	require.NoError(t, err)
 
+	assert.Equal(t, "56388858-38d6-4dfc-a001-506394259b51", concept.PreferredUUID())
+}
+
+func TestGetPreferredUUIDForConceptModel(t *testing.T) {
 	concept := ConceptModel{}
-	err := json.Unmarshal([]byte(testJSON), &concept)
+	err := json.Unmarshal([]byte(testConceptModelJSON), &concept)
+	require.NoError(t, err)
+
+	assert.Equal(t, "2384fa7a-d514-3d6a-a0ea-3a711f66d0d8", concept.PreferredUUID())
+}
+
+func TestGetAuthoritiesForConceptModel(t *testing.T) {
+	concept := ConceptModel{}
+	err := json.Unmarshal([]byte(testConceptModelJSON), &concept)
 	require.NoError(t, err)
 
 	expected := []string{"TME", "factsetIdentifier", "leiCode"}
@@ -213,10 +231,8 @@ func TestGetAuthoritiesForConceptModel(t *testing.T) {
 }
 
 func TestConceptFuncsForAggregatedConceptModel(t *testing.T) {
-	testJSON := `{"prefUUID":"56388858-38d6-4dfc-a001-506394259b51","prefLabel":"Smartlogics Brands PrefLabel","type":"Brand","strapline":"Some strapline","descriptionXML":"Some description","_imageUrl":"Some image url","sourceRepresentations":[{"uuid":"4ebbd9c4-3bb7-4d18-a14c-4c45aac5d966","prefLabel":"TMEs PrefLabel","type":"Brand","authority":"TME","authorityValue":"745212"},{"uuid":"56388858-38d6-4dfc-a001-506394259b51","prefLabel":"Smartlogics Brands PrefLabel","type":"Brand","authority":"Smartlogic","authorityValue":"123456789","lastModifiedEpoch":1498127042,"strapline":"Some strapline","descriptionXML":"Some description","_imageUrl":"Some image url"}]}`
-
 	concept := AggregateConceptModel{}
-	err := json.Unmarshal([]byte(testJSON), &concept)
+	err := json.Unmarshal([]byte(testAggregateConceptModelJSON), &concept)
 	require.NoError(t, err)
 
 	expected := []string{"TME", "Smartlogic"}

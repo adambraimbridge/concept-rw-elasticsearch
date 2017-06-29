@@ -8,6 +8,8 @@ type Concept interface {
 	GetAuthorities() []string
 	// ConcordedUUIDs returns an array containing all concorded concept uuids - N.B. it will not contain the canonical prefUUID.
 	ConcordedUUIDs() []string
+
+	PreferredUUID() string
 }
 
 type ConceptModel struct {
@@ -68,6 +70,14 @@ func ConvertAggregateConceptToESConceptModel(concept AggregateConceptModel, conc
 	esModel.PrefLabel = concept.PrefLabel
 
 	return esModel
+}
+
+func (c AggregateConceptModel) PreferredUUID() string {
+	return c.PrefUUID
+}
+
+func (c ConceptModel) PreferredUUID() string {
+	return c.UUID
 }
 
 func (c ConceptModel) GetAuthorities() []string {

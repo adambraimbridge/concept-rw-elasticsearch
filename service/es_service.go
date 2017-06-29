@@ -26,7 +26,7 @@ type EsServiceI interface {
 	ReadData(conceptType string, uuid string) (*elastic.GetResult, error)
 	DeleteData(conceptType string, uuid string) (*elastic.DeleteResponse, error)
 	LoadBulkData(conceptType string, uuid string, payload EsConceptModel)
-	CleanupData(conceptType string, uuid string, concept Concept)
+	CleanupData(conceptType string, concept Concept)
 	CloseBulkProcessor() error
 }
 
@@ -116,12 +116,12 @@ func (es *esService) ReadData(conceptType string, uuid string) (*elastic.GetResu
 	}
 }
 
-func (es *esService) CleanupData(conceptType string, prefUUID string, concept Concept) {
+func (es *esService) CleanupData(conceptType string, concept Concept) {
 	for _, uuid := range concept.ConcordedUUIDs() {
-		log.WithField("prefUUID", prefUUID).WithField("uuid", uuid).Info("Cleaning up concorded uuids")
+		log.WithField("prefUUID", concept.PreferredUUID()).WithField("uuid", uuid).Info("Cleaning up concorded uuids")
 		_, err := es.DeleteData(conceptType, uuid)
 		if err != nil {
-			log.WithField("prefUUID", prefUUID).WithField("uuid", uuid).Warn("Failed to delete concorded uuid.")
+			log.WithField("prefUUID", concept.PreferredUUID()).WithField("uuid", uuid).Warn("Failed to delete concorded uuid.")
 		}
 	}
 }

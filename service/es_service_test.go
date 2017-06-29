@@ -198,7 +198,7 @@ func TestCleanup(t *testing.T) {
 	}}
 
 	ct := conceptType + "s" // again the writeDocument func appends an "s" to the conceptType
-	service.CleanupData(ct, testUUID2, concept)
+	service.CleanupData(ct, concept)
 
 	getResp, err := service.ReadData(ct, testUUID1)
 	assert.NoError(t, err)
