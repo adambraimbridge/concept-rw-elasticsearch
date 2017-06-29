@@ -196,23 +196,7 @@ func TestConvertAggregateConceptToESConceptModel(t *testing.T) {
 	}
 }
 
-func TestGetPreferredUUIDForAggregateConceptModel(t *testing.T) {
-	concept := AggregateConceptModel{}
-	err := json.Unmarshal([]byte(testAggregateConceptModelJSON), &concept)
-	require.NoError(t, err)
-
-	assert.Equal(t, "56388858-38d6-4dfc-a001-506394259b51", concept.PreferredUUID())
-}
-
-func TestGetPreferredUUIDForConceptModel(t *testing.T) {
-	concept := ConceptModel{}
-	err := json.Unmarshal([]byte(testConceptModelJSON), &concept)
-	require.NoError(t, err)
-
-	assert.Equal(t, "2384fa7a-d514-3d6a-a0ea-3a711f66d0d8", concept.PreferredUUID())
-}
-
-func TestGetAuthoritiesForConceptModel(t *testing.T) {
+func TestConceptFuncsForForConceptModel(t *testing.T) {
 	concept := ConceptModel{}
 	err := json.Unmarshal([]byte(testConceptModelJSON), &concept)
 	require.NoError(t, err)
@@ -228,6 +212,7 @@ func TestGetAuthoritiesForConceptModel(t *testing.T) {
 	expected = []string{}
 	actual = concept.ConcordedUUIDs()
 	assert.Equal(t, expected, actual)
+	assert.Equal(t, "2384fa7a-d514-3d6a-a0ea-3a711f66d0d8", concept.PreferredUUID())
 }
 
 func TestConceptFuncsForAggregatedConceptModel(t *testing.T) {
@@ -246,6 +231,7 @@ func TestConceptFuncsForAggregatedConceptModel(t *testing.T) {
 	expected = []string{"4ebbd9c4-3bb7-4d18-a14c-4c45aac5d966"}
 	actual = concept.ConcordedUUIDs()
 	assert.Equal(t, expected, actual)
+	assert.Equal(t, "56388858-38d6-4dfc-a001-506394259b51", concept.PreferredUUID())
 }
 
 func TestReverse(t *testing.T) {
