@@ -6,7 +6,7 @@ If you do this for an Amazon Elasticsearch domain, consider using Postman with A
 ## Create new index for elasticsearch
 
 To verify if the index `concept` exists:
-`curl -i -XGET elascticsearch-domain/concept`  
+`curl -i -XGET elasticsearch-domain/concept`  
 
 You should see that the cluster has 5 shards created, with 1 replica for each, and this [mapping.json](https://github.com/Financial-Times/concept-rw-elasticsearch/blob/master/mapping.json) attached.
 
@@ -16,20 +16,20 @@ If the concept index is not yet created, create it with attaching the mapping.js
 
 This will create 5 shards and 1 replica for each (as a default).
 
-If you want to change the mapping type, you will need to create a new index with the new mapping type, and reindex the data from the old index into the new one. See details [here](https://www.elastic.co/guide/en/elasticsearch/reference/2.3/docs-reindex.html). 
+If you want to change the mapping type, you will need to create a new index with the new mapping type, and reindex the data from the old index into the new one. See details [here](https://www.elastic.co/guide/en/elasticsearch/reference/5.1/docs-reindex.html). 
 
 # Basic commands for indexing and schema creation
 
 ## Ensure index
 
 To check your indexes, you can do:
-`curl -i -XGET elascticsearch-domain/_cat/indices?v`
+`curl -i -XGET elasticsearch-domain/_cat/indices?v`
 
 To add an index, without any mapping:
-`curl -i -XPUT elascticsearch-domain/{indexname}`
+`curl -i -XPUT elasticsearch-domain/{indexname}`
 
 To delete an index (and all the data inside):
-`curl -i -XDELETE elascticsearch-domain/{indexname}`
+`curl -i -XDELETE elasticsearch-domain/{indexname}`
 
 
 ## Ensure mapping
@@ -52,7 +52,7 @@ It is only possible to remove a mapping if the index is also deleted.
 
 ### Some mapping explanations
 Mapping 1
-`"indexCompletion": {
+`"mentionsCompletion": {
   "type": "completion"
 },`
 
@@ -68,7 +68,7 @@ POST http://localhost:9200/concepts/_search
       "mySuggestions" : {
         "text" : "Lucy K",
         "completion" : {
-          "field" : "prefLabel.indexCompletion"
+          "field" : "prefLabel.mentionsCompletion"
         }
       }
     }
@@ -116,10 +116,10 @@ POST http://upp-concepts-dynpub-eu.in.ft.com/_reindex
 
 `{
   "source": {
-    "index": "concepts"
+    "index": "concepts-0.0.1"
   },
   "dest": {
-    "index": "concepts-0.0.1"
+    "index": "concepts-0.0.2"
   }
 }`
 
@@ -131,6 +131,12 @@ POST http://upp-concepts-dynpub-eu.in.ft.com/_aliases
   "actions" : [
     {
       "add" : {
+        "index" : "concepts-0.0.2",
+        "alias" : "concepts"
+      }
+    },
+    {
+      "remove" : {
         "index" : "concepts-0.0.1",
         "alias" : "concepts"
       }
@@ -139,8 +145,3 @@ POST http://upp-concepts-dynpub-eu.in.ft.com/_aliases
 }`
 
 aliases.json indicates the current version
-
-
-
-
-
