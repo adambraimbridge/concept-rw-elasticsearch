@@ -16,13 +16,15 @@ import (
 )
 
 var (
-	testError error = errors.New("test error")
+	errTest = errors.New("test error")
 )
 
 func TestCreateNewESWriter(t *testing.T) {
 	dummyEsService := &dummyEsService{}
+	dummyAuthorService := &dummyAuthorService{}
+
 	allowedTypes := []string{"organisations", "genres"}
-	writerService := NewHandler(dummyEsService, allowedTypes)
+	writerService := NewHandler(dummyEsService, dummyAuthorService, allowedTypes)
 	assert.True(t, writerService.allowedConceptTypes["organisations"])
 	assert.True(t, writerService.allowedConceptTypes["genres"])
 	assert.False(t, writerService.allowedConceptTypes["something else"])
@@ -30,8 +32,9 @@ func TestCreateNewESWriter(t *testing.T) {
 
 func TestCreateNewESWriterWithEmptyWhitelist(t *testing.T) {
 	dummyEsService := &dummyEsService{}
+	dummyAuthorService := &dummyAuthorService{}
 	allowedTypes := []string{}
-	writerService := NewHandler(dummyEsService, allowedTypes)
+	writerService := NewHandler(dummyEsService, dummyAuthorService, allowedTypes)
 	assert.Equal(t, 0, len(writerService.allowedConceptTypes))
 }
 
@@ -46,7 +49,8 @@ func TestLoadData(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	dummyEsService := &dummyEsService{}
-	writerService := NewHandler(dummyEsService, []string{"organisations"})
+	dummyAuthorService := &dummyAuthorService{}
+	writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.LoadData).Methods("PUT")
@@ -72,7 +76,8 @@ func TestLoadDataBadRequest(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	dummyEsService := &dummyEsService{}
-	writerService := NewHandler(dummyEsService, []string{"organisations"})
+	dummyAuthorService := &dummyAuthorService{}
+	writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.LoadData).Methods("PUT")
@@ -98,7 +103,8 @@ func TestLoadDataBadRequestForUnsupportedType(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	dummyEsService := &dummyEsService{}
-	writerService := NewHandler(dummyEsService, []string{"organisations", "people", "genres"})
+	dummyAuthorService := &dummyAuthorService{}
+	writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"organisations", "people", "genres"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.LoadData).Methods("PUT")
@@ -124,7 +130,8 @@ func TestLoadDataBadRequestForEmptyType(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	dummyEsService := &dummyEsService{}
-	writerService := NewHandler(dummyEsService, []string{"organisations"})
+	dummyAuthorService := &dummyAuthorService{}
+	writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.LoadData).Methods("PUT")
@@ -150,7 +157,8 @@ func TestLoadDataBadRequestForEmptyPrefLabel(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	dummyEsService := &dummyEsService{}
-	writerService := NewHandler(dummyEsService, []string{"organisations"})
+	dummyAuthorService := &dummyAuthorService{}
+	writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.LoadData).Methods("PUT")
@@ -175,8 +183,9 @@ func TestLoadDataEsClientServerErrors(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	dummyEsService := &dummyEsService{returnsError: testError}
-	writerService := NewHandler(dummyEsService, []string{"organisations"})
+	dummyEsService := &dummyEsService{returnsError: errTest}
+	dummyAuthorService := &dummyAuthorService{}
+	writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.LoadData).Methods("PUT")
@@ -202,7 +211,8 @@ func TestLoadDataIncorrectPayload(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	dummyEsService := &dummyEsService{}
-	writerService := NewHandler(dummyEsService, []string{"organisations"})
+	dummyAuthorService := &dummyAuthorService{}
+	writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.LoadData).Methods("PUT")
@@ -228,7 +238,8 @@ func TestLoadBulkDataIncorrectPayload(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	dummyEsService := &dummyEsService{}
-	writerService := NewHandler(dummyEsService, []string{"organisations"})
+	dummyAuthorService := &dummyAuthorService{}
+	writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/bulk/{concept-type}/{id}", writerService.LoadBulkData).Methods("PUT")
@@ -254,7 +265,8 @@ func TestLoadBulkDataBadRequest(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	dummyEsService := &dummyEsService{}
-	writerService := NewHandler(dummyEsService, []string{"organisations"})
+	dummyAuthorService := &dummyAuthorService{}
+	writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/bulk/{concept-type}/{id}", writerService.LoadBulkData).Methods("PUT")
@@ -280,7 +292,8 @@ func TestLoadBulkDataAccepted(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	dummyEsService := &dummyEsService{}
-	writerService := NewHandler(dummyEsService, []string{"organisations"})
+	dummyAuthorService := &dummyAuthorService{}
+	writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/bulk/{concept-type}/{id}", writerService.LoadBulkData).Methods("PUT")
@@ -314,9 +327,10 @@ func TestReadData(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var rawmsg json.RawMessage = json.RawMessage(rawModel)
+	rawmsg := json.RawMessage(rawModel)
 	dummyEsService := &dummyEsService{found: true, source: &rawmsg}
-	writerService := NewHandler(dummyEsService, []string{"genres"})
+	dummyAuthorService := &dummyAuthorService{isAuthor: false, authorIds: []service.AuthorUUID{}}
+	writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"genres"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.ReadData).Methods("GET")
@@ -352,7 +366,8 @@ func TestReadDataNotFound(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	dummyEsService := &dummyEsService{found: false}
-	writerService := NewHandler(dummyEsService, []string{"organisations"})
+	dummyAuthorService := &dummyAuthorService{}
+	writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.ReadData).Methods("GET")
@@ -375,8 +390,9 @@ func TestReadDataEsServerError(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	dummyEsService := &dummyEsService{returnsError: testError}
-	writerService := NewHandler(dummyEsService, []string{"organisations"})
+	dummyEsService := &dummyEsService{returnsError: errTest}
+	dummyAuthorService := &dummyAuthorService{}
+	writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.ReadData).Methods("GET")
@@ -400,7 +416,8 @@ func TestReadDataEsServerUnavailable(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	dummyEsService := &dummyEsService{returnsError: service.ErrNoElasticClient}
-	writerService := NewHandler(dummyEsService, []string{"organisations"})
+	dummyAuthorService := &dummyAuthorService{}
+	writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.ReadData).Methods("GET")
@@ -419,7 +436,8 @@ func TestDeleteData(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	dummyEsService := &dummyEsService{found: true}
-	writerService := NewHandler(dummyEsService, []string{"organisations"})
+	dummyAuthorService := &dummyAuthorService{}
+	writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.DeleteData).Methods("DELETE")
@@ -444,7 +462,8 @@ func TestDeleteDataNotFound(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	dummyEsService := &dummyEsService{found: false}
-	writerService := NewHandler(dummyEsService, []string{"organisations"})
+	dummyAuthorService := &dummyAuthorService{}
+	writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.DeleteData).Methods("DELETE")
@@ -468,8 +487,9 @@ func TestDeleteDataEsServerError(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	dummyEsService := &dummyEsService{returnsError: testError}
-	writerService := NewHandler(dummyEsService, []string{"organisations"})
+	dummyEsService := &dummyEsService{returnsError: errTest}
+	dummyAuthorService := &dummyAuthorService{}
+	writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.DeleteData).Methods("DELETE")
@@ -490,38 +510,52 @@ type dummyEsService struct {
 	source       *json.RawMessage
 }
 
-func (service *dummyEsService) LoadData(conceptType string, uuid string, payload service.EsConceptModel) (*elastic.IndexResponse, error) {
+func (service *dummyEsService) LoadData(conceptType string, uuid string, payload interface{}) (*elastic.IndexResponse, error) {
 	if service.returnsError != nil {
 		return nil, service.returnsError
-	} else {
-		return &elastic.IndexResponse{}, nil
 	}
+	return &elastic.IndexResponse{}, nil
 }
 
 func (service *dummyEsService) ReadData(conceptType string, uuid string) (*elastic.GetResult, error) {
 	if service.returnsError != nil {
 		return nil, service.returnsError
-	} else {
-		return &elastic.GetResult{Found: service.found, Source: service.source}, nil
 	}
+	return &elastic.GetResult{Found: service.found, Source: service.source}, nil
 }
 
 func (service *dummyEsService) DeleteData(conceptType string, uuid string) (*elastic.DeleteResponse, error) {
 	if service.returnsError != nil {
 		return nil, service.returnsError
-	} else {
-		return &elastic.DeleteResponse{Found: service.found}, nil
 	}
+	return &elastic.DeleteResponse{Found: service.found}, nil
 }
 
-func (service *dummyEsService) LoadBulkData(conceptType string, uuid string, payload service.EsConceptModel) {
+func (service *dummyEsService) LoadBulkData(conceptType string, uuid string, payload interface{}) {
 
 }
 
 func (service *dummyEsService) CloseBulkProcessor() error {
 	if service.returnsError != nil {
 		return service.returnsError
-	} else {
-		return nil
 	}
+	return nil
+}
+
+type dummyAuthorService struct {
+	isAuthor  bool
+	authorIds []service.AuthorUUID
+	gtg       error
+}
+
+func (service *dummyAuthorService) LoadAuthorIdentifiers() error {
+	return nil
+}
+
+func (service *dummyAuthorService) IsFTAuthor(UUID string) bool {
+	return service.isAuthor
+}
+
+func (service *dummyAuthorService) IsGTG() error {
+	return service.gtg
 }
