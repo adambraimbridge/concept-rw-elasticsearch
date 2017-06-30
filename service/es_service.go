@@ -22,10 +22,10 @@ type esService struct {
 }
 
 type EsServiceI interface {
-	LoadData(conceptType string, uuid string, payload EsConceptModel) (*elastic.IndexResponse, error)
+	LoadData(conceptType string, uuid string, payload interface{}) (*elastic.IndexResponse, error)
 	ReadData(conceptType string, uuid string) (*elastic.GetResult, error)
 	DeleteData(conceptType string, uuid string) (*elastic.DeleteResponse, error)
-	LoadBulkData(conceptType string, uuid string, payload EsConceptModel)
+	LoadBulkData(conceptType string, uuid string, payload interface{})
 	CloseBulkProcessor() error
 }
 
@@ -73,7 +73,7 @@ func (es *esService) GetClusterHealth() (*elastic.ClusterHealthResponse, error) 
 	return es.elasticClient.ClusterHealth().Do(context.Background())
 }
 
-func (es *esService) LoadData(conceptType string, uuid string, payload EsConceptModel) (*elastic.IndexResponse, error) {
+func (es *esService) LoadData(conceptType string, uuid string, payload interface{}) (*elastic.IndexResponse, error) {
 	if err := es.checkElasticClient(); err != nil {
 		return nil, err
 	}
@@ -133,7 +133,7 @@ func (es *esService) DeleteData(conceptType string, uuid string) (*elastic.Delet
 	}
 }
 
-func (es *esService) LoadBulkData(conceptType string, uuid string, payload EsConceptModel) {
+func (es *esService) LoadBulkData(conceptType string, uuid string, payload interface{}) {
 	r := elastic.NewBulkIndexRequest().Index(es.indexName).Type(conceptType).Id(uuid).Doc(payload)
 	es.bulkProcessor.Add(r)
 }

@@ -21,17 +21,19 @@ var (
 // Handler handles http calls
 type Handler struct {
 	elasticService      service.EsServiceI
+	modelPopulator      service.ModelPopulator
 	allowedConceptTypes map[string]bool
 }
 
-// NewHandler creates a new http resource handler for the service
-func NewHandler(elasticService service.EsServiceI, allowedConceptTypes []string) (service *Handler) {
+func NewHandler(elasticService service.EsServiceI, authorService service.AuthorService, allowedConceptTypes []string) *Handler {
 	allowedTypes := make(map[string]bool)
 	for _, v := range allowedConceptTypes {
 		allowedTypes[v] = true
 	}
 
-	return &Handler{elasticService: elasticService, allowedConceptTypes: allowedTypes}
+	esModelPopulator := service.NewEsModelPopulator(authorService)
+
+	return &Handler{elasticService: elasticService, modelPopulator: esModelPopulator, allowedConceptTypes: allowedTypes}
 }
 
 // LoadData processes a single ES concept entity
@@ -69,7 +71,7 @@ func (h *Handler) LoadBulkData(w http.ResponseWriter, r *http.Request) {
 	writeMessage(w, "Concept written successfully", http.StatusOK)
 }
 
-func (h *Handler) processPayload(w http.ResponseWriter, r *http.Request) (string, string, *service.EsConceptModel, error) {
+func (h *Handler) processPayload(w http.ResponseWriter, r *http.Request) (string, string, *interface{}, error) {
 	vars := mux.Vars(r)
 	uuid := vars["id"]
 	conceptType := vars["concept-type"]
@@ -90,17 +92,17 @@ func (h *Handler) processPayload(w http.ResponseWriter, r *http.Request) (string
 		return "", "", nil, errProcessingBody
 	}
 
-	var payload *service.EsConceptModel
+	var payload *interface{}
 	if aggConceptModel {
-		payload, err = processAggregateConceptModel(uuid, conceptType, body)
+		payload, err = h.processAggregateConceptModel(uuid, conceptType, body)
 	} else {
-		payload, err = processConceptModel(uuid, conceptType, body)
+		payload, err = h.processConceptModel(uuid, conceptType, body)
 	}
 
 	return uuid, conceptType, payload, err
 }
 
-func processConceptModel(uuid string, conceptType string, body []byte) (*service.EsConceptModel, error) {
+func (h *Handler) processConceptModel(uuid string, conceptType string, body []byte) (*interface{}, error) {
 	var concept service.ConceptModel
 	err := json.Unmarshal(body, &concept)
 	if err != nil {
@@ -116,11 +118,11 @@ func processConceptModel(uuid string, conceptType string, body []byte) (*service
 		return nil, errInvalidConceptModel
 	}
 
-	payload := service.ConvertConceptToESConceptModel(concept, conceptType)
+	payload := h.modelPopulator.ConvertConceptToESConceptModel(concept, conceptType)
 	return &payload, nil
 }
 
-func processAggregateConceptModel(uuid string, conceptType string, body []byte) (*service.EsConceptModel, error) {
+func (h *Handler) processAggregateConceptModel(uuid string, conceptType string, body []byte) (*interface{}, error) {
 	var concept service.AggregateConceptModel
 	err := json.Unmarshal(body, &concept)
 	if err != nil {
@@ -136,7 +138,7 @@ func processAggregateConceptModel(uuid string, conceptType string, body []byte) 
 		return nil, errInvalidConceptModel
 	}
 
-	payload := service.ConvertAggregateConceptToESConceptModel(concept, conceptType)
+	payload := h.modelPopulator.ConvertAggregateConceptToESConceptModel(concept, conceptType)
 	return &payload, nil
 }
 
