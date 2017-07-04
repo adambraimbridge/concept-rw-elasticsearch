@@ -39,7 +39,7 @@ func NewHandler(elasticService service.EsServiceI, authorService service.AuthorS
 // LoadData processes a single ES concept entity
 func (h *Handler) LoadData(w http.ResponseWriter, r *http.Request) {
 	uuid, conceptType, payload, err := h.processPayload(r)
-	if err == errUnsupportedConceptType || err == errInvalidConceptModel || err == errPathUUID || err == errProcessingBody {
+	if err != nil {
 		writeMessage(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -62,7 +62,7 @@ func (h *Handler) LoadData(w http.ResponseWriter, r *http.Request) {
 // LoadBulkData write a concept to ES via the ES Bulk API
 func (h *Handler) LoadBulkData(w http.ResponseWriter, r *http.Request) {
 	uuid, conceptType, payload, err := h.processPayload(r)
-	if err == errUnsupportedConceptType || err == errInvalidConceptModel || err == errPathUUID || err == errProcessingBody {
+	if err != nil {
 		writeMessage(w, err.Error(), http.StatusBadRequest)
 		return
 	}
