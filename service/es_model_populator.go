@@ -1,8 +1,10 @@
 package service
 
 import (
-	"fmt"
+	"strconv"
+
 	"github.com/Financial-Times/neo-model-utils-go/mapper"
+	log "github.com/Sirupsen/logrus"
 )
 
 const (
@@ -10,7 +12,8 @@ const (
 )
 
 type ModelPopulator interface {
-	ConvertToESConceptModel(concept ConceptModel, conceptType string) interface{}
+	ConvertConceptToESConceptModel(concept ConceptModel, conceptType string) interface{}
+	ConvertAggregateConceptToESConceptModel(concept AggregateConceptModel, conceptType string) interface{}
 }
 
 type EsModelPopulator struct {
@@ -21,25 +24,38 @@ func NewEsModelPopulator(authorService AuthorService) ModelPopulator {
 	return &EsModelPopulator{authorService}
 }
 
-func (mp *EsModelPopulator) ConvertToESConceptModel(concept ConceptModel, conceptType string) interface{} {
+func (mp *EsModelPopulator) ConvertConceptToESConceptModel(concept ConceptModel, conceptType string) interface{} {
+	esModel := convertToESConceptModel(concept, conceptType)
+
 	switch conceptType {
-
 	case PERSON:
-		return mp.convertToESPersonConceptModel(concept, conceptType)
-
+		return mp.convertToESPersonConceptModel(esModel, concept.UUID, conceptType)
 	default:
-		return convertToESDefaultConceptModel(concept, conceptType)
+		return esModel
 	}
 }
 
-func convertToESDefaultConceptModel(concept ConceptModel, conceptType string) EsConceptModel {
+func (mp *EsModelPopulator) ConvertAggregateConceptToESConceptModel(concept AggregateConceptModel, conceptType string) interface{} {
+	esModel := convertAggregateConceptToESConceptModel(concept, conceptType)
+
+	switch conceptType {
+	case PERSON:
+		return mp.convertToESPersonConceptModel(esModel, concept.PrefUUID, conceptType)
+	default:
+		return esModel
+	}
+}
+
+func convertAggregateConceptToESConceptModel(concept AggregateConceptModel, conceptType string) EsConceptModel {
 	esModel := EsConceptModel{}
-	esModel.ApiUrl = mapper.APIURL(concept.UUID, []string{concept.DirectType}, "")
-	esModel.Id = mapper.IDURL(concept.UUID)
+	esModel.ApiUrl = mapper.APIURL(concept.PrefUUID, []string{concept.DirectType}, "")
+	esModel.Id = mapper.IDURL(concept.PrefUUID)
 	esModel.Types = mapper.TypeURIs(getTypes(concept.DirectType))
 	directTypeArray := mapper.TypeURIs([]string{concept.DirectType})
 	if len(directTypeArray) == 1 {
 		esModel.DirectType = directTypeArray[0]
+	} else {
+		log.WithField("conceptType", conceptType).WithField("prefUUID", concept.PrefUUID).Warn("More than one directType found during type mapping.")
 	}
 	esModel.Aliases = concept.Aliases
 	esModel.PrefLabel = concept.PrefLabel
@@ -47,18 +63,28 @@ func convertToESDefaultConceptModel(concept ConceptModel, conceptType string) Es
 	return esModel
 }
 
-func (mp *EsModelPopulator) convertToESPersonConceptModel(concept ConceptModel, conceptType string) EsPersonConceptModel {
-	esConceptModel := convertToESDefaultConceptModel(concept, conceptType)
+func convertToESConceptModel(concept ConceptModel, conceptType string) EsConceptModel {
+	esModel := EsConceptModel{}
+	esModel.ApiUrl = mapper.APIURL(concept.UUID, []string{concept.DirectType}, "")
+	esModel.Id = mapper.IDURL(concept.UUID)
+	esModel.Types = mapper.TypeURIs(getTypes(concept.DirectType))
+	directTypeArray := mapper.TypeURIs([]string{concept.DirectType})
+	if len(directTypeArray) == 1 {
+		esModel.DirectType = directTypeArray[0]
+	} else {
+		log.WithField("conceptType", conceptType).WithField("prefUUID", concept.UUID).Warn("More than one directType found during type mapping.")
+	}
+
+	esModel.Aliases = concept.Aliases
+	esModel.PrefLabel = concept.PrefLabel
+
+	return esModel
+}
+
+func (mp *EsModelPopulator) convertToESPersonConceptModel(esConceptModel EsConceptModel, uuid string, conceptType string) EsPersonConceptModel {
 	esPersonModel := EsPersonConceptModel{
-		EsConceptModel{
-			esConceptModel.Id,
-			esConceptModel.ApiUrl,
-			esConceptModel.PrefLabel,
-			esConceptModel.Types,
-			esConceptModel.DirectType,
-			esConceptModel.Aliases,
-		},
-		fmt.Sprintf("%v", mp.authorService.IsFTAuthor(concept.UUID)),
+		esConceptModel,
+		strconv.FormatBool(mp.authorService.IsFTAuthor(uuid)),
 	}
 	return esPersonModel
 }
