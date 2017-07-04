@@ -59,6 +59,7 @@ func convertAggregateConceptToESConceptModel(concept AggregateConceptModel, conc
 	}
 	esModel.Aliases = concept.Aliases
 	esModel.PrefLabel = concept.PrefLabel
+	esModel.Authorities = concept.GetAuthorities()
 
 	return esModel
 }
@@ -77,6 +78,7 @@ func convertToESConceptModel(concept ConceptModel, conceptType string) EsConcept
 
 	esModel.Aliases = concept.Aliases
 	esModel.PrefLabel = concept.PrefLabel
+	esModel.Authorities = concept.GetAuthorities()
 
 	return esModel
 }
