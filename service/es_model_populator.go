@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	"github.com/Financial-Times/neo-model-utils-go/mapper"
+	log "github.com/Sirupsen/logrus"
 )
 
 const (
@@ -53,6 +54,8 @@ func convertAggregateConceptToESConceptModel(concept AggregateConceptModel, conc
 	directTypeArray := mapper.TypeURIs([]string{concept.DirectType})
 	if len(directTypeArray) == 1 {
 		esModel.DirectType = directTypeArray[0]
+	} else {
+		log.WithField("conceptType", conceptType).WithField("prefUUID", concept.PrefUUID).Warn("More than one directType found during type mapping.")
 	}
 	esModel.Aliases = concept.Aliases
 	esModel.PrefLabel = concept.PrefLabel
@@ -68,7 +71,10 @@ func convertToESConceptModel(concept ConceptModel, conceptType string) EsConcept
 	directTypeArray := mapper.TypeURIs([]string{concept.DirectType})
 	if len(directTypeArray) == 1 {
 		esModel.DirectType = directTypeArray[0]
+	} else {
+		log.WithField("conceptType", conceptType).WithField("prefUUID", concept.UUID).Warn("More than one directType found during type mapping.")
 	}
+
 	esModel.Aliases = concept.Aliases
 	esModel.PrefLabel = concept.PrefLabel
 
