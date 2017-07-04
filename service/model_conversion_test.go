@@ -36,8 +36,8 @@ func TestConvertToESConceptModel(t *testing.T) {
 				DirectType: "PublicCompany",
 				PrefLabel:  "Apple, Inc.",
 				AlternativeIdentifiers: map[string]interface{}{
-					"TME":     []string{"123", "456"},
 					"Factset": "789",
+					"TME":     []string{"123", "456"},
 				},
 				Aliases: []string{"Apple Inc", "Apple Computers",
 					"Apple",
@@ -61,7 +61,7 @@ func TestConvertToESConceptModel(t *testing.T) {
 					"http://www.ft.com/ontology/company/Company",
 					"http://www.ft.com/ontology/company/PublicCompany",
 				},
-				Authorities: []string{"TME", "Factset"},
+				Authorities: []string{"Factset", "TME"},
 				DirectType:  "http://www.ft.com/ontology/company/PublicCompany",
 				Aliases: []string{
 					"Apple Inc",
