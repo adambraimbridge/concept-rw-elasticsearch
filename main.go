@@ -9,7 +9,6 @@ import (
 	"github.com/Financial-Times/concept-rw-elasticsearch/health"
 	"github.com/Financial-Times/concept-rw-elasticsearch/resources"
 	"github.com/Financial-Times/concept-rw-elasticsearch/service"
-	fthealth "github.com/Financial-Times/go-fthealth/v1a"
 	"github.com/Financial-Times/http-handlers-go/httphandlers"
 	status "github.com/Financial-Times/service-status-go/httphandlers"
 	log "github.com/Sirupsen/logrus"
@@ -90,6 +89,19 @@ func main() {
 		Desc:   "List which are currently supported by elasticsearch (already have mapping associated)",
 		EnvVar: "ELASTICSEARCH_WHITELISTED_CONCEPTS",
 	})
+	pubClusterReadURL := app.String(cli.StringOpt{
+		Name:   "publish-cluster-read-url",
+		Value:  "http://localhost:8080",
+		Desc:   "The URL of the publish cluster (used for retreiving author list)",
+		EnvVar: "PUBLISH_CLUSTER_URL",
+	})
+
+	pubClusterCredKey := app.String(cli.StringOpt{
+		Name:   "publish-cluster-credentials",
+		Value:  "",
+		Desc:   "The ETCD key value that specifies the credentials for connection to the publish cluster in the form user:pass",
+		EnvVar: "PUBLISH_CLUSTER_CREDENTIALS",
+	})
 
 	accessConfig := service.NewAccessConfig(*accessKey, *secretKey, *esEndpoint)
 
@@ -119,13 +131,20 @@ func main() {
 		bulkProcessorConfig := service.NewBulkProcessorConfig(*nrOfElasticsearchWorkers, *nrOfElasticsearchRequests, *elasticsearchBulkSize, time.Duration(*elasticsearchFlushInterval)*time.Second)
 
 		esService := service.NewEsService(ecc, *indexName, &bulkProcessorConfig)
-		var allowedConceptTypes []string = strings.Split(*elasticsearchWhitelistedConceptTypes, ",")
-		handler := resources.NewHandler(esService, allowedConceptTypes)
+
+		allowedConceptTypes := strings.Split(*elasticsearchWhitelistedConceptTypes, ",")
+		authorService, err := service.NewAuthorService(*pubClusterReadURL, *pubClusterCredKey, &http.Client{Timeout: time.Second * 30})
+		if err != nil {
+			log.Errorf("Could not retrieve author list, error=[%s]\n", err)
+			//TODO we need to stop writing until we have authors
+			return
+		}
+
+		handler := resources.NewHandler(esService, authorService, allowedConceptTypes)
 		defer handler.Close()
 
 		//create health service
-		healthService := health.NewHealthService(esService)
-
+		healthService := health.NewHealthService(esService, authorService)
 		routeRequests(port, handler, healthService)
 	}
 
@@ -147,7 +166,7 @@ func routeRequests(port *string, handler *resources.Handler, healthService *heal
 	monitoringRouter = httphandlers.TransactionAwareRequestLoggingHandler(log.StandardLogger(), monitoringRouter)
 	monitoringRouter = httphandlers.HTTPMetricsHandler(metrics.DefaultRegistry, monitoringRouter)
 
-	http.HandleFunc("/__health", fthealth.Handler("Amazon Elasticsearch Service Healthcheck", "Checks for AES", healthService.ConnectivityHealthyCheck(), healthService.ClusterIsHealthyCheck()))
+	http.HandleFunc("/__health", healthService.HealthCheckHandler())
 	http.HandleFunc("/__health-details", healthService.HealthDetails)
 	http.HandleFunc(status.GTGPath, healthService.GoodToGo)
 	http.HandleFunc(status.BuildInfoPath, status.BuildInfoHandler)
