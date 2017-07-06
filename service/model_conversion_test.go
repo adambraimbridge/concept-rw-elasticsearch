@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,6 +14,7 @@ func TestConvertToESConceptModel(t *testing.T) {
 		httpClient:  nil,
 		serviceURL:  "url",
 		authorUUIDs: expectedAuthorUUIDs,
+		authorLock:  &sync.RWMutex{},
 	}
 
 	testModelPopulator := NewEsModelPopulator(&testAuthorService)
@@ -106,6 +108,7 @@ func TestConvertPersonToESConceptModel(t *testing.T) {
 		httpClient:  nil,
 		serviceURL:  "url",
 		authorUUIDs: expectedAuthorUUIDs,
+		authorLock:  &sync.RWMutex{},
 	}
 	testModelPopulator := NewEsModelPopulator(&testAuthorService)
 

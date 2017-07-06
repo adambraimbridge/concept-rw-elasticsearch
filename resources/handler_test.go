@@ -552,6 +552,10 @@ func (service *dummyAuthorService) LoadAuthorIdentifiers() error {
 	return nil
 }
 
+func (service *dummyAuthorService) RefreshAuthorIdentifiers() {
+
+}
+
 func (service *dummyAuthorService) IsFTAuthor(UUID string) bool {
 	return service.isAuthor
 }
