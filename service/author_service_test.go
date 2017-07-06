@@ -1,12 +1,12 @@
 package service
 
 import (
-	//"fmt"
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -20,6 +20,7 @@ var expectedAuthorUUIDs = map[string]struct{}{
 var authorIds = "{\"ID\":\"2916ded0-6d1f-4449-b54c-3805da729c1d\"}\n{\"ID\":\"ddc22d37-624a-4a3d-88e5-ba508e38c8ba\"}"
 
 func (m *mockAuthorTransformerServer) startMockAuthorTransformerServer(t *testing.T) *httptest.Server {
+	m.countLock = &sync.RWMutex{}
 	r := mux.NewRouter()
 	r.HandleFunc(authorTransformerIdsPath, func(w http.ResponseWriter, req *http.Request) {
 		ua := req.Header.Get("User-Agent")
@@ -32,6 +33,9 @@ func (m *mockAuthorTransformerServer) startMockAuthorTransformerServer(t *testin
 		status, resp := m.Ids(contentType, user, password)
 		w.WriteHeader(status)
 		w.Write([]byte(resp))
+		m.countLock.Lock()
+		defer m.countLock.Unlock()
+		m.count++
 	}).Methods("GET")
 
 	r.HandleFunc(gtgPath, func(w http.ResponseWriter, req *http.Request) {
@@ -101,7 +105,7 @@ func TestLoadAuthorServiceMissingRequestCredentials(t *testing.T) {
 	m.AssertExpectations(t)
 }
 
-/*func TestRefreshAuthorIdentifiersResponseSuccess(t *testing.T) {
+func TestRefreshAuthorIdentifiersResponseSuccess(t *testing.T) {
 	m := new(mockAuthorTransformerServer)
 	m.On("Ids", "application/json", "username", "password").Return(http.StatusOK, authorIds)
 	testServer := m.startMockAuthorTransformerServer(t)
@@ -117,15 +121,19 @@ func TestLoadAuthorServiceMissingRequestCredentials(t *testing.T) {
 	as.RefreshAuthorIdentifiers()
 
 	time.Sleep(time.Millisecond * 35)
-	//	for expectedUUID := range expectedRefreshedAuthorUUIDs {
-	//		assert.True(t, as.IsFTAuthor(expectedUUID), "The UUID is not in the author uuid map")
-	//}
+	m.countLock.RLock()
+	defer m.countLock.RUnlock()
+	assert.True(t, m.count >= 4, "author list is not being refreshed onl called"+strconv.Itoa(m.count))
 	m.AssertExpectations(t)
 }
 
 func TestRefreshAuthorIdentifiersWithErrorContinues(t *testing.T) {
 	m := new(mockAuthorTransformerServer)
 	m.On("Ids", "application/json", "username", "password").Return(http.StatusOK, authorIds)
+	m.ExpectedCalls = make([]*mock.Call, 0)
+	m.On("Ids", "application/json", "username", "password").Return(http.StatusBadRequest, "")
+	m.ExpectedCalls = make([]*mock.Call, 0)
+	m.On("Ids", "application/json", "username", "password").Return(http.StatusOK, authorIds)
 	testServer := m.startMockAuthorTransformerServer(t)
 	defer testServer.Close()
 
@@ -135,18 +143,15 @@ func TestRefreshAuthorIdentifiersWithErrorContinues(t *testing.T) {
 	for expectedUUID := range expectedAuthorUUIDs {
 		assert.True(t, as.IsFTAuthor(expectedUUID), "The UUID is not in the author uuid map")
 	}
-
 	as.RefreshAuthorIdentifiers()
 
-	m.ExpectedCalls = make([]*mock.Call, 0)
-	m.On("Ids", "application/json", "username", "password").Return(http.StatusBadRequest, "")
 	time.Sleep(time.Millisecond * 35)
-	//we should use the one in memory
-	for expectedUUID := range expectedAuthorUUIDs {
-		assert.True(t, as.IsFTAuthor(expectedUUID), "The UUID is not in the author uuid map")
-	}
+	m.countLock.RLock()
+	defer m.countLock.RUnlock()
+	assert.True(t, m.count >= 4, "author list is not being refreshed"+strconv.Itoa(m.count))
+
 	m.AssertExpectations(t)
-}*/
+}
 
 func TestIsFTAuthorTrue(t *testing.T) {
 	testService := &curatedAuthorService{
@@ -211,6 +216,8 @@ func TestGTGConnectionError(t *testing.T) {
 
 type mockAuthorTransformerServer struct {
 	mock.Mock
+	count     int
+	countLock *sync.RWMutex
 }
 
 func (m *mockAuthorTransformerServer) Ids(contentType string, user string, password string) (int, string) {

@@ -37,7 +37,6 @@ type curatedAuthorService struct {
 	authorLock             *sync.RWMutex
 	publishClusterUser     string
 	publishClusterpassword string
-	ticker                 *time.Ticker
 }
 
 func NewAuthorService(serviceURL string, pubClusterKey string, authorRefreshInterval time.Duration, client *http.Client) (AuthorService, error) {
@@ -45,7 +44,7 @@ func NewAuthorService(serviceURL string, pubClusterKey string, authorRefreshInte
 		return nil, fmt.Errorf("credentials missing credentials, author service cannot make request to author transformer")
 	}
 	credentials := strings.Split(pubClusterKey, ":")
-	cas := &curatedAuthorService{client, serviceURL, nil, authorRefreshInterval, &sync.RWMutex{}, credentials[0], credentials[1], time.NewTicker(authorRefreshInterval)}
+	cas := &curatedAuthorService{client, serviceURL, nil, authorRefreshInterval, &sync.RWMutex{}, credentials[0], credentials[1]}
 	return cas, cas.LoadAuthorIdentifiers()
 }
 
@@ -89,11 +88,11 @@ func (as *curatedAuthorService) LoadAuthorIdentifiers() error {
 }
 
 func (as *curatedAuthorService) RefreshAuthorIdentifiers() {
-
+	ticker := time.NewTicker(as.authorRefreshInterval)
 	go func() {
-		for range as.ticker.C {
+		for range ticker.C {
 			err := as.LoadAuthorIdentifiers()
-			if err != nil { // abort and use the map in memory
+			if err != nil { //log and use the map in memory
 				log.Errorf("Error on author identifier list reefresh attempt %v", err)
 			} else {
 				log.Infof("Author identifier list has been refereshed")
