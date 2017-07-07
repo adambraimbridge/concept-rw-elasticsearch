@@ -207,7 +207,7 @@ func TestConvertAggregateConceptToESConceptModel(t *testing.T) {
 	}
 }
 
-func TestConceptFuncsForForConceptModel(t *testing.T) {
+func TestConceptFuncsForConceptModel(t *testing.T) {
 	concept := ConceptModel{}
 	err := json.Unmarshal([]byte(testConceptModelJSON), &concept)
 	require.NoError(t, err)
