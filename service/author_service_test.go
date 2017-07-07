@@ -123,7 +123,7 @@ func TestRefreshAuthorIdentifiersResponseSuccess(t *testing.T) {
 	time.Sleep(time.Millisecond * 35)
 	m.countLock.RLock()
 	defer m.countLock.RUnlock()
-	assert.True(t, m.count >= 4, "author list is not being refreshed onl called"+strconv.Itoa(m.count))
+	assert.True(t, m.count >= 4, "author list is not being refreshed correctly, number of calls made: "+strconv.Itoa(m.count))
 	m.AssertExpectations(t)
 }
 
@@ -148,7 +148,7 @@ func TestRefreshAuthorIdentifiersWithErrorContinues(t *testing.T) {
 	time.Sleep(time.Millisecond * 35)
 	m.countLock.RLock()
 	defer m.countLock.RUnlock()
-	assert.True(t, m.count >= 4, "author list is not being refreshed"+strconv.Itoa(m.count))
+	assert.True(t, m.count >= 4, "author list is not being refreshed correctly, number of calls made:"+strconv.Itoa(m.count))
 
 	m.AssertExpectations(t)
 }

@@ -40,7 +40,7 @@ type curatedAuthorService struct {
 }
 
 func NewAuthorService(serviceURL string, pubClusterKey string, authorRefreshInterval time.Duration, client *http.Client) (AuthorService, error) {
-	if len(pubClusterKey) == 0 && serviceURL != "http://localhost:8080" {
+	if len(pubClusterKey) == 0 {
 		return nil, fmt.Errorf("credentials missing credentials, author service cannot make request to author transformer")
 	}
 	credentials := strings.Split(pubClusterKey, ":")
@@ -93,9 +93,9 @@ func (as *curatedAuthorService) RefreshAuthorIdentifiers() {
 		for range ticker.C {
 			err := as.LoadAuthorIdentifiers()
 			if err != nil { //log and use the map in memory
-				log.Errorf("Error on author identifier list reefresh attempt %v", err)
+				log.Errorf("Error on author identifier list refresh attempt %v", err)
 			} else {
-				log.Infof("Author identifier list has been refereshed")
+				log.Infof("Author identifier list has been refreshed")
 			}
 
 		}
