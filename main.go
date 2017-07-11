@@ -127,10 +127,9 @@ func main() {
 					log.Infof("connected to ElasticSearch")
 					ecc <- ec
 					return
-				} else {
-					log.Errorf("could not connect to ElasticSearch: %s", err.Error())
-					time.Sleep(time.Minute)
 				}
+				log.Errorf("could not connect to ElasticSearch: %s", err.Error())
+				time.Sleep(time.Minute)
 			}
 		}()
 
@@ -143,7 +142,7 @@ func main() {
 		authorService, err := service.NewAuthorService(*pubClusterReadURL, *pubClusterCredKey, time.Duration(*authorRefreshInterval)*time.Minute, &http.Client{Timeout: time.Second * 30})
 		if err != nil {
 			log.Errorf("Could not retrieve author list, error=[%s]\n", err)
-			return
+			os.Exit(1)
 		}
 		handler := resources.NewHandler(esService, authorService, allowedConceptTypes)
 		defer handler.Close()
