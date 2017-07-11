@@ -64,6 +64,8 @@ func (as *curatedAuthorService) LoadAuthorIdentifiers() error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
+
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("A non-200 error code from v1 authors transformer! Status: %v", resp.StatusCode)
 	}
@@ -112,10 +114,16 @@ func (as *curatedAuthorService) IsFTAuthor(uuid string) bool {
 }
 
 func (as *curatedAuthorService) IsGTG() error {
-	resp, err := http.Get(as.serviceURL + gtgPath)
+	req, err := http.NewRequest("GET", as.serviceURL+gtgPath, nil)
 	if err != nil {
 		return err
 	}
+	resp, err := as.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("gtg endpoint returned a non-200 status: %v", resp.StatusCode)
 	}
