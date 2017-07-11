@@ -162,6 +162,19 @@ See (https://www.elastic.co/guide/en/elasticsearch/reference/current/suggester-c
 }
  
  
+## Analyzers
+ 
+The `"analyzer": "folding"`
+includes a
+- standard tokeniser
+- lowercase token filter
+- asciifolding token filter
+
+These allow searching 
+- startswith <number> 
+- symbolic Unicode characters which are not in the first 127 ASCII characters into their ASCII equivalents i.e. can search for ç é ü using c e u.
+- case insensitive searching
+ 
  
 ## Aliases and Reindexing
 
