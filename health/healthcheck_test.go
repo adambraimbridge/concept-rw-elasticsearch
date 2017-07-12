@@ -349,6 +349,9 @@ func (m *AuthorServiceMock) IsGTG() error {
 	return args.Error(0)
 }
 
+func (m *AuthorServiceMock) RefreshAuthorIdentifiers() {
+}
+
 func parseHealthcheck(healthcheckJSON string) ([]fthealth.CheckResult, error) {
 	result := &struct {
 		Checks []fthealth.CheckResult `json:"checks"`
