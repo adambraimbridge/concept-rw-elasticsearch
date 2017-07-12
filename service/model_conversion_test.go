@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -18,6 +19,7 @@ func newTestModelPopulator() ModelPopulator {
 		httpClient:  nil,
 		serviceURL:  "url",
 		authorUUIDs: expectedAuthorUUIDs,
+		authorLock:  &sync.RWMutex{},
 	}
 	return NewEsModelPopulator(&testAuthorService)
 }
