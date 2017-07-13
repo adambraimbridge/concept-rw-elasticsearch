@@ -2,6 +2,12 @@
   "actions" : [
     {
       "add" : {
+        "index" : "concepts-0.0.5",
+        "alias" : "concepts"
+      }
+    },
+    {
+      "remove" : {
         "index" : "concepts-0.0.4",
         "alias" : "concepts"
       }

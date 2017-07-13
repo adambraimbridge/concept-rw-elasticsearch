@@ -47,37 +47,27 @@ func (mp *EsModelPopulator) ConvertAggregateConceptToESConceptModel(concept Aggr
 }
 
 func convertAggregateConceptToESConceptModel(concept AggregateConceptModel, conceptType string) EsConceptModel {
-	esModel := EsConceptModel{}
-	esModel.ApiUrl = mapper.APIURL(concept.PrefUUID, []string{concept.DirectType}, "")
-	esModel.Id = mapper.IDURL(concept.PrefUUID)
-	esModel.Types = mapper.TypeURIs(getTypes(concept.DirectType))
-	directTypeArray := mapper.TypeURIs([]string{concept.DirectType})
-	if len(directTypeArray) == 1 {
-		esModel.DirectType = directTypeArray[0]
-	} else {
-		log.WithField("conceptType", conceptType).WithField("prefUUID", concept.PrefUUID).Warn("More than one directType found during type mapping.")
-	}
-	esModel.Aliases = concept.Aliases
-	esModel.PrefLabel = concept.PrefLabel
-
-	return esModel
+	return newESConceptModel(concept.PrefUUID, conceptType, concept.DirectType, concept.Aliases, concept.PrefLabel)
 }
 
 func convertToESConceptModel(concept ConceptModel, conceptType string) EsConceptModel {
+	return newESConceptModel(concept.UUID, conceptType, concept.DirectType, concept.Aliases, concept.PrefLabel)
+}
+
+func newESConceptModel(uuid string, conceptType string, directType string, aliases []string, prefLabel string) EsConceptModel {
 	esModel := EsConceptModel{}
-	esModel.ApiUrl = mapper.APIURL(concept.UUID, []string{concept.DirectType}, "")
-	esModel.Id = mapper.IDURL(concept.UUID)
-	esModel.Types = mapper.TypeURIs(getTypes(concept.DirectType))
-	directTypeArray := mapper.TypeURIs([]string{concept.DirectType})
+	esModel.ApiUrl = mapper.APIURL(uuid, []string{directType}, "")
+	esModel.Id = mapper.IDURL(uuid)
+	esModel.Types = mapper.TypeURIs(getTypes(directType))
+	directTypeArray := mapper.TypeURIs([]string{directType})
 	if len(directTypeArray) == 1 {
 		esModel.DirectType = directTypeArray[0]
 	} else {
-		log.WithField("conceptType", conceptType).WithField("prefUUID", concept.UUID).Warn("More than one directType found during type mapping.")
+		log.WithField("conceptType", conceptType).WithField("prefUUID", uuid).Warn("More than one directType found during type mapping.")
 	}
 
-	esModel.Aliases = concept.Aliases
-	esModel.PrefLabel = concept.PrefLabel
-
+	esModel.Aliases = aliases
+	esModel.PrefLabel = prefLabel
 	return esModel
 }
 

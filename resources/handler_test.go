@@ -400,6 +400,8 @@ func (service *dummyEsService) LoadData(conceptType string, uuid string, payload
 	return &elastic.IndexResponse{}, nil
 }
 
+func (service *dummyEsService) CleanupData(conceptType string, concept service.Concept) {}
+
 func (service *dummyEsService) ReadData(conceptType string, uuid string) (*elastic.GetResult, error) {
 	if service.returnsError != nil {
 		return nil, service.returnsError
@@ -433,6 +435,10 @@ type dummyAuthorService struct {
 
 func (service *dummyAuthorService) LoadAuthorIdentifiers() error {
 	return nil
+}
+
+func (service *dummyAuthorService) RefreshAuthorIdentifiers() {
+
 }
 
 func (service *dummyAuthorService) IsFTAuthor(UUID string) bool {

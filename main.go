@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"strings"
 	"time"
@@ -98,9 +99,16 @@ func main() {
 
 	pubClusterCredKey := app.String(cli.StringOpt{
 		Name:   "publish-cluster-credentials",
-		Value:  "",
+		Value:  "dummyUser:dummyValue",
 		Desc:   "The ETCD key value that specifies the credentials for connection to the publish cluster in the form user:pass",
 		EnvVar: "PUBLISH_CLUSTER_CREDENTIALS",
+	})
+
+	authorRefreshInterval := app.Int(cli.IntOpt{
+		Name:   "author-refresh-interval",
+		Value:  60,
+		Desc:   "the time interval between author identefier list refreshes in minutes",
+		EnvVar: "AUTHOR_REFRESH_INTERVAL",
 	})
 
 	accessConfig := service.NewAccessConfig(*accessKey, *secretKey, *esEndpoint)
@@ -120,10 +128,9 @@ func main() {
 					log.Infof("connected to ElasticSearch")
 					ecc <- ec
 					return
-				} else {
-					log.Errorf("could not connect to ElasticSearch: %s", err.Error())
-					time.Sleep(time.Minute)
 				}
+				log.Errorf("could not connect to ElasticSearch: %s", err.Error())
+				time.Sleep(time.Minute)
 			}
 		}()
 
@@ -133,15 +140,14 @@ func main() {
 		esService := service.NewEsService(ecc, *indexName, &bulkProcessorConfig)
 
 		allowedConceptTypes := strings.Split(*elasticsearchWhitelistedConceptTypes, ",")
-		authorService, err := service.NewAuthorService(*pubClusterReadURL, *pubClusterCredKey, &http.Client{Timeout: time.Second * 30})
+		authorService, err := service.NewAuthorService(*pubClusterReadURL, *pubClusterCredKey, time.Duration(*authorRefreshInterval)*time.Minute, &http.Client{Timeout: time.Second * 30})
 		if err != nil {
 			log.Errorf("Could not retrieve author list, error=[%s]\n", err)
-			//TODO we need to stop writing until we have authors
-			return
+			os.Exit(1)
 		}
-
 		handler := resources.NewHandler(esService, authorService, allowedConceptTypes)
 		defer handler.Close()
+		authorService.RefreshAuthorIdentifiers()
 
 		//create health service
 		healthService := health.NewHealthService(esService, authorService)
