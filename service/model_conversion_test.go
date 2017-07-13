@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -18,6 +19,7 @@ func newTestModelPopulator() ModelPopulator {
 		httpClient:  nil,
 		serviceURL:  "url",
 		authorUUIDs: expectedAuthorUUIDs,
+		authorLock:  &sync.RWMutex{},
 	}
 	return NewEsModelPopulator(&testAuthorService)
 }
@@ -214,7 +216,7 @@ func TestConvertAggregateConceptToESConceptModel(t *testing.T) {
 	}
 }
 
-func TestConceptFuncsForForConceptModel(t *testing.T) {
+func TestConceptFuncsForConceptModel(t *testing.T) {
 	concept := ConceptModel{}
 	err := json.Unmarshal([]byte(testConceptModelJSON), &concept)
 	require.NoError(t, err)

@@ -18,7 +18,7 @@ import (
 const (
 	apiBaseUrl  = "http://test.api.ft.com"
 	indexName   = "concept"
-	conceptType = "organisation"
+	conceptType = "organisations"
 )
 
 func TestNoElasticClient(t *testing.T) {
@@ -52,7 +52,7 @@ func writeDocument(es *esService, t string, u string) (EsConceptModel, *elastic.
 		Aliases:    []string{},
 	}
 
-	resp, err := es.LoadData(t+"s", u, payload)
+	resp, err := es.LoadData(t, u, payload)
 	return payload, resp, err
 }
 
@@ -73,7 +73,7 @@ func TestWrite(t *testing.T) {
 
 	assert.Equal(t, true, resp.Created, "document should have been created")
 	assert.Equal(t, indexName, resp.Index, "index name")
-	assert.Equal(t, conceptType+"s", resp.Type, "concept type")
+	assert.Equal(t, conceptType, resp.Type, "concept type")
 	assert.Equal(t, testUuid, resp.Id, "document id")
 }
 
@@ -92,7 +92,7 @@ func TestRead(t *testing.T) {
 	payload, _, err := writeDocument(service, conceptType, testUuid)
 	assert.NoError(t, err, "expected successful write")
 
-	resp, err := service.ReadData(conceptType+"s", testUuid)
+	resp, err := service.ReadData(conceptType, testUuid)
 
 	assert.NoError(t, err, "expected no error for ES read")
 	assert.True(t, resp.Found, "should find a result")
@@ -125,7 +125,7 @@ func TestPassClientThroughChannel(t *testing.T) {
 	payload, _, err := writeDocument(service, conceptType, testUuid)
 	assert.NoError(t, err, "expected successful write")
 
-	resp, err := service.ReadData(conceptType+"s", testUuid)
+	resp, err := service.ReadData(conceptType, testUuid)
 
 	assert.NoError(t, err, "expected no error for ES read")
 	assert.True(t, resp.Found, "should find a result")
@@ -155,10 +155,10 @@ func TestDelete(t *testing.T) {
 
 	assert.True(t, resp.Created, "document should have been created")
 	assert.Equal(t, indexName, resp.Index, "index name")
-	assert.Equal(t, conceptType+"s", resp.Type, "concept type")
+	assert.Equal(t, conceptType, resp.Type, "concept type")
 	assert.Equal(t, testUUID, resp.Id, "document id")
 
-	deleteResp, err := service.DeleteData(conceptType+"s", testUUID) // don't know why but the writeDocument func appends an "s" to the conceptType
+	deleteResp, err := service.DeleteData(conceptType, testUUID)
 	require.NoError(t, err)
 	assert.True(t, deleteResp.Found)
 
@@ -197,7 +197,7 @@ func TestCleanup(t *testing.T) {
 		},
 	}}
 
-	ct := conceptType + "s" // again the writeDocument func appends an "s" to the conceptType
+	ct := conceptType
 	service.CleanupData(ct, concept)
 
 	getResp, err := service.ReadData(ct, testUUID1)
