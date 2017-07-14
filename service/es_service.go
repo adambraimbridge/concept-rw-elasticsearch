@@ -5,13 +5,16 @@ import (
 	"errors"
 	"sync"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"gopkg.in/olivere/elastic.v5"
+	"strconv"
 )
 
 var (
 	ErrNoElasticClient error = errors.New("No ElasticSearch client available")
 )
+
+const writeErrFormat = "Concept %s with uuid %s failed with status code %v and the following details: %v"
 
 type esService struct {
 	sync.RWMutex
@@ -78,12 +81,25 @@ func (es *esService) LoadData(conceptType string, uuid string, payload interface
 		return nil, err
 	}
 
-	return es.elasticClient.Index().
+	resp, err := es.elasticClient.Index().
 		Index(es.indexName).
 		Type(conceptType).
 		Id(uuid).
 		BodyJson(payload).
 		Do(context.Background())
+
+	if err != nil {
+		var status string
+		switch err.(type) {
+		case *elastic.Error:
+			status = strconv.Itoa(err.(*elastic.Error).Status)
+		default:
+			status = "unknown"
+		}
+		log.Errorf(writeErrFormat, conceptType, uuid, status, err)
+	}
+
+	return resp, err
 }
 
 func (es *esService) checkElasticClient() error {

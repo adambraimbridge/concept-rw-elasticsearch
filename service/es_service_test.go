@@ -3,15 +3,18 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/satori/go.uuid"
+	log "github.com/sirupsen/logrus"
+	testLog "github.com/sirupsen/logrus/hooks/test"
+	"github.com/stretchr/testify/assert"
+	"gopkg.in/olivere/elastic.v5"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/satori/go.uuid"
-	"github.com/stretchr/testify/assert"
-	"gopkg.in/olivere/elastic.v5"
 )
 
 const (
@@ -74,6 +77,53 @@ func TestWrite(t *testing.T) {
 	assert.Equal(t, indexName, resp.Index, "index name")
 	assert.Equal(t, conceptType+"s", resp.Type, "concept type")
 	assert.Equal(t, testUuid, resp.Id, "document id")
+}
+
+func TestWriteWithGenericError(t *testing.T) {
+	hook := testLog.NewGlobal()
+	es := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	defer es.Close()
+	ec, err := elastic.NewClient(
+		elastic.SetURL(es.URL),
+		elastic.SetSniff(false),
+	)
+	assert.NoError(t, err, "expected no error for ES client")
+	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
+
+	testUuid := uuid.NewV4().String()
+	_, _, err = writeDocument(service, conceptType, testUuid)
+	assert.EqualError(t, err, "unexpected end of JSON input")
+	assert.Equal(t, log.ErrorLevel, hook.LastEntry().Level)
+	expectedMsg := fmt.Sprintf("Concept organisations with uuid %v failed with status code unknown and the following details: unexpected end of JSON input", testUuid)
+	assert.Equal(t, expectedMsg, hook.LastEntry().Message)
+}
+
+func TestWriteWithESError(t *testing.T) {
+	hook := testLog.NewGlobal()
+	es := newBrokenESMock()
+	defer es.Close()
+	ec, err := elastic.NewClient(
+		elastic.SetURL(es.URL),
+		elastic.SetSniff(false),
+	)
+	assert.NoError(t, err, "expected no error for ES client")
+
+	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
+
+	testUuid := uuid.NewV4().String()
+	_, _, err = writeDocument(service, conceptType, testUuid)
+	assert.EqualError(t, err, "elastic: Error 500 (Internal Server Error)")
+	assert.Equal(t, log.ErrorLevel, hook.LastEntry().Level)
+	expectedMsg := fmt.Sprintf("Concept organisations with uuid %v failed with status code 500 and the following details: elastic: Error 500 (Internal Server Error)", testUuid)
+	assert.Equal(t, expectedMsg, hook.LastEntry().Message)
+}
+
+func newBrokenESMock() *httptest.Server {
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodHead {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+	}))
 }
 
 func TestRead(t *testing.T) {
@@ -145,5 +195,4 @@ func waitForClientInjection(service *esService) {
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-
 }

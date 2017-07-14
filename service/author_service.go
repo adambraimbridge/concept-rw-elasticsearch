@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	transactionid "github.com/Financial-Times/transactionid-utils-go"
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 const contentType = "application/json"

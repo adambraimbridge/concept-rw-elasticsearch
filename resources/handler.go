@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/Financial-Times/concept-rw-elasticsearch/service"
-	log "github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
 )
 
 type Handler struct {

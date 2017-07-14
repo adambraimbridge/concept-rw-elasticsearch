@@ -49,18 +49,10 @@
 		{
 			"checksumSHA1": "+sjiZBzrsk91W1A3Md1azCkZadg=",
 			"path": "github.com/Financial-Times/transactionid-utils-go",
-			"revision": "df2f00c734957c9dd651ce23ab0e0902504c7636", 
+			"revision": "df2f00c734957c9dd651ce23ab0e0902504c7636",
 			"revisionTime": "2017-03-28T16:39:54Z",
 			"version": "v0.2.0",
-            "versionExact": "v0.2.0"
-		},
-		{
-			"checksumSHA1": "Liv7AJyNinmP3pvwohcXp4R6xY4=",
-			"path": "github.com/Sirupsen/logrus",
-			"revision": "202f25545ea4cf9b191ff7f846df5d87c9382c2b",
-			"revisionTime": "2017-06-08T21:02:02Z",
-			"version": "v1.0.0",
-			"versionExact": "v1.0.0"
+			"versionExact": "v0.2.0"
 		},
 		{
 			"checksumSHA1": "dvabztWVQX8f6oMLRyv4dLH+TGY=",
@@ -119,6 +111,22 @@
 			"revisionTime": "2017-03-21T23:07:31Z"
 		},
 		{
+			"checksumSHA1": "IVurU/0OPiDHP+JrmQ1JyAx7jng=",
+			"path": "github.com/sirupsen/logrus",
+			"revision": "a3f95b5c423586578a4e099b11a46c2479628cac",
+			"revisionTime": "2017-07-13T11:42:50Z",
+			"version": "1.0.2",
+			"versionExact": "1.0.2"
+		},
+		{
+			"checksumSHA1": "Kt+BhrXMyYvOc9TGiBVOSNn6wcc=",
+			"path": "github.com/sirupsen/logrus/hooks/test",
+			"revision": "a3f95b5c423586578a4e099b11a46c2479628cac",
+			"revisionTime": "2017-07-13T11:42:50Z",
+			"version": "1.0.2",
+			"versionExact": "1.0.2"
+		},
+		{
 			"checksumSHA1": "iy7TNc01LWFOGwRwD6v0iDRqtLU=",
 			"path": "github.com/smartystreets/go-aws-auth",
 			"revision": "8ef1316913ee4f44bc48c2456e44a5c1c68ea53b",
@@ -153,7 +161,7 @@
 			"revisionTime": "2017-06-20T20:31:43Z"
 		},
 		{
-			"checksumSHA1": "Tkb1hBdBWeO7SGjixS2Hm48F6+s=",
+			"checksumSHA1": "rIYurTMbnyUj/eMHsaxTBnTvSnY=",
 			"path": "golang.org/x/sys/unix",
 			"revision": "fb4cac33e3196ff7f507ab9b2d2a44b0142f5b5a",
 			"revisionTime": "2017-06-14T06:48:48Z"
