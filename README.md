@@ -31,7 +31,7 @@ go test -race ./...
 
 Either set the environment variable `ELASTICSEARCH_TEST_URL` to the URL of an ElasticSearch instance, or run with `-short` to skip integration tests.
 
-Writing data to the ElasticSearch instance will create shards. If running a fresh ElasticSearch instance, this may turn the ElasticSearch status YELLOW. To make it GREEN, make a PUT request to `/_settings` with the following JSON:
+Writing data to the ElasticSearch instance will create shards. If running a local standalone ElasticSearch instance, this may turn the ElasticSearch status YELLOW. To make it GREEN, make a PUT request to `/_settings` with the following JSON:
 
 ```
 {
