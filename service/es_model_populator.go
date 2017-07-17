@@ -47,14 +47,14 @@ func (mp *EsModelPopulator) ConvertAggregateConceptToESConceptModel(concept Aggr
 }
 
 func convertAggregateConceptToESConceptModel(concept AggregateConceptModel, conceptType string) EsConceptModel {
-	return newESConceptModel(concept.PrefUUID, conceptType, concept.DirectType, concept.Aliases, concept.PrefLabel)
+	return newESConceptModel(concept.PrefUUID, conceptType, concept.DirectType, concept.Aliases, concept.GetAuthorities(), concept.PrefLabel)
 }
 
 func convertToESConceptModel(concept ConceptModel, conceptType string) EsConceptModel {
-	return newESConceptModel(concept.UUID, conceptType, concept.DirectType, concept.Aliases, concept.PrefLabel)
+	return newESConceptModel(concept.UUID, conceptType, concept.DirectType, concept.Aliases, concept.GetAuthorities(), concept.PrefLabel)
 }
 
-func newESConceptModel(uuid string, conceptType string, directType string, aliases []string, prefLabel string) EsConceptModel {
+func newESConceptModel(uuid string, conceptType string, directType string, aliases []string, authorities []string, prefLabel string) EsConceptModel {
 	esModel := EsConceptModel{}
 	esModel.ApiUrl = mapper.APIURL(uuid, []string{directType}, "")
 	esModel.Id = mapper.IDURL(uuid)
@@ -68,6 +68,7 @@ func newESConceptModel(uuid string, conceptType string, directType string, alias
 
 	esModel.Aliases = aliases
 	esModel.PrefLabel = prefLabel
+	esModel.Authorities = authorities
 	return esModel
 }
 

@@ -1,0 +1,431 @@
+{
+  "settings" : {
+    "analysis" : {
+      "analyzer" : {
+        "folding" : {
+          "tokenizer" : "standard",
+          "filter" : ["lowercase", "standard", "ascii_folding"]
+        }
+      },
+      "filter" : {
+        "ascii_folding" : {
+          "type" : "asciifolding",
+          "preserve_original" : true
+        }
+      }
+    }
+  },
+  "mappings" : {
+    "organisations": {
+      "properties": {
+        "id": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "apiUrl": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "directType": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "types": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "authorities": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "prefLabel": {
+          "type": "string",
+          "analyzer": "standard",
+          "fields": {
+            "raw": {
+              "type": "string",
+              "index": "not_analyzed"
+            },
+            "mentionsCompletion": {
+              "analyzer": "folding",
+              "type": "completion"
+            }
+          }
+        },
+        "aliases": {
+          "type": "string",
+          "analyzer": "standard",
+          "fields": {
+            "raw": {
+              "type": "string",
+              "index": "not_analyzed"
+            }
+          }
+        }
+      }
+    },
+    "people": {
+      "properties": {
+        "id": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "apiUrl": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "directType": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "types": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "authorities": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "prefLabel": {
+          "type": "string",
+          "analyzer": "standard",
+          "fields": {
+            "raw": {
+              "type": "string",
+              "index": "not_analyzed"
+            },
+            "mentionsCompletion": {
+              "analyzer": "folding",
+              "type": "completion"
+            },
+            "authorCompletionByContext": {
+              "analyzer": "folding",
+              "type": "completion",
+              "contexts": [
+                {
+                  "name" : "typeContext",
+                  "type" : "category",
+                  "path" : "_type"
+                },
+                {
+                  "name" : "authorContext",
+                  "type" : "category",
+                  "path" : "isFTAuthor"
+                }]
+            },
+            "completionByContext": {
+              "analyzer": "folding",
+              "type": "completion",
+              "contexts": [{
+                "name" : "typeContext",
+                "type" : "category",
+                "path" : "_type"
+              }]
+            }
+          }
+        },
+        "isFTAuthor": {
+          "type": "string",
+          "analyzer": "standard",
+          "fields": {
+            "raw": {
+              "type": "string",
+              "index": "not_analyzed"
+            }
+          }
+        },
+        "aliases": {
+          "type": "string",
+          "analyzer": "standard",
+          "fields": {
+            "raw": {
+              "type": "string",
+              "index": "not_analyzed"
+            }
+          }
+        }
+      }
+    },
+    "locations": {
+      "properties": {
+        "id": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "apiUrl": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "directType": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "types": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "authorities": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "prefLabel": {
+          "type": "string",
+          "analyzer": "standard",
+          "fields": {
+            "raw": {
+              "type": "string",
+              "index": "not_analyzed"
+            },
+            "mentionsCompletion": {
+              "analyzer": "folding",
+              "type": "completion"
+            }
+          }
+        },
+        "aliases": {
+          "type": "string",
+          "analyzer": "standard",
+          "fields": {
+            "raw": {
+              "type": "string",
+              "index": "not_analyzed"
+            }
+          }
+        }
+      }
+    },
+    "sections": {
+      "properties": {
+        "id": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "apiUrl": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "directType": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "types": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "authorities": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "prefLabel": {
+          "type": "string",
+          "analyzer": "standard",
+          "fields": {
+            "raw": {
+              "type": "string",
+              "index": "not_analyzed"
+            }
+          }
+        },
+        "aliases": {
+          "type": "string",
+          "analyzer": "standard",
+          "fields": {
+            "raw": {
+              "type": "string",
+              "index": "not_analyzed"
+            }
+          }
+        }
+      }
+    },
+    "subjects": {
+      "properties": {
+        "id": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "apiUrl": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "directType": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "types": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "authorities": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "prefLabel": {
+          "type": "string",
+          "analyzer": "standard",
+          "fields": {
+            "raw": {
+              "type": "string",
+              "index": "not_analyzed"
+            }
+          }
+        },
+        "aliases": {
+          "type": "string",
+          "analyzer": "standard",
+          "fields": {
+            "raw": {
+              "type": "string",
+              "index": "not_analyzed"
+            }
+          }
+        }
+      }
+    },
+    "brands": {
+      "properties": {
+        "id": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "apiUrl": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "directType": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "types": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "authorities": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "prefLabel": {
+          "type": "string",
+          "analyzer": "standard",
+          "fields": {
+            "raw": {
+              "type": "string",
+              "index": "not_analyzed"
+            },
+            "completionByContext": {
+              "analyzer": "folding",
+              "type": "completion",
+              "contexts": [{
+                "name" : "typeContext",
+                "type" : "category",
+                "path" : "_type"
+              }]
+            }
+          }
+        },
+        "aliases": {
+          "type": "string",
+          "analyzer": "standard",
+          "fields": {
+            "raw": {
+              "type": "string",
+              "index": "not_analyzed"
+            }
+          }
+        }
+      }
+    },
+    "genres": {
+      "properties": {
+        "id": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "apiUrl": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "directType": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "types": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "authorities": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "prefLabel": {
+          "type": "string",
+          "analyzer": "standard",
+          "fields": {
+            "raw": {
+              "type": "string",
+              "index": "not_analyzed"
+            }
+          }
+        },
+        "aliases": {
+          "type": "string",
+          "analyzer": "standard",
+          "fields": {
+            "raw": {
+              "type": "string",
+              "index": "not_analyzed"
+            }
+          }
+        }
+      }
+    },
+    "topics": {
+      "properties": {
+        "id": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "apiUrl": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "directType": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "types": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "authorities": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "prefLabel": {
+          "type": "string",
+          "analyzer": "standard",
+          "fields": {
+            "raw": {
+              "type": "string",
+              "index": "not_analyzed"
+            },
+            "mentionsCompletion": {
+              "analyzer": "folding",
+              "type": "completion"
+            }
+          }
+        },
+        "aliases": {
+          "type": "string",
+          "analyzer": "standard",
+          "fields": {
+            "raw": {
+              "type": "string",
+              "index": "not_analyzed"
+            }
+          }
+        }
+      }
+    }
+  }
+}
