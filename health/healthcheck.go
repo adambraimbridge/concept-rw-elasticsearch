@@ -3,10 +3,11 @@ package health
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+
 	"github.com/Financial-Times/concept-rw-elasticsearch/service"
 	fthealth "github.com/Financial-Times/go-fthealth/v1_1"
 	log "github.com/sirupsen/logrus"
-	"net/http"
 )
 
 type HealthService struct {

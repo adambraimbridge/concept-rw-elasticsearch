@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
+	"time"
 
 	transactionid "github.com/Financial-Times/transactionid-utils-go"
 	log "github.com/sirupsen/logrus"
@@ -21,6 +23,7 @@ type AuthorUUID struct {
 
 type AuthorService interface {
 	LoadAuthorIdentifiers() error
+	RefreshAuthorIdentifiers()
 	IsFTAuthor(UUID string) bool
 	IsGTG() error
 }
@@ -30,16 +33,18 @@ type curatedAuthorService struct {
 	httpClient             *http.Client
 	serviceURL             string
 	authorUUIDs            map[string]struct{}
+	authorRefreshInterval  time.Duration
+	authorLock             *sync.RWMutex
 	publishClusterUser     string
 	publishClusterpassword string
 }
 
-func NewAuthorService(serviceURL string, pubClusterKey string, client *http.Client) (AuthorService, error) {
+func NewAuthorService(serviceURL string, pubClusterKey string, authorRefreshInterval time.Duration, client *http.Client) (AuthorService, error) {
 	if len(pubClusterKey) == 0 {
 		return nil, fmt.Errorf("credentials missing credentials, author service cannot make request to author transformer")
 	}
 	credentials := strings.Split(pubClusterKey, ":")
-	cas := &curatedAuthorService{client, serviceURL, nil, credentials[0], credentials[1]}
+	cas := &curatedAuthorService{client, serviceURL, nil, authorRefreshInterval, &sync.RWMutex{}, credentials[0], credentials[1]}
 	return cas, cas.LoadAuthorIdentifiers()
 }
 
@@ -59,11 +64,13 @@ func (as *curatedAuthorService) LoadAuthorIdentifiers() error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
+
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("A non-200 error code from v1 authors transformer! Status: %v", resp.StatusCode)
 	}
 
-	as.authorUUIDs = make(map[string]struct{})
+	authorUUIDsTmp := make(map[string]struct{})
 
 	scan := bufio.NewScanner(resp.Body)
 	for scan.Scan() {
@@ -72,23 +79,51 @@ func (as *curatedAuthorService) LoadAuthorIdentifiers() error {
 		if err != nil {
 			return err
 		}
-		as.authorUUIDs[id.UUID] = struct{}{}
+		authorUUIDsTmp[id.UUID] = struct{}{}
 	}
+	as.authorLock.Lock()
+	defer as.authorLock.Unlock()
+	as.authorUUIDs = authorUUIDsTmp
 	log.Infof("Found %v authors", len(as.authorUUIDs))
 
 	return nil
 }
 
+func (as *curatedAuthorService) RefreshAuthorIdentifiers() {
+	ticker := time.NewTicker(as.authorRefreshInterval)
+	go func() {
+		for range ticker.C {
+			err := as.LoadAuthorIdentifiers()
+			if err != nil { //log and use the map in memory
+				log.Errorf("Error on author identifier list refresh attempt %v", err)
+			} else {
+				log.Infof("Author identifier list has been refreshed")
+			}
+
+		}
+	}()
+
+}
+
 func (as *curatedAuthorService) IsFTAuthor(uuid string) bool {
+	as.authorLock.RLock()
+	defer as.authorLock.RUnlock()
 	_, found := as.authorUUIDs[uuid]
+
 	return found
 }
 
 func (as *curatedAuthorService) IsGTG() error {
-	resp, err := http.Get(as.serviceURL + gtgPath)
+	req, err := http.NewRequest("GET", as.serviceURL+gtgPath, nil)
 	if err != nil {
 		return err
 	}
+	resp, err := as.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("gtg endpoint returned a non-200 status: %v", resp.StatusCode)
 	}

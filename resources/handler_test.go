@@ -12,6 +12,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"gopkg.in/olivere/elastic.v5"
 )
 
@@ -39,273 +40,161 @@ func TestCreateNewESWriterWithEmptyWhitelist(t *testing.T) {
 }
 
 func TestLoadData(t *testing.T) {
-
-	payload := `{"uuid":"8ff7dfef-0330-3de0-b37a-2d6aa9c98580","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report","type":"Genre"}`
-	req, err := http.NewRequest("PUT", "/organisations/8ff7dfef-0330-3de0-b37a-2d6aa9c98580", bytes.NewReader([]byte(payload)))
-	if err != nil {
-		t.Fatal(err)
+	testCases := []struct {
+		name    string
+		path    string
+		payload string
+		status  int
+		msg     string
+	}{
+		{
+			name:    "Succesful write",
+			payload: `{"uuid":"8ff7dfef-0330-3de0-b37a-2d6aa9c98580","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report","type":"Genre"}`,
+			status:  http.StatusOK,
+			msg:     `{"message":"Concept written successfully"}`,
+			path:    "/valid-type/8ff7dfef-0330-3de0-b37a-2d6aa9c98580",
+		},
+		{
+			name:    "Succesful aggregate model write",
+			payload: `{"prefUUID":"8ff7dfef-0330-3de0-b37a-2d6aa9c98580","prefLabel":"Smartlogics Brands PrefLabel","type":"Brand","strapline":"Some strapline","descriptionXML":"Some description","_imageUrl":"Some image url","sourceRepresentations":[{"uuid":"4ebbd9c4-3bb7-4d18-a14c-4c45aac5d966","prefLabel":"TMEs PrefLabel","type":"Brand","authority":"TME","authorityValue":"745212"},{"uuid":"56388858-38d6-4dfc-a001-506394259b51","prefLabel":"Smartlogics Brands PrefLabel","type":"Brand","authority":"Smartlogic","authorityValue":"123456789","lastModifiedEpoch":1498127042,"strapline":"Some strapline","descriptionXML":"Some description","_imageUrl":"Some image url"}]}`,
+			status:  http.StatusOK,
+			msg:     `{"message":"Concept written successfully"}`,
+			path:    "/valid-type/8ff7dfef-0330-3de0-b37a-2d6aa9c98580",
+		},
+		{
+			name:    "Path contains different uuid to body",
+			payload: `{"uuid":"different-uuid","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report","type":"Genre"}`,
+			status:  http.StatusBadRequest,
+			msg:     `{"message":"Provided path UUID does not match request body"}`,
+			path:    "/valid-type/8ff7dfef-0330-3de0-b37a-2d6aa9c98580",
+		},
+		{
+			name:    "Path contains no type",
+			payload: `{"uuid":"different-uuid","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report","type":"Genre"}`,
+			status:  http.StatusBadRequest,
+			msg:     `{"message":"Unsupported or invalid concept type"}`,
+			path:    "/invalid-type/8ff7dfef-0330-3de0-b37a-2d6aa9c98580",
+		},
+		{
+			name:    "Body contains empty type",
+			payload: `{"uuid":"8ff7dfef-0330-3de0-b37a-2d6aa9c98580","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report"}`,
+			status:  http.StatusBadRequest,
+			msg:     `{"message":"Invalid or incomplete concept model"}`,
+			path:    "/valid-type/8ff7dfef-0330-3de0-b37a-2d6aa9c98580",
+		},
+		{
+			name:    "Body contains empty prefLabel",
+			payload: `{"uuid":"8ff7dfef-0330-3de0-b37a-2d6aa9c98580","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"type":"Genre"}`,
+			status:  http.StatusBadRequest,
+			msg:     `{"message":"Invalid or incomplete concept model"}`,
+			path:    "/valid-type/8ff7dfef-0330-3de0-b37a-2d6aa9c98580",
+		},
+		{
+			name:    "Path contains different uuid to aggregate model body",
+			payload: `{"prefUUID":"different-uuid","prefLabel":"Smartlogics Brands PrefLabel","strapline":"Some strapline","descriptionXML":"Some description","_imageUrl":"Some image url","sourceRepresentations":[{"uuid":"4ebbd9c4-3bb7-4d18-a14c-4c45aac5d966","prefLabel":"TMEs PrefLabel","type":"Brand","authority":"TME","authorityValue":"745212"},{"uuid":"56388858-38d6-4dfc-a001-506394259b51","prefLabel":"Smartlogics Brands PrefLabel","type":"Brand","authority":"Smartlogic","authorityValue":"123456789","lastModifiedEpoch":1498127042,"strapline":"Some strapline","descriptionXML":"Some description","_imageUrl":"Some image url"}]}`,
+			status:  http.StatusBadRequest,
+			msg:     `{"message":"Provided path UUID does not match request body"}`,
+			path:    "/valid-type/8ff7dfef-0330-3de0-b37a-2d6aa9c98580",
+		},
+		{
+			name:    "Aggregate model body contains empty type",
+			payload: `{"prefUUID":"8ff7dfef-0330-3de0-b37a-2d6aa9c98580","prefLabel":"Smartlogics Brands PrefLabel","strapline":"Some strapline","descriptionXML":"Some description","_imageUrl":"Some image url","sourceRepresentations":[{"uuid":"4ebbd9c4-3bb7-4d18-a14c-4c45aac5d966","prefLabel":"TMEs PrefLabel","type":"Brand","authority":"TME","authorityValue":"745212"},{"uuid":"56388858-38d6-4dfc-a001-506394259b51","prefLabel":"Smartlogics Brands PrefLabel","type":"Brand","authority":"Smartlogic","authorityValue":"123456789","lastModifiedEpoch":1498127042,"strapline":"Some strapline","descriptionXML":"Some description","_imageUrl":"Some image url"}]}`,
+			status:  http.StatusBadRequest,
+			msg:     `{"message":"Invalid or incomplete concept model"}`,
+			path:    "/valid-type/8ff7dfef-0330-3de0-b37a-2d6aa9c98580",
+		},
+		{
+			name:    "Aggregate model body contains empty prefLabel",
+			payload: `{"prefUUID":"8ff7dfef-0330-3de0-b37a-2d6aa9c98580","type":"Brands","strapline":"Some strapline","descriptionXML":"Some description","_imageUrl":"Some image url","sourceRepresentations":[{"uuid":"4ebbd9c4-3bb7-4d18-a14c-4c45aac5d966","prefLabel":"TMEs PrefLabel","type":"Brand","authority":"TME","authorityValue":"745212"},{"uuid":"56388858-38d6-4dfc-a001-506394259b51","prefLabel":"Smartlogics Brands PrefLabel","type":"Brand","authority":"Smartlogic","authorityValue":"123456789","lastModifiedEpoch":1498127042,"strapline":"Some strapline","descriptionXML":"Some description","_imageUrl":"Some image url"}]}`,
+			status:  http.StatusBadRequest,
+			msg:     `{"message":"Invalid or incomplete concept model"}`,
+			path:    "/valid-type/8ff7dfef-0330-3de0-b37a-2d6aa9c98580",
+		},
+		{
+			name:    "Body contains invalid json",
+			payload: `{wrong data}`,
+			status:  http.StatusBadRequest,
+			msg:     `{"message":"Request body is not in the expected concept model format"}`,
+			path:    "/valid-type/8ff7dfef-0330-3de0-b37a-2d6aa9c98580",
+		},
+		{
+			name:    "Bulk request successful",
+			payload: `{"uuid":"8ff7dfef-0330-3de0-b37a-2d6aa9c98580","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report","type":"Genre"}`,
+			status:  http.StatusOK,
+			msg:     `{"message":"Concept written successfully"}`,
+			path:    "/bulk/valid-type/8ff7dfef-0330-3de0-b37a-2d6aa9c98580",
+		},
+		{
+			name:    "Bulk request body contains invalid json",
+			payload: `{wrong data}`,
+			status:  http.StatusBadRequest,
+			msg:     `{"message":"Request body is not in the expected concept model format"}`,
+			path:    "/bulk/valid-type/8ff7dfef-0330-3de0-b37a-2d6aa9c98580",
+		},
+		{
+			name:    "Bulk path contains different uuid to body",
+			payload: `{"uuid":"different-uuid","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report","type":"Genre"}`,
+			status:  http.StatusBadRequest,
+			msg:     `{"message":"Provided path UUID does not match request body"}`,
+			path:    "/bulk/valid-type/8ff7dfef-0330-3de0-b37a-2d6aa9c98580",
+		},
 	}
 
-	rr := httptest.NewRecorder()
+	dummyAuthorService := &dummyAuthorService{isAuthor: false, authorIds: []service.AuthorUUID{}}
+	for _, tc := range testCases {
+		req, err := http.NewRequest("PUT", tc.path, bytes.NewReader([]byte(tc.payload)))
+		require.NoError(t, err, `Current test "%v"`, tc.name)
 
-	dummyEsService := &dummyEsService{}
-	dummyAuthorService := &dummyAuthorService{}
-	writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"organisations"})
+		rr := httptest.NewRecorder()
 
-	servicesRouter := mux.NewRouter()
-	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.LoadData).Methods("PUT")
-	servicesRouter.ServeHTTP(rr, req)
+		dummyEsService := &dummyEsService{}
+		writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"valid-type"})
 
-	// Check the status code is what we expect.
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusOK)
+		servicesRouter := mux.NewRouter()
+		servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.LoadData).Methods("PUT")
+		servicesRouter.HandleFunc("/bulk/{concept-type}/{id}", writerService.LoadBulkData).Methods("PUT")
+		servicesRouter.ServeHTTP(rr, req)
+
+		assert.Equal(t, tc.status, rr.Code, `Current test "%v"`, tc.name)
+		assert.JSONEq(t, tc.msg, rr.Body.String(), `Current test "%v"`, tc.name)
 	}
-
-	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
-}
-
-func TestLoadDataBadRequest(t *testing.T) {
-
-	payload := `{"uuid":"different-uuid","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report","type":"Genre"}`
-	req, err := http.NewRequest("PUT", "/organisations/8ff7dfef-0330-3de0-b37a-2d6aa9c98580", bytes.NewReader([]byte(payload)))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	rr := httptest.NewRecorder()
-
-	dummyEsService := &dummyEsService{}
-	dummyAuthorService := &dummyAuthorService{}
-	writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"organisations"})
-
-	servicesRouter := mux.NewRouter()
-	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.LoadData).Methods("PUT")
-	servicesRouter.ServeHTTP(rr, req)
-
-	// Check the status code is what we expect.
-	if status := rr.Code; status != http.StatusBadRequest {
-		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusBadRequest)
-	}
-
-	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
-}
-
-func TestLoadDataBadRequestForUnsupportedType(t *testing.T) {
-
-	payload := `{"uuid":"different-uuid","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report","type":"Genre"}`
-	req, err := http.NewRequest("PUT", "/organisation/8ff7dfef-0330-3de0-b37a-2d6aa9c98580", bytes.NewReader([]byte(payload)))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	rr := httptest.NewRecorder()
-
-	dummyEsService := &dummyEsService{}
-	dummyAuthorService := &dummyAuthorService{}
-	writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"organisations", "people", "genres"})
-
-	servicesRouter := mux.NewRouter()
-	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.LoadData).Methods("PUT")
-	servicesRouter.ServeHTTP(rr, req)
-
-	// For Bad Request the status code should be 400 - but for unsupported concept types the writer returns 200 - without further processing
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusOK)
-	}
-
-	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
-}
-
-func TestLoadDataBadRequestForEmptyType(t *testing.T) {
-
-	payload := `{"uuid":"8ff7dfef-0330-3de0-b37a-2d6aa9c98580","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report"}`
-	req, err := http.NewRequest("PUT", "/organisations/8ff7dfef-0330-3de0-b37a-2d6aa9c98580", bytes.NewReader([]byte(payload)))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	rr := httptest.NewRecorder()
-
-	dummyEsService := &dummyEsService{}
-	dummyAuthorService := &dummyAuthorService{}
-	writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"organisations"})
-
-	servicesRouter := mux.NewRouter()
-	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.LoadData).Methods("PUT")
-	servicesRouter.ServeHTTP(rr, req)
-
-	// Check the status code is what we expect.
-	if status := rr.Code; status != http.StatusBadRequest {
-		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusBadRequest)
-	}
-
-	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
-}
-
-func TestLoadDataBadRequestForEmptyPrefLabel(t *testing.T) {
-
-	payload := `{"uuid":"8ff7dfef-0330-3de0-b37a-2d6aa9c98580","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"type":"Genre"}`
-	req, err := http.NewRequest("PUT", "/organisations/8ff7dfef-0330-3de0-b37a-2d6aa9c98580", bytes.NewReader([]byte(payload)))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	rr := httptest.NewRecorder()
-
-	dummyEsService := &dummyEsService{}
-	dummyAuthorService := &dummyAuthorService{}
-	writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"organisations"})
-
-	servicesRouter := mux.NewRouter()
-	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.LoadData).Methods("PUT")
-	servicesRouter.ServeHTTP(rr, req)
-
-	// Check the status code is what we expect.
-	if status := rr.Code; status != http.StatusBadRequest {
-		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusBadRequest)
-	}
-
-	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
 }
 
 func TestLoadDataEsClientServerErrors(t *testing.T) {
-
-	payload := `{"uuid":"8ff7dfef-0330-3de0-b37a-2d6aa9c98580","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report","type":"Genre"}`
-	req, err := http.NewRequest("PUT", "/organisations/8ff7dfef-0330-3de0-b37a-2d6aa9c98580", bytes.NewReader([]byte(payload)))
-	if err != nil {
-		t.Fatal(err)
+	testCases := []struct {
+		err    error
+		status int
+		msg    string
+	}{
+		{
+			err:    errTest,
+			status: http.StatusInternalServerError,
+			msg:    `{"message":"Failed to write data to ES"}`,
+		},
+		{
+			err:    service.ErrNoElasticClient,
+			status: http.StatusServiceUnavailable,
+			msg:    `{"message":"ES unavailable"}`,
+		},
 	}
 
-	rr := httptest.NewRecorder()
+	dummyAuthorService := &dummyAuthorService{isAuthor: false, authorIds: []service.AuthorUUID{}}
+	for _, tc := range testCases {
+		req, err := http.NewRequest("PUT", "/valid-type/8ff7dfef-0330-3de0-b37a-2d6aa9c98580", bytes.NewReader([]byte(`{"uuid":"8ff7dfef-0330-3de0-b37a-2d6aa9c98580","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report","type":"Genre"}`)))
+		require.NoError(t, err)
 
-	dummyEsService := &dummyEsService{returnsError: errTest}
-	dummyAuthorService := &dummyAuthorService{}
-	writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"organisations"})
+		rr := httptest.NewRecorder()
 
-	servicesRouter := mux.NewRouter()
-	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.LoadData).Methods("PUT")
-	servicesRouter.ServeHTTP(rr, req)
+		dummyEsService := &dummyEsService{returnsError: tc.err}
+		writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"valid-type"})
 
-	// Check the status code is what we expect.
-	if status := rr.Code; status != http.StatusInternalServerError {
-		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusInternalServerError)
+		servicesRouter := mux.NewRouter()
+		servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.LoadData).Methods("PUT")
+		servicesRouter.ServeHTTP(rr, req)
+
+		assert.Equal(t, tc.status, rr.Code)
+		assert.JSONEq(t, tc.msg, rr.Body.String())
 	}
-
-	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
-}
-
-func TestLoadDataIncorrectPayload(t *testing.T) {
-
-	payload := `{wrong data}`
-	req, err := http.NewRequest("PUT", "/organisations/8ff7dfef-0330-3de0-b37a-2d6aa9c98580", bytes.NewReader([]byte(payload)))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	rr := httptest.NewRecorder()
-
-	dummyEsService := &dummyEsService{}
-	dummyAuthorService := &dummyAuthorService{}
-	writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"organisations"})
-
-	servicesRouter := mux.NewRouter()
-	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.LoadData).Methods("PUT")
-	servicesRouter.ServeHTTP(rr, req)
-
-	// Check the status code is what we expect.
-	if status := rr.Code; status != http.StatusInternalServerError {
-		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusInternalServerError)
-	}
-
-	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
-}
-
-func TestLoadBulkDataIncorrectPayload(t *testing.T) {
-
-	payload := `{wrong data}`
-	req, err := http.NewRequest("PUT", "/bulk/organisations/8ff7dfef-0330-3de0-b37a-2d6aa9c98580", bytes.NewReader([]byte(payload)))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	rr := httptest.NewRecorder()
-
-	dummyEsService := &dummyEsService{}
-	dummyAuthorService := &dummyAuthorService{}
-	writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"organisations"})
-
-	servicesRouter := mux.NewRouter()
-	servicesRouter.HandleFunc("/bulk/{concept-type}/{id}", writerService.LoadBulkData).Methods("PUT")
-	servicesRouter.ServeHTTP(rr, req)
-
-	// Check the status code is what we expect.
-	if status := rr.Code; status != http.StatusInternalServerError {
-		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusInternalServerError)
-	}
-
-	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
-}
-
-func TestLoadBulkDataBadRequest(t *testing.T) {
-
-	payload := `{"uuid":"different-uuid","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report","type":"Genre"}`
-	req, err := http.NewRequest("PUT", "/bulk/organisations/8ff7dfef-0330-3de0-b37a-2d6aa9c98580", bytes.NewReader([]byte(payload)))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	rr := httptest.NewRecorder()
-
-	dummyEsService := &dummyEsService{}
-	dummyAuthorService := &dummyAuthorService{}
-	writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"organisations"})
-
-	servicesRouter := mux.NewRouter()
-	servicesRouter.HandleFunc("/bulk/{concept-type}/{id}", writerService.LoadBulkData).Methods("PUT")
-	servicesRouter.ServeHTTP(rr, req)
-
-	// Check the status code is what we expect.
-	if status := rr.Code; status != http.StatusBadRequest {
-		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusBadRequest)
-	}
-
-	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
-}
-
-func TestLoadBulkDataAccepted(t *testing.T) {
-
-	payload := `{"uuid":"8ff7dfef-0330-3de0-b37a-2d6aa9c98580","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report","type":"Genre"}`
-	req, err := http.NewRequest("PUT", "/bulk/organisations/8ff7dfef-0330-3de0-b37a-2d6aa9c98580", bytes.NewReader([]byte(payload)))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	rr := httptest.NewRecorder()
-
-	dummyEsService := &dummyEsService{}
-	dummyAuthorService := &dummyAuthorService{}
-	writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"organisations"})
-
-	servicesRouter := mux.NewRouter()
-	servicesRouter.HandleFunc("/bulk/{concept-type}/{id}", writerService.LoadBulkData).Methods("PUT")
-	servicesRouter.ServeHTTP(rr, req)
-
-	// Check the status code is what we expect.
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusOK)
-	}
-
-	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
 }
 
 func TestReadData(t *testing.T) {
@@ -338,13 +227,11 @@ func TestReadData(t *testing.T) {
 
 	// Check the status code is what we expect.
 	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusOK)
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 
 	if contentType := rr.HeaderMap.Get("Content-Type"); contentType != "application/json" {
-		t.Errorf("handler returned wrong content type: got %v want %v",
-			contentType, "application/json")
+		t.Errorf("handler returned wrong content type: got %v want %v", contentType, "application/json")
 	}
 
 	var respObject *service.EsConceptModel
@@ -354,7 +241,6 @@ func TestReadData(t *testing.T) {
 	}
 
 	assert.True(t, reflect.DeepEqual(respObject, esModel))
-
 }
 
 func TestReadDataNotFound(t *testing.T) {
@@ -427,7 +313,6 @@ func TestReadDataEsServerUnavailable(t *testing.T) {
 }
 
 func TestDeleteData(t *testing.T) {
-
 	req, err := http.NewRequest("DELETE", "/organisations/8ff7dfef-0330-3de0-b37a-2d6aa9c98580", nil)
 	if err != nil {
 		t.Fatal(err)
@@ -453,7 +338,6 @@ func TestDeleteData(t *testing.T) {
 }
 
 func TestDeleteDataNotFound(t *testing.T) {
-
 	req, err := http.NewRequest("DELETE", "/organisations/8ff7dfef-0330-3de0-b37a-2d6aa9c98580", nil)
 	if err != nil {
 		t.Fatal(err)
@@ -479,7 +363,6 @@ func TestDeleteDataNotFound(t *testing.T) {
 }
 
 func TestDeleteDataEsServerError(t *testing.T) {
-
 	req, err := http.NewRequest("DELETE", "/organisations/8ff7dfef-0330-3de0-b37a-2d6aa9c98580", nil)
 	if err != nil {
 		t.Fatal(err)
@@ -517,6 +400,8 @@ func (service *dummyEsService) LoadData(conceptType string, uuid string, payload
 	return &elastic.IndexResponse{}, nil
 }
 
+func (service *dummyEsService) CleanupData(conceptType string, concept service.Concept) {}
+
 func (service *dummyEsService) ReadData(conceptType string, uuid string) (*elastic.GetResult, error) {
 	if service.returnsError != nil {
 		return nil, service.returnsError
@@ -550,6 +435,10 @@ type dummyAuthorService struct {
 
 func (service *dummyAuthorService) LoadAuthorIdentifiers() error {
 	return nil
+}
+
+func (service *dummyAuthorService) RefreshAuthorIdentifiers() {
+
 }
 
 func (service *dummyAuthorService) IsFTAuthor(UUID string) bool {
