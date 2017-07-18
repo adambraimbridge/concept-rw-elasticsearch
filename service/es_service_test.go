@@ -94,8 +94,12 @@ func TestWriteWithGenericError(t *testing.T) {
 	_, _, err = writeDocument(service, conceptType, testUuid)
 	assert.EqualError(t, err, "unexpected end of JSON input")
 	assert.Equal(t, log.ErrorLevel, hook.LastEntry().Level)
-	expectedMsg := fmt.Sprintf("Concept organisations with uuid %v failed with status code unknown and the following details: unexpected end of JSON input", testUuid)
-	assert.Equal(t, expectedMsg, hook.LastEntry().Message)
+	assert.Equal(t, "Failed operation to Elasticsearch", hook.LastEntry().Message)
+	assert.Equal(t, conceptType+"s", hook.LastEntry().Data[conceptTypeField])
+	assert.Equal(t, testUuid, hook.LastEntry().Data[uuidField])
+	assert.EqualError(t, hook.LastEntry().Data["error"].(error), "unexpected end of JSON input")
+	assert.Equal(t, "unknown", hook.LastEntry().Data[statusField])
+	assert.Equal(t, "write", hook.LastEntry().Data[oparationField])
 }
 
 func TestWriteWithESError(t *testing.T) {
@@ -114,8 +118,13 @@ func TestWriteWithESError(t *testing.T) {
 	_, _, err = writeDocument(service, conceptType, testUuid)
 	assert.EqualError(t, err, "elastic: Error 500 (Internal Server Error)")
 	assert.Equal(t, log.ErrorLevel, hook.LastEntry().Level)
-	expectedMsg := fmt.Sprintf("Concept organisations with uuid %v failed with status code 500 and the following details: elastic: Error 500 (Internal Server Error)", testUuid)
-	assert.Equal(t, expectedMsg, hook.LastEntry().Message)
+	assert.Equal(t, "Failed operation to Elasticsearch", hook.LastEntry().Message)
+	assert.Equal(t, conceptType+"s", hook.LastEntry().Data[conceptTypeField])
+	assert.Equal(t, testUuid, hook.LastEntry().Data[uuidField])
+	assert.EqualError(t, hook.LastEntry().Data["error"].(error), "elastic: Error 500 (Internal Server Error)")
+	assert.Equal(t, "500", hook.LastEntry().Data[statusField])
+	assert.Equal(t, "write", hook.LastEntry().Data[oparationField])
+
 }
 
 func newBrokenESMock() *httptest.Server {
@@ -150,6 +159,105 @@ func TestRead(t *testing.T) {
 	err = json.Unmarshal(*resp.Source, &obj)
 	assert.Equal(t, payload.ApiUrl, obj["apiUrl"], "apiUrl")
 	assert.Equal(t, payload.PrefLabel, obj["prefLabel"], "prefLabel")
+}
+
+func TestDelete(t *testing.T) {
+	esURL := getElasticSearchTestURL(t)
+
+	ec, err := elastic.NewClient(
+		elastic.SetURL(esURL),
+		elastic.SetSniff(false),
+	)
+	assert.NoError(t, err, "expected no error for ES client")
+
+	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
+
+	testUuid := uuid.NewV4().String()
+	_, _, err = writeDocument(service, conceptType, testUuid)
+	assert.NoError(t, err, "expected successful write")
+	resp, err := service.DeleteData(conceptType+"s", testUuid)
+
+	assert.True(t, resp.Found, "document is found")
+	assert.Equal(t, indexName, resp.Index, "index name")
+	assert.Equal(t, conceptType+"s", resp.Type, "concept type")
+	assert.Equal(t, testUuid, resp.Id, "document id")
+	assert.False(t, resp.Result)
+}
+
+func TestDeleteNotFoundConcept(t *testing.T) {
+	hook := testLog.NewGlobal()
+	esURL := getElasticSearchTestURL(t)
+
+	ec, err := elastic.NewClient(
+		elastic.SetURL(esURL),
+		elastic.SetSniff(false),
+	)
+	assert.NoError(t, err, "expected no error for ES client")
+
+	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
+
+	testUuid := uuid.NewV4().String()
+	resp, err := service.DeleteData(conceptType+"s", testUuid)
+
+	assert.False(t, resp.Found, "document is not found")
+
+	assert.Equal(t, log.ErrorLevel, hook.LastEntry().Level)
+	assert.Equal(t, "Failed operation to Elasticsearch", hook.LastEntry().Message)
+	assert.Equal(t, conceptType+"s", hook.LastEntry().Data[conceptTypeField])
+	assert.Equal(t, testUuid, hook.LastEntry().Data[uuidField])
+	assert.EqualError(t, hook.LastEntry().Data["error"].(error), "elastic: Error 404 (Not Found)")
+	assert.Equal(t, "404", hook.LastEntry().Data[statusField])
+	assert.Equal(t, "delete", hook.LastEntry().Data[oparationField])
+}
+
+func TestDeleteWithGenericError(t *testing.T) {
+	hook := testLog.NewGlobal()
+	es := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	defer es.Close()
+	ec, err := elastic.NewClient(
+		elastic.SetURL(es.URL),
+		elastic.SetSniff(false),
+	)
+	assert.NoError(t, err, "expected no error for ES client")
+	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
+
+	testUuid := uuid.NewV4().String()
+
+	_, err = service.DeleteData(conceptType+"s", testUuid)
+
+	assert.EqualError(t, err, "unexpected end of JSON input")
+	assert.Equal(t, log.ErrorLevel, hook.LastEntry().Level)
+	assert.Equal(t, "Failed operation to Elasticsearch", hook.LastEntry().Message)
+	assert.Equal(t, conceptType+"s", hook.LastEntry().Data[conceptTypeField])
+	assert.Equal(t, testUuid, hook.LastEntry().Data[uuidField])
+	assert.EqualError(t, hook.LastEntry().Data["error"].(error), "unexpected end of JSON input")
+	assert.Equal(t, "unknown", hook.LastEntry().Data[statusField])
+	assert.Equal(t, "delete", hook.LastEntry().Data[oparationField])
+}
+
+func TestDeleteWithESError(t *testing.T) {
+	hook := testLog.NewGlobal()
+	es := newBrokenESMock()
+	defer es.Close()
+	ec, err := elastic.NewClient(
+		elastic.SetURL(es.URL),
+		elastic.SetSniff(false),
+	)
+	assert.NoError(t, err, "expected no error for ES client")
+
+	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
+
+	testUuid := uuid.NewV4().String()
+	_, err = service.DeleteData(conceptType+"s", testUuid)
+
+	assert.EqualError(t, err, "elastic: Error 500 (Internal Server Error)")
+	assert.Equal(t, log.ErrorLevel, hook.LastEntry().Level)
+	assert.Equal(t, "Failed operation to Elasticsearch", hook.LastEntry().Message)
+	assert.Equal(t, conceptType+"s", hook.LastEntry().Data[conceptTypeField])
+	assert.Equal(t, testUuid, hook.LastEntry().Data[uuidField])
+	assert.EqualError(t, hook.LastEntry().Data["error"].(error), "elastic: Error 500 (Internal Server Error)")
+	assert.Equal(t, "500", hook.LastEntry().Data[statusField])
+	assert.Equal(t, "delete", hook.LastEntry().Data[oparationField])
 }
 
 func TestPassClientThroughChannel(t *testing.T) {

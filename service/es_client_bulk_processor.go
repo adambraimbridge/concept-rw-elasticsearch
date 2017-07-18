@@ -39,6 +39,6 @@ func handleBulkFailures(executionId int64, requests []elastic.BulkableRequest, r
 
 	for _, failedItem := range response.Failed() {
 		errorDetails := fmt.Sprintf("elastic: %s [type=%s] caused by %s, failed shard details: %v", failedItem.Error.Reason, failedItem.Error.Type, failedItem.Error.CausedBy, failedItem.Error.FailedShards)
-		log.Errorf(writeErrFormat, failedItem.Type, failedItem.Id, failedItem.Status, errorDetails)
+		log.Errorf("Concept %s with uuid %s failed with status code %v and the following details: %v", failedItem.Type, failedItem.Id, failedItem.Status, errorDetails)
 	}
 }

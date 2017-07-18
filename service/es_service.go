@@ -14,7 +14,10 @@ var (
 	ErrNoElasticClient error = errors.New("No ElasticSearch client available")
 )
 
-const writeErrFormat = "Concept %s with uuid %s failed with status code %v and the following details: %v"
+const conceptTypeField = "conceptType"
+const uuidField = "uuid"
+const statusField = "status"
+const oparationField = "operation"
 
 type esService struct {
 	sync.RWMutex
@@ -96,7 +99,12 @@ func (es *esService) LoadData(conceptType string, uuid string, payload interface
 		default:
 			status = "unknown"
 		}
-		log.Errorf(writeErrFormat, conceptType, uuid, status, err)
+		log.WithError(err).
+			WithField(conceptTypeField, conceptType).
+			WithField(uuidField, uuid).
+			WithField(statusField, status).
+			WithField(oparationField, "write").
+			Error("Failed operation to Elasticsearch")
 	}
 
 	return resp, err
@@ -142,11 +150,26 @@ func (es *esService) DeleteData(conceptType string, uuid string) (*elastic.Delet
 		Id(uuid).
 		Do(context.Background())
 
+	if err != nil {
+		var status string
+		switch err.(type) {
+		case *elastic.Error:
+			status = strconv.Itoa(err.(*elastic.Error).Status)
+		default:
+			status = "unknown"
+		}
+		log.WithError(err).
+			WithField(conceptTypeField, conceptType).
+			WithField(uuidField, uuid).
+			WithField(statusField, status).
+			WithField(oparationField, "delete").
+			Error("Failed operation to Elasticsearch")
+	}
+
 	if elastic.IsNotFound(err) {
 		return &elastic.DeleteResponse{Found: false}, nil
-	} else {
-		return resp, err
 	}
+	return resp, err
 }
 
 func (es *esService) LoadBulkData(conceptType string, uuid string, payload interface{}) {
