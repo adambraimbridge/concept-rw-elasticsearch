@@ -113,8 +113,8 @@ func main() {
 
 	accessConfig := service.NewAccessConfig(*accessKey, *secretKey, *esEndpoint)
 
-	//log.SetLevel(log.InfoLevel)
-	//log.Infof("[Startup] The writer handles the following concept types: %v\n", *elasticsearchWhitelistedConceptTypes)
+	log.SetLevel(log.InfoLevel)
+	log.Infof("[Startup] The writer handles the following concept types: %v\n", *elasticsearchWhitelistedConceptTypes)
 
 	// It seems that once we have a connection, we can lose and reconnect to Elastic OK
 	// so just keep going until successful
