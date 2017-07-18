@@ -27,18 +27,25 @@ func (service *HealthService) HealthCheckHandler() func(http.ResponseWriter, *ht
 		SystemCode:  "up-crwes",
 		Name:        "Concept RW Elasticsearch",
 		Description: "Concept RW ElasticSearch is an application that writes concepts into Amazon Elasticsearch cluster in batches",
-		Checks:      service.checks(),
+		Checks:      service.checks(true),
 	}
 
 	return fthealth.Handler(hc)
 }
 
-func (service *HealthService) checks() []fthealth.Check {
-	return []fthealth.Check{
-		service.esClusterIsHealthyCheck(),
+func (service *HealthService) checks(includeReadOnlyCheck bool) []fthealth.Check {
+	checks := []fthealth.Check{
 		service.esConnectivityHealthyCheck(),
-		service.v1AuthorsTransformerConnectivityCheck(),
+		service.esClusterIsHealthyCheck(),
 	}
+
+	if includeReadOnlyCheck {
+		checks = append(checks, service.indexIsWriteableCheck())
+	}
+
+	checks = append(checks, service.v1AuthorsTransformerConnectivityCheck())
+
+	return checks
 }
 
 func (service *HealthService) esClusterIsHealthyCheck() fthealth.Check {
@@ -67,7 +74,7 @@ func (service *HealthService) healthChecker() (string, error) {
 func (service *HealthService) esConnectivityHealthyCheck() fthealth.Check {
 	return fthealth.Check{
 		ID:               "check-connectivity-to-elasticsearch-cluster",
-		BusinessImpact:   "Concepts could not be written to Elasticsearch",
+		BusinessImpact:   "Concepts could not be read from or written to Elasticsearch",
 		Name:             "Check connectivity to the Elasticsearch cluster",
 		PanicGuide:       "https://dewey.ft.com/up-crwes.html",
 		Severity:         1,
@@ -82,6 +89,34 @@ func (service *HealthService) esConnectivityChecker() (string, error) {
 		return "Could not connect to elasticsearch", err
 	}
 	return "Successfully connected to the cluster", nil
+}
+
+func (service *HealthService) indexIsWriteableCheck() fthealth.Check {
+	return fthealth.Check{
+		ID:             "check-elasticsearch-index-writeable",
+		BusinessImpact: "Updates to concepts cannot be written to ElasticSearch",
+		Name:           "Check index is writeable",
+		PanicGuide:     "https://dewey.ft.com/up-crwes.html",
+		Severity:       2,
+		TechnicalSummary: `Elasticsearch index is locked for writing. 
+		This may be because the reindexer is creating a new index version, in which case this service will become healthy 
+		once that process is completed. This requires further investigation if there is no ongoing reindexing process.`,
+		Checker: service.readOnlyChecker,
+	}
+}
+
+func (service *HealthService) readOnlyChecker() (string, error) {
+	readOnly, indexName, err := service.esHealthService.IsIndexReadOnly()
+	if err != nil {
+		return "Could not connect to elasticsearch", err
+	}
+
+	if readOnly {
+		err = fmt.Errorf("Elasticsearch index [%v] is read-only", indexName)
+		return err.Error(), err
+	}
+
+	return fmt.Sprintf("Elasticsearch index [%v] is writeable", indexName), nil
 }
 
 func (service *HealthService) v1AuthorsTransformerConnectivityCheck() fthealth.Check {
@@ -106,7 +141,7 @@ func (service *HealthService) v1AuthorsTransformerConnectivityChecker() (string,
 
 //GoodToGo returns a 503 if the healthcheck fails - suitable for use from varnish to check availability of a node
 func (service *HealthService) GoodToGo(writer http.ResponseWriter, req *http.Request) {
-	for _, c := range service.checks() {
+	for _, c := range service.checks(false) {
 		if _, err := c.Checker(); err != nil {
 			writer.WriteHeader(http.StatusServiceUnavailable)
 			writer.Write([]byte(fmt.Sprintf("gtg failed for %v, reason: %v", c.ID, err.Error())))

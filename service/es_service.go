@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"errors"
+	"strconv"
+	"strings"
 	"sync"
 
 	log "github.com/Sirupsen/logrus"
@@ -32,6 +34,7 @@ type EsServiceI interface {
 
 type EsHealthServiceI interface {
 	GetClusterHealth() (*elastic.ClusterHealthResponse, error)
+	IsIndexReadOnly() (bool, string, error)
 }
 
 func NewEsService(ch chan *elastic.Client, indexName string, bulkProcessorConfig *BulkProcessorConfig) *esService {
@@ -72,6 +75,41 @@ func (es *esService) GetClusterHealth() (*elastic.ClusterHealthResponse, error) 
 	}
 
 	return es.elasticClient.ClusterHealth().Do(context.Background())
+}
+
+func (es *esService) IsIndexReadOnly() (bool, string, error) {
+	es.RLock()
+	defer es.RUnlock()
+
+	if err := es.checkElasticClient(); err != nil {
+		return false, "", err
+	}
+
+	resp, err := es.elasticClient.IndexGetSettings(es.indexName).Do(context.Background())
+	if err != nil {
+		return false, "", err
+	}
+
+	for k, v := range resp {
+		if strings.HasPrefix(k, es.indexName) {
+			readOnly, err := es.isIndexReadOnly(v.Settings)
+			return readOnly, k, err
+		}
+	}
+
+	return false, "", errors.New("No index settings found")
+}
+
+func (es *esService) isIndexReadOnly(settings map[string]interface{}) (bool, error) {
+	indexSettings := settings["index"].(map[string]interface{})
+	if block, hasBlockSetting := indexSettings["blocks"]; hasBlockSetting {
+		if writeBlocked, hasWriteBlockSetting := block.(map[string]interface{})["write"]; hasWriteBlockSetting {
+			readOnly, err := strconv.ParseBool(writeBlocked.(string))
+			return readOnly, err
+		}
+	}
+
+	return false, nil
 }
 
 func (es *esService) LoadData(conceptType string, uuid string, payload interface{}) (*elastic.IndexResponse, error) {

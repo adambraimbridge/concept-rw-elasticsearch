@@ -1,9 +1,11 @@
 package service
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -42,6 +44,24 @@ func getElasticSearchTestURL(t *testing.T) string {
 	return esURL
 }
 
+func getElasticClient(t *testing.T, url string) *elastic.Client {
+	ec, err := elastic.NewClient(
+		elastic.SetURL(url),
+		elastic.SetSniff(false),
+	)
+	assert.NoError(t, err, "expected no error for ES client")
+
+	return ec
+}
+
+func setReadOnly(t *testing.T, client *elastic.Client, indexName string, readOnly bool) {
+	indexService := elastic.NewIndicesPutSettingsService(client)
+
+	_, err := indexService.Index(indexName).BodyJson(map[string]interface{}{"index.blocks.write": strconv.FormatBool(readOnly)}).Do(context.Background())
+
+	assert.NoError(t, err, "expected no error for putting index settings")
+}
+
 func writeDocument(es *esService, t string, u string) (EsConceptModel, *elastic.IndexResponse, error) {
 	payload := EsConceptModel{
 		Id:         u,
@@ -58,13 +78,7 @@ func writeDocument(es *esService, t string, u string) (EsConceptModel, *elastic.
 
 func TestWrite(t *testing.T) {
 	esURL := getElasticSearchTestURL(t)
-
-	ec, err := elastic.NewClient(
-		elastic.SetURL(esURL),
-		elastic.SetSniff(false),
-	)
-	assert.NoError(t, err, "expected no error for ES client")
-
+	ec := getElasticClient(t, esURL)
 	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
 
 	testUuid := uuid.NewV4().String()
@@ -77,15 +91,39 @@ func TestWrite(t *testing.T) {
 	assert.Equal(t, testUuid, resp.Id, "document id")
 }
 
+func TestIsReadOnly(t *testing.T) {
+	esURL := getElasticSearchTestURL(t)
+	ec := getElasticClient(t, esURL)
+	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
+
+	readOnly, name, err := service.IsIndexReadOnly()
+	assert.False(t, readOnly, "index should not be read-only")
+	assert.Equal(t, name, indexName, "index name should be returned")
+	assert.NoError(t, err, "read-only check should not return an error")
+
+	setReadOnly(t, ec, indexName, true)
+	defer setReadOnly(t, ec, indexName, false)
+
+	readOnly, name, err = service.IsIndexReadOnly()
+	assert.True(t, readOnly, "index should be read-only")
+	assert.Equal(t, name, indexName, "index name should be returned")
+	assert.NoError(t, err, "read-only check should not return an error")
+}
+
+func TestIsReadOnlyIndexNotFound(t *testing.T) {
+	esURL := getElasticSearchTestURL(t)
+	ec := getElasticClient(t, esURL)
+	service := &esService{sync.RWMutex{}, ec, nil, "foo", nil}
+
+	readOnly, name, err := service.IsIndexReadOnly()
+	assert.False(t, readOnly, "index should not be read-only")
+	assert.Empty(t, name, "no index name should be returned")
+	assert.Error(t, err, "index should not be found")
+}
+
 func TestRead(t *testing.T) {
 	esURL := getElasticSearchTestURL(t)
-
-	ec, err := elastic.NewClient(
-		elastic.SetURL(esURL),
-		elastic.SetSniff(false),
-	)
-	assert.NoError(t, err, "expected no error for ES client")
-
+	ec := getElasticClient(t, esURL)
 	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
 
 	testUuid := uuid.NewV4().String()
@@ -111,11 +149,7 @@ func TestPassClientThroughChannel(t *testing.T) {
 
 	service := NewEsService(ecc, indexName, nil)
 
-	ec, err := elastic.NewClient(
-		elastic.SetURL(esURL),
-		elastic.SetSniff(false),
-	)
-	assert.NoError(t, err, "expected no error for ES client")
+	ec := getElasticClient(t, esURL)
 
 	ecc <- ec
 
@@ -141,12 +175,7 @@ func TestPassClientThroughChannel(t *testing.T) {
 func TestDelete(t *testing.T) {
 	esURL := getElasticSearchTestURL(t)
 
-	ec, err := elastic.NewClient(
-		elastic.SetURL(esURL),
-		elastic.SetSniff(false),
-	)
-	require.NoError(t, err, "expected no error for ES client")
-
+	ec := getElasticClient(t, esURL)
 	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
 
 	testUUID := uuid.NewV4().String()
@@ -169,13 +198,7 @@ func TestDelete(t *testing.T) {
 
 func TestCleanup(t *testing.T) {
 	esURL := getElasticSearchTestURL(t)
-
-	ec, err := elastic.NewClient(
-		elastic.SetURL(esURL),
-		elastic.SetSniff(false),
-	)
-	require.NoError(t, err, "expected no error for ES client")
-
+	ec := getElasticClient(t, esURL)
 	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
 
 	testUUID1 := uuid.NewV4().String()

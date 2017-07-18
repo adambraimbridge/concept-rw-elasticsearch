@@ -128,7 +128,7 @@ func TestGoodToGoUnhealthyESCluster(t *testing.T) {
 			status, http.StatusServiceUnavailable)
 	}
 
-	assert.Equal(t, "gtg failed for check-elasticsearch-cluster-health, reason: computer says no", rr.Body.String())
+	assert.Regexp(t, "gtg failed .+, reason: computer says no", rr.Body.String(), "GTG response body")
 
 	esHealthService.AssertExpectations(t)
 	authorService.AssertExpectations(t)
@@ -207,6 +207,7 @@ func TestHappyHealthCheck(t *testing.T) {
 
 	esHealthService := new(EsHealthServiceMock)
 	esHealthService.On("GetClusterHealth").Return(happyESCluster, nil)
+	esHealthService.On("IsIndexReadOnly").Return(false, "indexName", nil)
 	authorService := new(AuthorServiceMock)
 	authorService.On("IsGTG").Return(nil)
 	healthService := NewHealthService(esHealthService, authorService)
@@ -234,6 +235,7 @@ func TestHealthCheckUnhealthyESCluster(t *testing.T) {
 
 	esHealthService := new(EsHealthServiceMock)
 	esHealthService.On("GetClusterHealth").Return(unhappyESCluster, nil)
+	esHealthService.On("IsIndexReadOnly").Return(false, "indexName", nil)
 	authorService := new(AuthorServiceMock)
 	authorService.On("IsGTG").Return(nil)
 	healthService := NewHealthService(esHealthService, authorService)
@@ -265,6 +267,7 @@ func TestHealthCheckNoESClusterConnection(t *testing.T) {
 
 	esHealthService := new(EsHealthServiceMock)
 	esHealthService.On("GetClusterHealth").Return(unhappyESCluster, errors.New("computer says no"))
+	esHealthService.On("IsIndexReadOnly").Return(false, "indexName", nil)
 	authorService := new(AuthorServiceMock)
 	authorService.On("IsGTG").Return(nil)
 	healthService := NewHealthService(esHealthService, authorService)
@@ -296,6 +299,7 @@ func TestHealthCheckV1AuthorsTransformNotGTG(t *testing.T) {
 
 	esHealthService := new(EsHealthServiceMock)
 	esHealthService.On("GetClusterHealth").Return(happyESCluster, nil)
+	esHealthService.On("IsIndexReadOnly").Return(false, "indexName", nil)
 	authorService := new(AuthorServiceMock)
 	authorService.On("IsGTG").Return(errors.New("computer says no"))
 	healthService := NewHealthService(esHealthService, authorService)
@@ -321,6 +325,38 @@ func TestHealthCheckV1AuthorsTransformNotGTG(t *testing.T) {
 	authorService.AssertExpectations(t)
 }
 
+func TestHealthCheckReadOnlyIndex(t *testing.T) {
+	req, err := http.NewRequest("GET", "/__health", nil)
+	assert.NoError(t, err, "HTTP request to healthcheck should be consistent")
+
+	esHealthService := new(EsHealthServiceMock)
+	esHealthService.On("GetClusterHealth").Return(happyESCluster, nil)
+	esHealthService.On("IsIndexReadOnly").Return(true, "indexName", nil)
+	authorService := new(AuthorServiceMock)
+	authorService.On("IsGTG").Return(nil)
+	healthService := NewHealthService(esHealthService, authorService)
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(healthService.HealthCheckHandler())
+
+	handler.ServeHTTP(rr, req)
+	assert.Equal(t, http.StatusOK, rr.Code, "HealthCheck should return HTTP 200 OK")
+
+	checks, err := parseHealthcheck(rr.Body.String())
+	assert.NoError(t, err, "HealthCheck Response Body should be consistent")
+
+	for _, check := range checks {
+		if check.ID == "check-elasticsearch-index-writeable" {
+			assert.False(t, check.Ok)
+		} else {
+			assert.True(t, check.Ok)
+		}
+	}
+
+	esHealthService.AssertExpectations(t)
+	authorService.AssertExpectations(t)
+}
+
 type EsHealthServiceMock struct {
 	mock.Mock
 }
@@ -328,6 +364,11 @@ type EsHealthServiceMock struct {
 func (m *EsHealthServiceMock) GetClusterHealth() (*elastic.ClusterHealthResponse, error) {
 	args := m.Called()
 	return args.Get(0).(*elastic.ClusterHealthResponse), args.Error(1)
+}
+
+func (m *EsHealthServiceMock) IsIndexReadOnly() (bool, string, error) {
+	args := m.Called()
+	return args.Bool(0), args.String(1), args.Error(2)
 }
 
 type AuthorServiceMock struct {
