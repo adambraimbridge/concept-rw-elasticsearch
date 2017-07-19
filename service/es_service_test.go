@@ -100,7 +100,7 @@ func TestWriteWithGenericError(t *testing.T) {
 	assert.Equal(t, testUuid, hook.LastEntry().Data[uuidField])
 	assert.EqualError(t, hook.LastEntry().Data["error"].(error), "unexpected end of JSON input")
 	assert.Equal(t, "unknown", hook.LastEntry().Data[statusField])
-	assert.Equal(t, "write", hook.LastEntry().Data[oparationField])
+	assert.Equal(t, "write", hook.LastEntry().Data[operationField])
 }
 
 func TestWriteWithESError(t *testing.T) {
@@ -124,7 +124,7 @@ func TestWriteWithESError(t *testing.T) {
 	assert.Equal(t, testUuid, hook.LastEntry().Data[uuidField])
 	assert.EqualError(t, hook.LastEntry().Data["error"].(error), "elastic: Error 500 (Internal Server Error)")
 	assert.Equal(t, "500", hook.LastEntry().Data[statusField])
-	assert.Equal(t, "write", hook.LastEntry().Data[oparationField])
+	assert.Equal(t, "write", hook.LastEntry().Data[operationField])
 
 }
 
@@ -184,7 +184,7 @@ func TestDeleteWithESError(t *testing.T) {
 	assert.Equal(t, testUuid, hook.LastEntry().Data[uuidField])
 	assert.EqualError(t, hook.LastEntry().Data["error"].(error), "elastic: Error 500 (Internal Server Error)")
 	assert.Equal(t, "500", hook.LastEntry().Data[statusField])
-	assert.Equal(t, "delete", hook.LastEntry().Data[oparationField])
+	assert.Equal(t, "delete", hook.LastEntry().Data[operationField])
 }
 
 func TestPassClientThroughChannel(t *testing.T) {
@@ -274,7 +274,7 @@ func TestDeleteNotFoundConcept(t *testing.T) {
 	assert.Equal(t, testUuid, hook.LastEntry().Data[uuidField])
 	assert.EqualError(t, hook.LastEntry().Data["error"].(error), "elastic: Error 404 (Not Found)")
 	assert.Equal(t, "404", hook.LastEntry().Data[statusField])
-	assert.Equal(t, "delete", hook.LastEntry().Data[oparationField])
+	assert.Equal(t, "delete", hook.LastEntry().Data[operationField])
 }
 
 func TestDeleteWithGenericError(t *testing.T) {
@@ -299,7 +299,7 @@ func TestDeleteWithGenericError(t *testing.T) {
 	assert.Equal(t, testUuid, hook.LastEntry().Data[uuidField])
 	assert.EqualError(t, hook.LastEntry().Data["error"].(error), "unexpected end of JSON input")
 	assert.Equal(t, "unknown", hook.LastEntry().Data[statusField])
-	assert.Equal(t, "delete", hook.LastEntry().Data[oparationField])
+	assert.Equal(t, "delete", hook.LastEntry().Data[operationField])
 }
 
 func TestCleanup(t *testing.T) {
