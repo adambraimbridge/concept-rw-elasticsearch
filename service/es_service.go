@@ -17,7 +17,7 @@ var (
 const conceptTypeField = "conceptType"
 const uuidField = "uuid"
 const statusField = "status"
-const oparationField = "operation"
+const operationField = "operation"
 
 type esService struct {
 	sync.RWMutex
@@ -104,7 +104,7 @@ func (es *esService) LoadData(conceptType string, uuid string, payload interface
 			WithField(conceptTypeField, conceptType).
 			WithField(uuidField, uuid).
 			WithField(statusField, status).
-			WithField(oparationField, "write").
+			WithField(operationField, "write").
 			Error("Failed operation to Elasticsearch")
 	}
 
@@ -173,7 +173,7 @@ func (es *esService) DeleteData(conceptType string, uuid string) (*elastic.Delet
 			WithField(conceptTypeField, conceptType).
 			WithField(uuidField, uuid).
 			WithField(statusField, status).
-			WithField(oparationField, "delete").
+			WithField(operationField, "delete").
 			Error("Failed operation to Elasticsearch")
 	}
 
