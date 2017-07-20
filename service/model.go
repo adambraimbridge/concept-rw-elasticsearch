@@ -58,7 +58,7 @@ func (c ConceptModel) PreferredUUID() string {
 func (c ConceptModel) GetAuthorities() []string {
 	var authorities []string
 
-	if c.Authority != "" {
+	if c.AlternativeIdentifiers == nil && c.Authority != "" {
 		return []string{c.Authority}
 	}
 
