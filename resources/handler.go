@@ -6,7 +6,9 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"context"
 	"github.com/Financial-Times/concept-rw-elasticsearch/service"
+	tid "github.com/Financial-Times/transactionid-utils-go"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )
@@ -20,12 +22,12 @@ var (
 
 // Handler handles http calls
 type Handler struct {
-	elasticService      service.EsServiceI
+	elasticService      service.EsService
 	modelPopulator      service.ModelPopulator
 	allowedConceptTypes map[string]bool
 }
 
-func NewHandler(elasticService service.EsServiceI, authorService service.AuthorService, allowedConceptTypes []string) *Handler {
+func NewHandler(elasticService service.EsService, authorService service.AuthorService, allowedConceptTypes []string) *Handler {
 	allowedTypes := make(map[string]bool)
 	for _, v := range allowedConceptTypes {
 		allowedTypes[v] = true
@@ -38,13 +40,16 @@ func NewHandler(elasticService service.EsServiceI, authorService service.AuthorS
 
 // LoadData processes a single ES concept entity
 func (h *Handler) LoadData(w http.ResponseWriter, r *http.Request) {
+	transactionID := tid.GetTransactionIDFromRequest(r)
+	ctx := tid.TransactionAwareContext(context.Background(), transactionID)
+
 	conceptType, concept, payload, err := h.processPayload(r)
 	if err != nil {
 		writeMessage(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	_, err = h.elasticService.LoadData(conceptType, concept.PreferredUUID(), *payload)
+	_, err = h.elasticService.LoadData(conceptType, concept.PreferredUUID(), *payload, ctx)
 	if err == service.ErrNoElasticClient {
 		writeMessage(w, "ES unavailable", http.StatusServiceUnavailable)
 		return
@@ -56,7 +61,7 @@ func (h *Handler) LoadData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.elasticService.CleanupData(conceptType, concept)
+	h.elasticService.CleanupData(conceptType, concept, ctx)
 
 	writeMessage(w, "Concept written successfully", http.StatusOK)
 }
@@ -70,7 +75,7 @@ func (h *Handler) LoadBulkData(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.elasticService.LoadBulkData(conceptType, concept.PreferredUUID(), *payload)
-	h.elasticService.CleanupData(conceptType, concept)
+	h.elasticService.CleanupData(conceptType, concept, context.Background())
 	writeMessage(w, "Concept written successfully", http.StatusOK)
 }
 
@@ -176,10 +181,13 @@ func (h *Handler) ReadData(writer http.ResponseWriter, request *http.Request) {
 
 // DeleteData handles a delete for a concept
 func (h *Handler) DeleteData(writer http.ResponseWriter, request *http.Request) {
+	transactionID := tid.GetTransactionIDFromRequest(request)
+	ctx := tid.TransactionAwareContext(context.Background(), transactionID)
+
 	uuid := mux.Vars(request)["id"]
 	conceptType := mux.Vars(request)["concept-type"]
 
-	res, err := h.elasticService.DeleteData(conceptType, uuid)
+	res, err := h.elasticService.DeleteData(conceptType, uuid, ctx)
 
 	if err != nil {
 		log.Errorf(err.Error())

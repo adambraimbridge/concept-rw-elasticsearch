@@ -1,8 +1,10 @@
 package service
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	tid "github.com/Financial-Times/transactionid-utils-go"
 	"github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 	testLog "github.com/sirupsen/logrus/hooks/test"
@@ -22,6 +24,7 @@ const (
 	apiBaseUrl  = "http://test.api.ft.com"
 	indexName   = "concept"
 	conceptType = "organisations"
+	testTID     = "tid_test"
 )
 
 func TestNoElasticClient(t *testing.T) {
@@ -45,7 +48,7 @@ func getElasticSearchTestURL(t *testing.T) string {
 	return esURL
 }
 
-func writeDocument(es *esService, t string, u string) (EsConceptModel, *elastic.IndexResponse, error) {
+func writeDocument(es EsService, t string, u string) (EsConceptModel, *elastic.IndexResponse, error) {
 	payload := EsConceptModel{
 		Id:         u,
 		ApiUrl:     fmt.Sprintf("%s/%ss/%s", apiBaseUrl, t, u),
@@ -55,8 +58,12 @@ func writeDocument(es *esService, t string, u string) (EsConceptModel, *elastic.
 		Aliases:    []string{},
 	}
 
-	resp, err := es.LoadData(t, u, payload)
+	resp, err := es.LoadData(t, u, payload, newTestContext())
 	return payload, resp, err
+}
+
+func newTestContext() context.Context {
+	return tid.TransactionAwareContext(context.Background(), testTID)
 }
 
 func TestWrite(t *testing.T) {
@@ -101,6 +108,7 @@ func TestWriteWithGenericError(t *testing.T) {
 	assert.EqualError(t, hook.LastEntry().Data["error"].(error), "unexpected end of JSON input")
 	assert.Equal(t, "unknown", hook.LastEntry().Data[statusField])
 	assert.Equal(t, "write", hook.LastEntry().Data[operationField])
+	assert.Equal(t, testTID, hook.LastEntry().Data[tid.TransactionIDKey])
 }
 
 func TestWriteWithESError(t *testing.T) {
@@ -125,7 +133,7 @@ func TestWriteWithESError(t *testing.T) {
 	assert.EqualError(t, hook.LastEntry().Data["error"].(error), "elastic: Error 500 (Internal Server Error)")
 	assert.Equal(t, "500", hook.LastEntry().Data[statusField])
 	assert.Equal(t, "write", hook.LastEntry().Data[operationField])
-
+	assert.Equal(t, testTID, hook.LastEntry().Data[tid.TransactionIDKey])
 }
 
 func newBrokenESMock() *httptest.Server {
@@ -175,7 +183,7 @@ func TestDeleteWithESError(t *testing.T) {
 	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
 
 	testUuid := uuid.NewV4().String()
-	_, err = service.DeleteData(conceptType+"s", testUuid)
+	_, err = service.DeleteData(conceptType+"s", testUuid, newTestContext())
 
 	assert.EqualError(t, err, "elastic: Error 500 (Internal Server Error)")
 	assert.Equal(t, log.ErrorLevel, hook.LastEntry().Level)
@@ -185,6 +193,7 @@ func TestDeleteWithESError(t *testing.T) {
 	assert.EqualError(t, hook.LastEntry().Data["error"].(error), "elastic: Error 500 (Internal Server Error)")
 	assert.Equal(t, "500", hook.LastEntry().Data[statusField])
 	assert.Equal(t, "delete", hook.LastEntry().Data[operationField])
+	assert.Equal(t, testTID, hook.LastEntry().Data[tid.TransactionIDKey])
 }
 
 func TestPassClientThroughChannel(t *testing.T) {
@@ -242,7 +251,7 @@ func TestDelete(t *testing.T) {
 	assert.Equal(t, conceptType, resp.Type, "concept type")
 	assert.Equal(t, testUUID, resp.Id, "document id")
 
-	deleteResp, err := service.DeleteData(conceptType, testUUID)
+	deleteResp, err := service.DeleteData(conceptType, testUUID, newTestContext())
 	require.NoError(t, err)
 	assert.True(t, deleteResp.Found)
 
@@ -264,7 +273,7 @@ func TestDeleteNotFoundConcept(t *testing.T) {
 	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
 
 	testUuid := uuid.NewV4().String()
-	resp, err := service.DeleteData(conceptType+"s", testUuid)
+	resp, err := service.DeleteData(conceptType+"s", testUuid, newTestContext())
 
 	assert.False(t, resp.Found, "document is not found")
 
@@ -275,6 +284,7 @@ func TestDeleteNotFoundConcept(t *testing.T) {
 	assert.EqualError(t, hook.LastEntry().Data["error"].(error), "elastic: Error 404 (Not Found)")
 	assert.Equal(t, "404", hook.LastEntry().Data[statusField])
 	assert.Equal(t, "delete", hook.LastEntry().Data[operationField])
+	assert.Equal(t, testTID, hook.LastEntry().Data[tid.TransactionIDKey])
 }
 
 func TestDeleteWithGenericError(t *testing.T) {
@@ -290,7 +300,7 @@ func TestDeleteWithGenericError(t *testing.T) {
 
 	testUuid := uuid.NewV4().String()
 
-	_, err = service.DeleteData(conceptType+"s", testUuid)
+	_, err = service.DeleteData(conceptType+"s", testUuid, newTestContext())
 
 	assert.EqualError(t, err, "unexpected end of JSON input")
 	assert.Equal(t, log.ErrorLevel, hook.LastEntry().Level)
@@ -300,6 +310,7 @@ func TestDeleteWithGenericError(t *testing.T) {
 	assert.EqualError(t, hook.LastEntry().Data["error"].(error), "unexpected end of JSON input")
 	assert.Equal(t, "unknown", hook.LastEntry().Data[statusField])
 	assert.Equal(t, "delete", hook.LastEntry().Data[operationField])
+	assert.Equal(t, testTID, hook.LastEntry().Data[tid.TransactionIDKey])
 }
 
 func TestCleanup(t *testing.T) {
@@ -333,7 +344,7 @@ func TestCleanup(t *testing.T) {
 	}}
 
 	ct := conceptType
-	service.CleanupData(ct, concept)
+	service.CleanupData(ct, concept, newTestContext())
 
 	getResp, err := service.ReadData(ct, testUUID1)
 	assert.NoError(t, err)
@@ -344,7 +355,7 @@ func TestCleanup(t *testing.T) {
 	assert.True(t, getResp.Found)
 }
 
-func waitForClientInjection(service *esService) {
+func waitForClientInjection(service EsService) {
 	for i := 0; i < 10; i++ {
 		_, err := service.GetClusterHealth()
 		if err == nil {

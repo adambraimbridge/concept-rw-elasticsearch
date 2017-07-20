@@ -6,6 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"context"
+	"github.com/Financial-Times/concept-rw-elasticsearch/service"
 	fthealth "github.com/Financial-Times/go-fthealth/v1_1"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -26,10 +28,10 @@ func TestHealthDetailsHealthyCluster(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	esHealthService := new(EsHealthServiceMock)
-	esHealthService.On("GetClusterHealth").Return(happyESCluster, nil)
+	esService := new(EsServiceMock)
+	esService.On("GetClusterHealth").Return(happyESCluster, nil)
 	authorService := new(AuthorServiceMock)
-	healthService := NewHealthService(esHealthService, authorService)
+	healthService := NewHealthService(esService, authorService)
 
 	//create a responseRecorder
 	rr := httptest.NewRecorder()
@@ -59,7 +61,7 @@ func TestHealthDetailsHealthyCluster(t *testing.T) {
 		t.Errorf("Cluster status it is not as expected, got %v want %v", respObject.Status, "green")
 	}
 
-	esHealthService.AssertExpectations(t)
+	esService.AssertExpectations(t)
 	authorService.AssertExpectations(t)
 }
 
@@ -71,10 +73,10 @@ func TestHealthDetailsReturnsError(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	esHealthService := new(EsHealthServiceMock)
-	esHealthService.On("GetClusterHealth").Return(unhappyESCluster, errors.New("computer says no"))
+	esService := new(EsServiceMock)
+	esService.On("GetClusterHealth").Return(unhappyESCluster, errors.New("computer says no"))
 	authorService := new(AuthorServiceMock)
-	healthService := NewHealthService(esHealthService, authorService)
+	healthService := NewHealthService(esService, authorService)
 
 	//create a responseRecorder
 	rr := httptest.NewRecorder()
@@ -99,7 +101,7 @@ func TestHealthDetailsReturnsError(t *testing.T) {
 		t.Error("Response body should be empty")
 	}
 
-	esHealthService.AssertExpectations(t)
+	esService.AssertExpectations(t)
 	authorService.AssertExpectations(t)
 }
 
@@ -109,10 +111,10 @@ func TestGoodToGoUnhealthyESCluster(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	esHealthService := new(EsHealthServiceMock)
-	esHealthService.On("GetClusterHealth").Return(unhappyESCluster, errors.New("computer says no"))
+	esService := new(EsServiceMock)
+	esService.On("GetClusterHealth").Return(unhappyESCluster, errors.New("computer says no"))
 	authorService := new(AuthorServiceMock)
-	healthService := NewHealthService(esHealthService, authorService)
+	healthService := NewHealthService(esService, authorService)
 
 	//create a responseRecorder
 	rr := httptest.NewRecorder()
@@ -130,7 +132,7 @@ func TestGoodToGoUnhealthyESCluster(t *testing.T) {
 
 	assert.Equal(t, "gtg failed for check-elasticsearch-cluster-health, reason: computer says no", rr.Body.String())
 
-	esHealthService.AssertExpectations(t)
+	esService.AssertExpectations(t)
 	authorService.AssertExpectations(t)
 }
 
@@ -141,11 +143,11 @@ func TestHappyGoodToGo(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	esHealthService := new(EsHealthServiceMock)
-	esHealthService.On("GetClusterHealth").Return(happyESCluster, nil)
+	esService := new(EsServiceMock)
+	esService.On("GetClusterHealth").Return(happyESCluster, nil)
 	authorService := new(AuthorServiceMock)
 	authorService.On("IsGTG").Return(nil)
-	healthService := NewHealthService(esHealthService, authorService)
+	healthService := NewHealthService(esService, authorService)
 
 	//create a responseRecorder
 	rr := httptest.NewRecorder()
@@ -165,7 +167,7 @@ func TestHappyGoodToGo(t *testing.T) {
 		t.Error("Response body should be empty")
 	}
 
-	esHealthService.AssertExpectations(t)
+	esService.AssertExpectations(t)
 	authorService.AssertExpectations(t)
 }
 
@@ -175,11 +177,11 @@ func TestGoodToGoUnhealthyV1AuthorsTransformer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	esHealthService := new(EsHealthServiceMock)
-	esHealthService.On("GetClusterHealth").Return(happyESCluster, nil)
+	esService := new(EsServiceMock)
+	esService.On("GetClusterHealth").Return(happyESCluster, nil)
 	authorService := new(AuthorServiceMock)
 	authorService.On("IsGTG").Return(errors.New("computer says no"))
-	healthService := NewHealthService(esHealthService, authorService)
+	healthService := NewHealthService(esService, authorService)
 
 	//create a responseRecorder
 	rr := httptest.NewRecorder()
@@ -197,7 +199,7 @@ func TestGoodToGoUnhealthyV1AuthorsTransformer(t *testing.T) {
 
 	assert.Equal(t, "gtg failed for check-connectivity-to-v1-authors-transformer, reason: computer says no", rr.Body.String())
 
-	esHealthService.AssertExpectations(t)
+	esService.AssertExpectations(t)
 	authorService.AssertExpectations(t)
 }
 
@@ -205,11 +207,11 @@ func TestHappyHealthCheck(t *testing.T) {
 	req, err := http.NewRequest("GET", "/__health", nil)
 	assert.NoError(t, err, "HTTP request to healthcheck should be consistent")
 
-	esHealthService := new(EsHealthServiceMock)
-	esHealthService.On("GetClusterHealth").Return(happyESCluster, nil)
+	esService := new(EsServiceMock)
+	esService.On("GetClusterHealth").Return(happyESCluster, nil)
 	authorService := new(AuthorServiceMock)
 	authorService.On("IsGTG").Return(nil)
-	healthService := NewHealthService(esHealthService, authorService)
+	healthService := NewHealthService(esService, authorService)
 
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(healthService.HealthCheckHandler())
@@ -224,7 +226,7 @@ func TestHappyHealthCheck(t *testing.T) {
 		assert.True(t, check.Ok)
 	}
 
-	esHealthService.AssertExpectations(t)
+	esService.AssertExpectations(t)
 	authorService.AssertExpectations(t)
 }
 
@@ -232,11 +234,11 @@ func TestHealthCheckUnhealthyESCluster(t *testing.T) {
 	req, err := http.NewRequest("GET", "/__health", nil)
 	assert.NoError(t, err, "HTTP request to healthcheck should be consistent")
 
-	esHealthService := new(EsHealthServiceMock)
-	esHealthService.On("GetClusterHealth").Return(unhappyESCluster, nil)
+	esService := new(EsServiceMock)
+	esService.On("GetClusterHealth").Return(unhappyESCluster, nil)
 	authorService := new(AuthorServiceMock)
 	authorService.On("IsGTG").Return(nil)
-	healthService := NewHealthService(esHealthService, authorService)
+	healthService := NewHealthService(esService, authorService)
 
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(healthService.HealthCheckHandler())
@@ -255,7 +257,7 @@ func TestHealthCheckUnhealthyESCluster(t *testing.T) {
 		}
 	}
 
-	esHealthService.AssertExpectations(t)
+	esService.AssertExpectations(t)
 	authorService.AssertExpectations(t)
 }
 
@@ -263,11 +265,11 @@ func TestHealthCheckNoESClusterConnection(t *testing.T) {
 	req, err := http.NewRequest("GET", "/__health", nil)
 	assert.NoError(t, err, "HTTP request to healthcheck should be consistent")
 
-	esHealthService := new(EsHealthServiceMock)
-	esHealthService.On("GetClusterHealth").Return(unhappyESCluster, errors.New("computer says no"))
+	esService := new(EsServiceMock)
+	esService.On("GetClusterHealth").Return(unhappyESCluster, errors.New("computer says no"))
 	authorService := new(AuthorServiceMock)
 	authorService.On("IsGTG").Return(nil)
-	healthService := NewHealthService(esHealthService, authorService)
+	healthService := NewHealthService(esService, authorService)
 
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(healthService.HealthCheckHandler())
@@ -286,7 +288,7 @@ func TestHealthCheckNoESClusterConnection(t *testing.T) {
 		}
 	}
 
-	esHealthService.AssertExpectations(t)
+	esService.AssertExpectations(t)
 	authorService.AssertExpectations(t)
 }
 
@@ -294,11 +296,11 @@ func TestHealthCheckV1AuthorsTransformNotGTG(t *testing.T) {
 	req, err := http.NewRequest("GET", "/__health", nil)
 	assert.NoError(t, err, "HTTP request to healthcheck should be consistent")
 
-	esHealthService := new(EsHealthServiceMock)
-	esHealthService.On("GetClusterHealth").Return(happyESCluster, nil)
+	esService := new(EsServiceMock)
+	esService.On("GetClusterHealth").Return(happyESCluster, nil)
 	authorService := new(AuthorServiceMock)
 	authorService.On("IsGTG").Return(errors.New("computer says no"))
-	healthService := NewHealthService(esHealthService, authorService)
+	healthService := NewHealthService(esService, authorService)
 
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(healthService.HealthCheckHandler())
@@ -317,15 +319,43 @@ func TestHealthCheckV1AuthorsTransformNotGTG(t *testing.T) {
 		}
 	}
 
-	esHealthService.AssertExpectations(t)
+	esService.AssertExpectations(t)
 	authorService.AssertExpectations(t)
 }
 
-type EsHealthServiceMock struct {
+type EsServiceMock struct {
 	mock.Mock
 }
 
-func (m *EsHealthServiceMock) GetClusterHealth() (*elastic.ClusterHealthResponse, error) {
+func (m *EsServiceMock) LoadData(conceptType string, uuid string, payload interface{}, ctx context.Context) (*elastic.IndexResponse, error) {
+	args := m.Called(conceptType, uuid, payload)
+	return args.Get(0).(*elastic.IndexResponse), args.Error(1)
+}
+
+func (m *EsServiceMock) ReadData(conceptType string, uuid string) (*elastic.GetResult, error) {
+	args := m.Called(conceptType, uuid)
+	return args.Get(0).(*elastic.GetResult), args.Error(1)
+}
+
+func (m *EsServiceMock) DeleteData(conceptType string, uuid string, ctx context.Context) (*elastic.DeleteResponse, error) {
+	args := m.Called(conceptType, uuid, ctx)
+	return args.Get(0).(*elastic.DeleteResponse), args.Error(1)
+}
+
+func (m *EsServiceMock) LoadBulkData(conceptType string, uuid string, payload interface{}) {
+	m.Called(conceptType, uuid, payload)
+}
+
+func (m *EsServiceMock) CleanupData(conceptType string, concept service.Concept, ctx context.Context) {
+	m.Called(conceptType, concept, ctx)
+}
+
+func (m *EsServiceMock) CloseBulkProcessor() error {
+	args := m.Called()
+	return args.Error(0)
+}
+
+func (m *EsServiceMock) GetClusterHealth() (*elastic.ClusterHealthResponse, error) {
 	args := m.Called()
 	return args.Get(0).(*elastic.ClusterHealthResponse), args.Error(1)
 }

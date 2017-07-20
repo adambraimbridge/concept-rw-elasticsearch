@@ -5,6 +5,7 @@ import (
 	"errors"
 	"sync"
 
+	tid "github.com/Financial-Times/transactionid-utils-go"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/olivere/elastic.v5"
 	"strconv"
@@ -18,6 +19,9 @@ const conceptTypeField = "conceptType"
 const uuidField = "uuid"
 const statusField = "status"
 const operationField = "operation"
+const writeOperation = "write"
+const deleteOperation = "delete"
+const unknownStatus = "unknown"
 
 type esService struct {
 	sync.RWMutex
@@ -27,20 +31,17 @@ type esService struct {
 	bulkProcessorConfig *BulkProcessorConfig
 }
 
-type EsServiceI interface {
-	LoadData(conceptType string, uuid string, payload interface{}) (*elastic.IndexResponse, error)
+type EsService interface {
+	LoadData(conceptType string, uuid string, payload interface{}, ctx context.Context) (*elastic.IndexResponse, error)
 	ReadData(conceptType string, uuid string) (*elastic.GetResult, error)
-	DeleteData(conceptType string, uuid string) (*elastic.DeleteResponse, error)
+	DeleteData(conceptType string, uuid string, ctx context.Context) (*elastic.DeleteResponse, error)
 	LoadBulkData(conceptType string, uuid string, payload interface{})
-	CleanupData(conceptType string, concept Concept)
+	CleanupData(conceptType string, concept Concept, ctx context.Context)
 	CloseBulkProcessor() error
-}
-
-type EsHealthServiceI interface {
 	GetClusterHealth() (*elastic.ClusterHealthResponse, error)
 }
 
-func NewEsService(ch chan *elastic.Client, indexName string, bulkProcessorConfig *BulkProcessorConfig) *esService {
+func NewEsService(ch chan *elastic.Client, indexName string, bulkProcessorConfig *BulkProcessorConfig) EsService {
 	es := &esService{bulkProcessorConfig: bulkProcessorConfig, indexName: indexName}
 	go func() {
 		for ec := range ch {
@@ -80,8 +81,22 @@ func (es *esService) GetClusterHealth() (*elastic.ClusterHealthResponse, error) 
 	return es.elasticClient.ClusterHealth().Do(context.Background())
 }
 
-func (es *esService) LoadData(conceptType string, uuid string, payload interface{}) (*elastic.IndexResponse, error) {
+func (es *esService) LoadData(conceptType string, uuid string, payload interface{}, ctx context.Context) (*elastic.IndexResponse, error) {
+	loadDataLog := log.WithField(conceptTypeField, conceptType).
+		WithField(uuidField, uuid).
+		WithField(operationField, writeOperation)
+
+	transactionID, err := tid.GetTransactionIDFromContext(ctx)
+
+	if err != nil {
+		loadDataLog.WithError(err).Warn("Transaction ID not found")
+	}
+	loadDataLog = loadDataLog.WithField(tid.TransactionIDKey, transactionID)
+
 	if err := es.checkElasticClient(); err != nil {
+		loadDataLog.WithError(err).
+			WithField(statusField, unknownStatus).
+			Error("Failed operation to Elasticsearch")
 		return nil, err
 	}
 
@@ -90,7 +105,7 @@ func (es *esService) LoadData(conceptType string, uuid string, payload interface
 		Type(conceptType).
 		Id(uuid).
 		BodyJson(payload).
-		Do(context.Background())
+		Do(ctx)
 
 	if err != nil {
 		var status string
@@ -98,13 +113,10 @@ func (es *esService) LoadData(conceptType string, uuid string, payload interface
 		case *elastic.Error:
 			status = strconv.Itoa(err.(*elastic.Error).Status)
 		default:
-			status = "unknown"
+			status = unknownStatus
 		}
-		log.WithError(err).
-			WithField(conceptTypeField, conceptType).
-			WithField(uuidField, uuid).
+		loadDataLog.WithError(err).
 			WithField(statusField, status).
-			WithField(operationField, "write").
 			Error("Failed operation to Elasticsearch")
 	}
 
@@ -140,18 +152,38 @@ func (es *esService) ReadData(conceptType string, uuid string) (*elastic.GetResu
 	}
 }
 
-func (es *esService) CleanupData(conceptType string, concept Concept) {
+func (es *esService) CleanupData(conceptType string, concept Concept, ctx context.Context) {
+	cleanupDataLog := log.WithField("prefUUID", concept.PreferredUUID())
+	transactionID, err := tid.GetTransactionIDFromContext(ctx)
+	if err != nil {
+		cleanupDataLog.WithError(err).Warn("Transaction ID not found for cleaning up data")
+	}
+	cleanupDataLog = cleanupDataLog.WithField(tid.TransactionIDKey, transactionID)
 	for _, uuid := range concept.ConcordedUUIDs() {
-		log.WithField("prefUUID", concept.PreferredUUID()).WithField("uuid", uuid).Info("Cleaning up concorded uuids")
-		_, err := es.DeleteData(conceptType, uuid)
+		cleanupDataLog.WithField("uuid", uuid).Info("Cleaning up concorded uuids")
+		_, err := es.DeleteData(conceptType, uuid, ctx)
 		if err != nil {
-			log.WithField("prefUUID", concept.PreferredUUID()).WithField("uuid", uuid).Warn("Failed to delete concorded uuid.")
+			cleanupDataLog.WithField("uuid", uuid).Warn("Failed to delete concorded uuid.")
 		}
 	}
 }
 
-func (es *esService) DeleteData(conceptType string, uuid string) (*elastic.DeleteResponse, error) {
+func (es *esService) DeleteData(conceptType string, uuid string, ctx context.Context) (*elastic.DeleteResponse, error) {
+	deleteDataLog := log.WithField(conceptTypeField, conceptType).
+		WithField(uuidField, uuid).
+		WithField(operationField, deleteOperation)
+
+	transactionID, err := tid.GetTransactionIDFromContext(ctx)
+
+	if err != nil {
+		deleteDataLog.WithError(err).Warn("Transaction ID not found")
+	}
+	deleteDataLog = deleteDataLog.WithField(tid.TransactionIDKey, transactionID)
+
 	if err := es.checkElasticClient(); err != nil {
+		deleteDataLog.WithError(err).
+			WithField(statusField, unknownStatus).
+			Error("Failed operation to Elasticsearch")
 		return nil, err
 	}
 
@@ -159,7 +191,7 @@ func (es *esService) DeleteData(conceptType string, uuid string) (*elastic.Delet
 		Index(es.indexName).
 		Type(conceptType).
 		Id(uuid).
-		Do(context.Background())
+		Do(ctx)
 
 	if err != nil {
 		var status string
@@ -167,13 +199,10 @@ func (es *esService) DeleteData(conceptType string, uuid string) (*elastic.Delet
 		case *elastic.Error:
 			status = strconv.Itoa(err.(*elastic.Error).Status)
 		default:
-			status = "unknown"
+			status = unknownStatus
 		}
-		log.WithError(err).
-			WithField(conceptTypeField, conceptType).
-			WithField(uuidField, uuid).
+		deleteDataLog.WithError(err).
 			WithField(statusField, status).
-			WithField(operationField, "delete").
 			Error("Failed operation to Elasticsearch")
 	}
 
