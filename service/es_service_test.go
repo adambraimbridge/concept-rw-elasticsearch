@@ -58,7 +58,7 @@ func writeDocument(es EsService, t string, u string) (EsConceptModel, *elastic.I
 		Aliases:    []string{},
 	}
 
-	resp, err := es.LoadData(t, u, payload, newTestContext())
+	resp, err := es.LoadData(newTestContext(), t, u, payload)
 	return payload, resp, err
 }
 
@@ -183,7 +183,7 @@ func TestDeleteWithESError(t *testing.T) {
 	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
 
 	testUuid := uuid.NewV4().String()
-	_, err = service.DeleteData(conceptType+"s", testUuid, newTestContext())
+	_, err = service.DeleteData(newTestContext(), conceptType+"s", testUuid)
 
 	assert.EqualError(t, err, "elastic: Error 500 (Internal Server Error)")
 	assert.Equal(t, log.ErrorLevel, hook.LastEntry().Level)
@@ -251,7 +251,7 @@ func TestDelete(t *testing.T) {
 	assert.Equal(t, conceptType, resp.Type, "concept type")
 	assert.Equal(t, testUUID, resp.Id, "document id")
 
-	deleteResp, err := service.DeleteData(conceptType, testUUID, newTestContext())
+	deleteResp, err := service.DeleteData(newTestContext(), conceptType, testUUID)
 	require.NoError(t, err)
 	assert.True(t, deleteResp.Found)
 
@@ -273,7 +273,7 @@ func TestDeleteNotFoundConcept(t *testing.T) {
 	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
 
 	testUuid := uuid.NewV4().String()
-	resp, err := service.DeleteData(conceptType+"s", testUuid, newTestContext())
+	resp, err := service.DeleteData(newTestContext(), conceptType+"s", testUuid)
 
 	assert.False(t, resp.Found, "document is not found")
 
@@ -300,7 +300,7 @@ func TestDeleteWithGenericError(t *testing.T) {
 
 	testUuid := uuid.NewV4().String()
 
-	_, err = service.DeleteData(conceptType+"s", testUuid, newTestContext())
+	_, err = service.DeleteData(newTestContext(), conceptType+"s", testUuid)
 
 	assert.EqualError(t, err, "unexpected end of JSON input")
 	assert.Equal(t, log.ErrorLevel, hook.LastEntry().Level)
@@ -344,7 +344,7 @@ func TestCleanup(t *testing.T) {
 	}}
 
 	ct := conceptType
-	service.CleanupData(ct, concept, newTestContext())
+	service.CleanupData(newTestContext(), ct, concept)
 
 	getResp, err := service.ReadData(ct, testUUID1)
 	assert.NoError(t, err)
@@ -353,6 +353,41 @@ func TestCleanup(t *testing.T) {
 	getResp, err = service.ReadData(ct, testUUID2)
 	assert.NoError(t, err)
 	assert.True(t, getResp.Found)
+}
+
+func TestCleanupErrorLogging(t *testing.T) {
+	hook := testLog.NewGlobal()
+	es := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	defer es.Close()
+	ec, err := elastic.NewClient(
+		elastic.SetURL(es.URL),
+		elastic.SetSniff(false),
+	)
+	assert.NoError(t, err, "expected no error for ES client")
+
+	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
+
+	testUUID1 := uuid.NewV4().String()
+	testUUID2 := uuid.NewV4().String()
+
+	concept := AggregateConceptModel{PrefUUID: testUUID2, SourceRepresentations: []SourceConcept{
+		{
+			UUID: testUUID1,
+		},
+		{
+			UUID: testUUID2,
+		},
+	}}
+
+	service.CleanupData(newTestContext(), conceptType, concept)
+
+	assert.Equal(t, log.ErrorLevel, hook.LastEntry().Level)
+	assert.Equal(t, "Failed to delete concorded uuid.", hook.LastEntry().Message)
+	assert.Equal(t, conceptType, hook.LastEntry().Data[conceptTypeField])
+	assert.Equal(t, testUUID1, hook.LastEntry().Data[uuidField])
+	assert.Equal(t, testUUID2, hook.LastEntry().Data[prefUUIDField])
+	assert.EqualError(t, hook.LastEntry().Data["error"].(error), "unexpected end of JSON input")
+	assert.Equal(t, testTID, hook.LastEntry().Data[tid.TransactionIDKey])
 }
 
 func waitForClientInjection(service EsService) {

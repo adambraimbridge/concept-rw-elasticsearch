@@ -17,6 +17,7 @@ var (
 
 const conceptTypeField = "conceptType"
 const uuidField = "uuid"
+const prefUUIDField = "prefUUID"
 const statusField = "status"
 const operationField = "operation"
 const writeOperation = "write"
@@ -32,11 +33,11 @@ type esService struct {
 }
 
 type EsService interface {
-	LoadData(conceptType string, uuid string, payload interface{}, ctx context.Context) (*elastic.IndexResponse, error)
+	LoadData(ctx context.Context, conceptType string, uuid string, payload interface{}) (*elastic.IndexResponse, error)
 	ReadData(conceptType string, uuid string) (*elastic.GetResult, error)
-	DeleteData(conceptType string, uuid string, ctx context.Context) (*elastic.DeleteResponse, error)
+	DeleteData(ctx context.Context, conceptType string, uuid string) (*elastic.DeleteResponse, error)
 	LoadBulkData(conceptType string, uuid string, payload interface{})
-	CleanupData(conceptType string, concept Concept, ctx context.Context)
+	CleanupData(ctx context.Context, conceptType string, concept Concept)
 	CloseBulkProcessor() error
 	GetClusterHealth() (*elastic.ClusterHealthResponse, error)
 }
@@ -81,7 +82,7 @@ func (es *esService) GetClusterHealth() (*elastic.ClusterHealthResponse, error) 
 	return es.elasticClient.ClusterHealth().Do(context.Background())
 }
 
-func (es *esService) LoadData(conceptType string, uuid string, payload interface{}, ctx context.Context) (*elastic.IndexResponse, error) {
+func (es *esService) LoadData(ctx context.Context, conceptType string, uuid string, payload interface{}) (*elastic.IndexResponse, error) {
 	loadDataLog := log.WithField(conceptTypeField, conceptType).
 		WithField(uuidField, uuid).
 		WithField(operationField, writeOperation)
@@ -152,23 +153,23 @@ func (es *esService) ReadData(conceptType string, uuid string) (*elastic.GetResu
 	}
 }
 
-func (es *esService) CleanupData(conceptType string, concept Concept, ctx context.Context) {
-	cleanupDataLog := log.WithField("prefUUID", concept.PreferredUUID())
+func (es *esService) CleanupData(ctx context.Context, conceptType string, concept Concept) {
+	cleanupDataLog := log.WithField(prefUUIDField, concept.PreferredUUID()).WithField(conceptTypeField, conceptType)
 	transactionID, err := tid.GetTransactionIDFromContext(ctx)
 	if err != nil {
 		cleanupDataLog.WithError(err).Warn("Transaction ID not found for cleaning up data")
 	}
 	cleanupDataLog = cleanupDataLog.WithField(tid.TransactionIDKey, transactionID)
 	for _, uuid := range concept.ConcordedUUIDs() {
-		cleanupDataLog.WithField("uuid", uuid).Info("Cleaning up concorded uuids")
-		_, err := es.DeleteData(conceptType, uuid, ctx)
+		cleanupDataLog.WithField(uuidField, uuid).Info("Cleaning up concorded uuids")
+		_, err := es.DeleteData(ctx, conceptType, uuid)
 		if err != nil {
-			cleanupDataLog.WithField("uuid", uuid).Warn("Failed to delete concorded uuid.")
+			cleanupDataLog.WithError(err).WithField(uuidField, uuid).Error("Failed to delete concorded uuid.")
 		}
 	}
 }
 
-func (es *esService) DeleteData(conceptType string, uuid string, ctx context.Context) (*elastic.DeleteResponse, error) {
+func (es *esService) DeleteData(ctx context.Context, conceptType string, uuid string) (*elastic.DeleteResponse, error) {
 	deleteDataLog := log.WithField(conceptTypeField, conceptType).
 		WithField(uuidField, uuid).
 		WithField(operationField, deleteOperation)

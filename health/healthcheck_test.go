@@ -327,8 +327,8 @@ type EsServiceMock struct {
 	mock.Mock
 }
 
-func (m *EsServiceMock) LoadData(conceptType string, uuid string, payload interface{}, ctx context.Context) (*elastic.IndexResponse, error) {
-	args := m.Called(conceptType, uuid, payload)
+func (m *EsServiceMock) LoadData(ctx context.Context, conceptType string, uuid string, payload interface{}) (*elastic.IndexResponse, error) {
+	args := m.Called(ctx, conceptType, uuid, payload)
 	return args.Get(0).(*elastic.IndexResponse), args.Error(1)
 }
 
@@ -337,8 +337,8 @@ func (m *EsServiceMock) ReadData(conceptType string, uuid string) (*elastic.GetR
 	return args.Get(0).(*elastic.GetResult), args.Error(1)
 }
 
-func (m *EsServiceMock) DeleteData(conceptType string, uuid string, ctx context.Context) (*elastic.DeleteResponse, error) {
-	args := m.Called(conceptType, uuid, ctx)
+func (m *EsServiceMock) DeleteData(ctx context.Context, conceptType string, uuid string) (*elastic.DeleteResponse, error) {
+	args := m.Called(ctx, conceptType, uuid)
 	return args.Get(0).(*elastic.DeleteResponse), args.Error(1)
 }
 
@@ -346,8 +346,8 @@ func (m *EsServiceMock) LoadBulkData(conceptType string, uuid string, payload in
 	m.Called(conceptType, uuid, payload)
 }
 
-func (m *EsServiceMock) CleanupData(conceptType string, concept service.Concept, ctx context.Context) {
-	m.Called(conceptType, concept, ctx)
+func (m *EsServiceMock) CleanupData(ctx context.Context, conceptType string, concept service.Concept) {
+	m.Called(ctx, conceptType, concept)
 }
 
 func (m *EsServiceMock) CloseBulkProcessor() error {

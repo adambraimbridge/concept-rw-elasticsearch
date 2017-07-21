@@ -394,14 +394,14 @@ type dummyEsService struct {
 	source       *json.RawMessage
 }
 
-func (service *dummyEsService) LoadData(conceptType string, uuid string, payload interface{}, ctx context.Context) (*elastic.IndexResponse, error) {
+func (service *dummyEsService) LoadData(ctx context.Context, conceptType string, uuid string, payload interface{}) (*elastic.IndexResponse, error) {
 	if service.returnsError != nil {
 		return nil, service.returnsError
 	}
 	return &elastic.IndexResponse{}, nil
 }
 
-func (service *dummyEsService) CleanupData(conceptType string, concept service.Concept, ctx context.Context) {
+func (service *dummyEsService) CleanupData(ctx context.Context, conceptType string, concept service.Concept) {
 }
 
 func (service *dummyEsService) ReadData(conceptType string, uuid string) (*elastic.GetResult, error) {
@@ -411,7 +411,7 @@ func (service *dummyEsService) ReadData(conceptType string, uuid string) (*elast
 	return &elastic.GetResult{Found: service.found, Source: service.source}, nil
 }
 
-func (service *dummyEsService) DeleteData(conceptType string, uuid string, ctx context.Context) (*elastic.DeleteResponse, error) {
+func (service *dummyEsService) DeleteData(ctx context.Context, conceptType string, uuid string) (*elastic.DeleteResponse, error) {
 	if service.returnsError != nil {
 		return nil, service.returnsError
 	}

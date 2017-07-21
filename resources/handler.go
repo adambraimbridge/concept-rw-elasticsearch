@@ -49,7 +49,7 @@ func (h *Handler) LoadData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = h.elasticService.LoadData(conceptType, concept.PreferredUUID(), *payload, ctx)
+	_, err = h.elasticService.LoadData(ctx, conceptType, concept.PreferredUUID(), *payload)
 	if err == service.ErrNoElasticClient {
 		writeMessage(w, "ES unavailable", http.StatusServiceUnavailable)
 		return
@@ -61,7 +61,7 @@ func (h *Handler) LoadData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.elasticService.CleanupData(conceptType, concept, ctx)
+	h.elasticService.CleanupData(ctx, conceptType, concept)
 
 	writeMessage(w, "Concept written successfully", http.StatusOK)
 }
@@ -75,7 +75,7 @@ func (h *Handler) LoadBulkData(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.elasticService.LoadBulkData(conceptType, concept.PreferredUUID(), *payload)
-	h.elasticService.CleanupData(conceptType, concept, context.Background())
+	h.elasticService.CleanupData(context.Background(), conceptType, concept)
 	writeMessage(w, "Concept written successfully", http.StatusOK)
 }
 
@@ -187,7 +187,7 @@ func (h *Handler) DeleteData(writer http.ResponseWriter, request *http.Request) 
 	uuid := mux.Vars(request)["id"]
 	conceptType := mux.Vars(request)["concept-type"]
 
-	res, err := h.elasticService.DeleteData(conceptType, uuid, ctx)
+	res, err := h.elasticService.DeleteData(ctx, conceptType, uuid)
 
 	if err != nil {
 		log.Errorf(err.Error())
