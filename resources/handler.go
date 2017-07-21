@@ -40,7 +40,7 @@ func NewHandler(elasticService service.EsServiceI, authorService service.AuthorS
 func (h *Handler) LoadData(w http.ResponseWriter, r *http.Request) {
 	conceptType, concept, payload, err := h.processPayload(r)
 	if err == errUnsupportedConceptType {
-		writeMessage(w, err.Error(), http.StatusUnprocessableEntity)
+		writeMessage(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
@@ -70,7 +70,7 @@ func (h *Handler) LoadData(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) LoadBulkData(w http.ResponseWriter, r *http.Request) {
 	conceptType, concept, payload, err := h.processPayload(r)
 	if err == errUnsupportedConceptType {
-		writeMessage(w, err.Error(), http.StatusUnprocessableEntity)
+		writeMessage(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
