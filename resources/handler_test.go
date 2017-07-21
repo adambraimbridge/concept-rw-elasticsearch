@@ -132,6 +132,13 @@ func TestLoadData(t *testing.T) {
 			path:    "/bulk/valid-type/8ff7dfef-0330-3de0-b37a-2d6aa9c98580",
 		},
 		{
+			name:    "Bulk request body contains invalid json",
+			payload: `{"uuid":"8ff7dfef-0330-3de0-b37a-2d6aa9c98580","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report","type":"Genre"}`,
+			status:  http.StatusUnprocessableEntity,
+			msg:     `{"message":"Unsupported or invalid concept type"}`,
+			path:    "/bulk/invalid-type/8ff7dfef-0330-3de0-b37a-2d6aa9c98580",
+		},
+		{
 			name:    "Bulk path contains different uuid to body",
 			payload: `{"uuid":"different-uuid","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report","type":"Genre"}`,
 			status:  http.StatusBadRequest,
