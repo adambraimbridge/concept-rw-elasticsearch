@@ -69,7 +69,7 @@ func TestLoadData(t *testing.T) {
 			path:    "/valid-type/8ff7dfef-0330-3de0-b37a-2d6aa9c98580",
 		},
 		{
-			name:    "Path contains no type",
+			name:    "Path contains unsupported concept type",
 			payload: `{"uuid":"different-uuid","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report","type":"Genre"}`,
 			status:  http.StatusNotFound,
 			msg:     `{"message":"Unsupported or invalid concept type"}`,
@@ -132,7 +132,7 @@ func TestLoadData(t *testing.T) {
 			path:    "/bulk/valid-type/8ff7dfef-0330-3de0-b37a-2d6aa9c98580",
 		},
 		{
-			name:    "Bulk request body contains invalid json",
+			name:    "Bulk request unsupported concept type",
 			payload: `{"uuid":"8ff7dfef-0330-3de0-b37a-2d6aa9c98580","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report","type":"Genre"}`,
 			status:  http.StatusNotFound,
 			msg:     `{"message":"Unsupported or invalid concept type"}`,
