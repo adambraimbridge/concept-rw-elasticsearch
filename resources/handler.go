@@ -39,6 +39,11 @@ func NewHandler(elasticService service.EsServiceI, authorService service.AuthorS
 // LoadData processes a single ES concept entity
 func (h *Handler) LoadData(w http.ResponseWriter, r *http.Request) {
 	conceptType, concept, payload, err := h.processPayload(r)
+	if err == errUnsupportedConceptType {
+		writeMessage(w, err.Error(), http.StatusUnprocessableEntity)
+		return
+	}
+
 	if err != nil {
 		writeMessage(w, err.Error(), http.StatusBadRequest)
 		return
