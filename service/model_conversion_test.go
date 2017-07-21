@@ -231,9 +231,8 @@ func TestConceptFuncsForConceptModel(t *testing.T) {
 		assert.Contains(t, actual, val)
 	}
 
-	expected = []string{}
 	actual = concept.ConcordedUUIDs()
-	assert.Equal(t, expected, actual)
+	assert.Empty(t, actual)
 	assert.Equal(t, "2384fa7a-d514-3d6a-a0ea-3a711f66d0d8", concept.PreferredUUID())
 }
 
