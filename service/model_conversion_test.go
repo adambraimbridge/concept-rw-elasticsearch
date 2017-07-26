@@ -14,6 +14,8 @@ var testAggregateConceptModelJSON = `{"prefUUID":"56388858-38d6-4dfc-a001-506394
 
 var testConceptModelJSON = `{"uuid":"2384fa7a-d514-3d6a-a0ea-3a711f66d0d8","type":"PublicCompany","properName":"Apple, Inc.","prefLabel":"Apple, Inc.","legalName":"Apple Inc.","shortName":"Apple","hiddenLabel":"APPLE INC","alternativeIdentifiers":{"TME":["TnN0ZWluX09OX0ZvcnR1bmVDb21wYW55X0FBUEw=-T04="],"uuids":["2384fa7a-d514-3d6a-a0ea-3a711f66d0d8","2abff0bd-544d-31c3-899b-fba2f60d53dd"],"factsetIdentifier":"000C7F-E","leiCode":"HWUPKR0MPOU8FGXBT394"},"formerNames":["Apple Computer, Inc."],"aliases":["Apple Inc","Apple Computers","Apple","Apple Canada","Apple Computer","Apple Computer, Inc.","APPLE INC","Apple Incorporated","Apple Computer Inc","Apple Inc.","Apple, Inc."],"industryClassification":"7a01c847-a9bd-33be-b991-c6fbd8871a46"}`
 
+var testIntermediateConceptModelJSON = `{"uuid":"7e3f1354-53ba-3c3e-b9bb-5fcb8941df8c","prefLabel":"ICOmedy","type":"AlphavilleSeries","authority":"TME","authorityValue":"NDQ1NjhiMzktMjJmNy00OWEzLWExNDctNDFiNDk4OGU2MTdj-QWxwaGF2aWxsZVNlcmllc0NsYXNzaWZpY2F0aW9u"}`
+
 func newTestModelPopulator() ModelPopulator {
 	testAuthorService := curatedAuthorService{
 		httpClient:  nil,
@@ -229,10 +231,28 @@ func TestConceptFuncsForConceptModel(t *testing.T) {
 		assert.Contains(t, actual, val)
 	}
 
+	actual = concept.ConcordedUUIDs()
+	assert.Empty(t, actual)
+	assert.Equal(t, "2384fa7a-d514-3d6a-a0ea-3a711f66d0d8", concept.PreferredUUID())
+}
+
+func TestConceptFuncsForIntermediateConceptModel(t *testing.T) {
+	concept := ConceptModel{}
+	err := json.Unmarshal([]byte(testIntermediateConceptModelJSON), &concept)
+	require.NoError(t, err)
+
+	expected := []string{"TME"}
+	actual := concept.GetAuthorities()
+
+	assert.Len(t, actual, 1)
+	for _, val := range expected {
+		assert.Contains(t, actual, val)
+	}
+
 	expected = []string{}
 	actual = concept.ConcordedUUIDs()
 	assert.Equal(t, expected, actual)
-	assert.Equal(t, "2384fa7a-d514-3d6a-a0ea-3a711f66d0d8", concept.PreferredUUID())
+	assert.Equal(t, "7e3f1354-53ba-3c3e-b9bb-5fcb8941df8c", concept.PreferredUUID())
 }
 
 func TestConceptFuncsForAggregatedConceptModel(t *testing.T) {
