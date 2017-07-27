@@ -44,6 +44,11 @@ func (h *Handler) LoadData(w http.ResponseWriter, r *http.Request) {
 	ctx := tid.TransactionAwareContext(context.Background(), transactionID)
 
 	conceptType, concept, payload, err := h.processPayload(r)
+	if err == errUnsupportedConceptType {
+		writeMessage(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
 	if err != nil {
 		writeMessage(w, err.Error(), http.StatusBadRequest)
 		return
@@ -69,6 +74,11 @@ func (h *Handler) LoadData(w http.ResponseWriter, r *http.Request) {
 // LoadBulkData write a concept to ES via the ES Bulk API
 func (h *Handler) LoadBulkData(w http.ResponseWriter, r *http.Request) {
 	conceptType, concept, payload, err := h.processPayload(r)
+	if err == errUnsupportedConceptType {
+		writeMessage(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
 	if err != nil {
 		writeMessage(w, err.Error(), http.StatusBadRequest)
 		return
