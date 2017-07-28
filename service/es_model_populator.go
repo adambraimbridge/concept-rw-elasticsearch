@@ -4,7 +4,7 @@ import (
 	"strconv"
 
 	"github.com/Financial-Times/neo-model-utils-go/mapper"
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 const (

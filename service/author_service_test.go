@@ -123,6 +123,7 @@ func TestRefreshAuthorIdentifiersResponseSuccess(t *testing.T) {
 	}
 
 	as.RefreshAuthorIdentifiers()
+	defer as.(*curatedAuthorService).refreshTicker.Stop()
 
 	time.Sleep(time.Millisecond * 35)
 	m.countLock.RLock()
@@ -150,6 +151,7 @@ func TestRefreshAuthorIdentifiersWithErrorContinues(t *testing.T) {
 		assert.NoError(t, err, "Checking for FTAuthor should not return an error")
 	}
 	as.RefreshAuthorIdentifiers()
+	defer as.(*curatedAuthorService).refreshTicker.Stop()
 
 	time.Sleep(time.Millisecond * 35)
 	m.countLock.RLock()
