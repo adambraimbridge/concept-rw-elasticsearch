@@ -143,7 +143,6 @@ func main() {
 		authorService, err := service.NewAuthorService(*pubClusterReadURL, *pubClusterCredKey, time.Duration(*authorRefreshInterval)*time.Minute, &http.Client{Timeout: time.Second * 30})
 		if err != nil {
 			log.Errorf("Could not retrieve author list, error=[%s]\n", err)
-			os.Exit(1)
 		}
 		handler := resources.NewHandler(esService, authorService, allowedConceptTypes)
 		defer handler.Close()

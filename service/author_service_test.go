@@ -56,7 +56,9 @@ func TestLoadAuthorIdentifiersResponseSuccess(t *testing.T) {
 	assert.NoError(t, err, "Creation of a new Author sevice should not return an error")
 
 	for expectedUUID := range expectedAuthorUUIDs {
-		assert.True(t, as.IsFTAuthor(expectedUUID), "The UUID is not in the author uuid map")
+		actual, err := as.IsFTAuthor(expectedUUID)
+		assert.True(t, actual, "The UUID is not in the author uuid map")
+		assert.NoError(t, err, "Checking for FTAuthor should not return an error")
 	}
 	m.AssertExpectations(t)
 }
@@ -115,7 +117,9 @@ func TestRefreshAuthorIdentifiersResponseSuccess(t *testing.T) {
 
 	assert.NoError(t, err, "Creation of a new Author sevice should not return an error")
 	for expectedUUID := range expectedAuthorUUIDs {
-		assert.True(t, as.IsFTAuthor(expectedUUID), "The UUID is not in the author uuid map")
+		actual, err := as.IsFTAuthor(expectedUUID)
+		assert.True(t, actual, "The UUID is not in the author uuid map")
+		assert.NoError(t, err, "Checking for FTAuthor should not return an error")
 	}
 
 	as.RefreshAuthorIdentifiers()
@@ -141,7 +145,9 @@ func TestRefreshAuthorIdentifiersWithErrorContinues(t *testing.T) {
 
 	assert.NoError(t, err, "Creation of a new Author sevice should not return an error")
 	for expectedUUID := range expectedAuthorUUIDs {
-		assert.True(t, as.IsFTAuthor(expectedUUID), "The UUID is not in the author uuid map")
+		actual, err := as.IsFTAuthor(expectedUUID)
+		assert.True(t, actual, "The UUID is not in the author uuid map")
+		assert.NoError(t, err, "Checking for FTAuthor should not return an error")
 	}
 	as.RefreshAuthorIdentifiers()
 
@@ -160,8 +166,9 @@ func TestIsFTAuthorTrue(t *testing.T) {
 		authorUUIDs: expectedAuthorUUIDs,
 		authorLock:  &sync.RWMutex{},
 	}
-	isAuthor := testService.IsFTAuthor("2916ded0-6d1f-4449-b54c-3805da729c1d")
+	isAuthor, err := testService.IsFTAuthor("2916ded0-6d1f-4449-b54c-3805da729c1d")
 	assert.True(t, isAuthor)
+	assert.NoError(t, err, "Checking for FTAuthor should not return an error")
 }
 
 func TestIsIsFTAuthorFalse(t *testing.T) {
@@ -171,8 +178,20 @@ func TestIsIsFTAuthorFalse(t *testing.T) {
 		authorUUIDs: expectedAuthorUUIDs,
 		authorLock:  &sync.RWMutex{},
 	}
-	isAuthor := testService.IsFTAuthor("61346cf7-008b-49e0-945a-832a90cd60ac")
+	isAuthor, err := testService.IsFTAuthor("61346cf7-008b-49e0-945a-832a90cd60ac")
 	assert.False(t, isAuthor)
+	assert.NoError(t, err, "Checking for FTAuthor should not return an error")
+}
+
+func TestIsIsFTAuthorEmptyList(t *testing.T) {
+	testService := &curatedAuthorService{
+		httpClient:  nil,
+		serviceURL:  "url",
+		authorUUIDs: map[string]struct{}{},
+		authorLock:  &sync.RWMutex{},
+	}
+	_, err := testService.IsFTAuthor("61346cf7-008b-49e0-945a-832a90cd60ac")
+	assert.EqualError(t, err, "Author list is unavailable", "Checking for FTAuthor should return an error")
 }
 
 func TestIsGTG(t *testing.T) {

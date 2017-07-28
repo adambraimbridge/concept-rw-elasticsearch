@@ -339,9 +339,9 @@ func (m *AuthorServiceMock) LoadAuthorIdentifiers() error {
 	return args.Error(0)
 }
 
-func (m *AuthorServiceMock) IsFTAuthor(uuid string) bool {
+func (m *AuthorServiceMock) IsFTAuthor(uuid string) (bool, error) {
 	args := m.Called(uuid)
-	return args.Bool(0)
+	return args.Bool(0), args.Error(1)
 }
 
 func (m *AuthorServiceMock) IsGTG() error {

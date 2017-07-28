@@ -107,7 +107,8 @@ func TestConvertToESConceptModel(t *testing.T) {
 	}
 
 	for _, testModel := range tests {
-		esModel := testModelPopulator.ConvertConceptToESConceptModel(testModel.conceptModel, "organisations").(EsConceptModel)
+		actual, _ := testModelPopulator.ConvertConceptToESConceptModel(testModel.conceptModel, "organisations")
+		esModel := actual.(EsConceptModel)
 		assert.Equal(t, testModel.esConceptModel.Id, esModel.Id, fmt.Sprintf("Expected Id %s differs from actual id %s ", testModel.esConceptModel.Id, esModel.Id))
 		assert.Equal(t, testModel.esConceptModel.ApiUrl, esModel.ApiUrl, fmt.Sprintf("Expected ApiUrl %s differs from actual ApiUrl %s ", testModel.esConceptModel.ApiUrl, esModel.ApiUrl))
 		assert.Equal(t, testModel.esConceptModel.DirectType, esModel.DirectType, fmt.Sprintf("Expected DirectType %s differs from actual DirectType %s ", testModel.esConceptModel.DirectType, esModel.DirectType))
@@ -207,7 +208,8 @@ func TestConvertAggregateConceptToESConceptModel(t *testing.T) {
 	}
 
 	for _, testModel := range tests {
-		esModel := testModelPopulator.ConvertAggregateConceptToESConceptModel(testModel.conceptModel, "organisations").(EsConceptModel)
+		actual, _ := testModelPopulator.ConvertAggregateConceptToESConceptModel(testModel.conceptModel, "organisations")
+		esModel := actual.(EsConceptModel)
 		assert.Equal(t, testModel.esConceptModel.Id, esModel.Id, fmt.Sprintf("Expected Id %s differs from actual id %s ", testModel.esConceptModel.Id, esModel.Id))
 		assert.Equal(t, testModel.esConceptModel.ApiUrl, esModel.ApiUrl, fmt.Sprintf("Expected ApiUrl %s differs from actual ApiUrl %s ", testModel.esConceptModel.ApiUrl, esModel.ApiUrl))
 		assert.Equal(t, testModel.esConceptModel.DirectType, esModel.DirectType, fmt.Sprintf("Expected DirectType %s differs from actual DirectType %s ", testModel.esConceptModel.DirectType, esModel.DirectType))
@@ -305,10 +307,34 @@ func TestConvertPersonToESConceptModel(t *testing.T) {
 				IsFTAuthor: "false",
 			},
 		},
+		{
+			ConceptModel{
+				UUID:       "2916ded0-6d1f-4449-b54c-3805da729c1d",
+				DirectType: "Person",
+				PrefLabel:  "Martin Wolf",
+				Aliases:    []string{},
+			},
+			EsPersonConceptModel{
+				EsConceptModel: EsConceptModel{
+					Id:        "http://api.ft.com/things/2916ded0-6d1f-4449-b54c-3805da729c1d",
+					ApiUrl:    "http://api.ft.com/people/2916ded0-6d1f-4449-b54c-3805da729c1d",
+					PrefLabel: "Martin Wolf",
+					Types: []string{
+						"http://www.ft.com/ontology/core/Thing",
+						"http://www.ft.com/ontology/concept/Concept",
+						"http://www.ft.com/ontology/person/Person",
+					},
+					DirectType: "http://www.ft.com/ontology/person/Person",
+					Aliases:    []string{},
+				},
+				IsFTAuthor: "true",
+			},
+		},
 	}
 
 	for _, testModel := range tests {
-		esModel := testModelPopulator.ConvertConceptToESConceptModel(testModel.conceptModel, "people").(EsPersonConceptModel)
+		actual, _ := testModelPopulator.ConvertConceptToESConceptModel(testModel.conceptModel, "people")
+		esModel := actual.(EsPersonConceptModel)
 		assert.Equal(testModel.esPersonConceptModel.Id, esModel.Id, fmt.Sprintf("Expected Id %s differs from actual id %s ", testModel.esPersonConceptModel.Id, esModel.Id))
 		assert.Equal(testModel.esPersonConceptModel.ApiUrl, esModel.ApiUrl, fmt.Sprintf("Expected ApiUrl %s differs from actual ApiUrl %s ", testModel.esPersonConceptModel.ApiUrl, esModel.ApiUrl))
 		assert.Equal(testModel.esPersonConceptModel.DirectType, esModel.DirectType, fmt.Sprintf("Expected DirectType %s differs from actual DirectType %s ", testModel.esPersonConceptModel.DirectType, esModel.DirectType))
@@ -317,6 +343,28 @@ func TestConvertPersonToESConceptModel(t *testing.T) {
 		assert.Equal(testModel.esPersonConceptModel.Aliases, esModel.Aliases, fmt.Sprintf("Expected Aliases %s differ from actual Aliases %s ", testModel.esPersonConceptModel.Aliases, esModel.Aliases))
 		assert.Equal(testModel.esPersonConceptModel.IsFTAuthor, esModel.IsFTAuthor, fmt.Sprintf("Expected IsFTAuthor %s differ from actual IsFTAuthor %s ", testModel.esPersonConceptModel.IsFTAuthor, esModel.IsFTAuthor))
 	}
+}
+
+func TestConvertPersonToESConceptModelNoAuthors(t *testing.T) {
+	assert := assert.New(t)
+	testAuthorService := curatedAuthorService{
+		httpClient:  nil,
+		serviceURL:  "url",
+		authorUUIDs: map[string]struct{}{},
+		authorLock:  &sync.RWMutex{},
+	}
+	testModelPopulator := NewEsModelPopulator(&testAuthorService)
+
+	conceptModel := ConceptModel{
+		UUID:       "0f07d468-fc37-3c44-bf19-a81f2aae9f36",
+		DirectType: "Person",
+		PrefLabel:  "Martin Wolf",
+		Aliases:    []string{},
+	}
+
+	actual, err := testModelPopulator.ConvertConceptToESConceptModel(conceptModel, "people")
+	assert.Empty(actual, "expected empty model returned")
+	assert.EqualError(err, "Author list is unavailable", "expected an error for conversion")
 }
 
 func TestReverse(t *testing.T) {

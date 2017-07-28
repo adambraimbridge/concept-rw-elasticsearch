@@ -12,6 +12,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/olivere/elastic.v5"
 )
@@ -22,10 +23,10 @@ var (
 
 func TestCreateNewESWriter(t *testing.T) {
 	dummyEsService := &dummyEsService{}
-	dummyAuthorService := &dummyAuthorService{}
+	mockAuthorService := &mockAuthorService{}
 
 	allowedTypes := []string{"organisations", "genres"}
-	writerService := NewHandler(dummyEsService, dummyAuthorService, allowedTypes)
+	writerService := NewHandler(dummyEsService, mockAuthorService, allowedTypes)
 	assert.True(t, writerService.allowedConceptTypes["organisations"])
 	assert.True(t, writerService.allowedConceptTypes["genres"])
 	assert.False(t, writerService.allowedConceptTypes["something else"])
@@ -33,9 +34,9 @@ func TestCreateNewESWriter(t *testing.T) {
 
 func TestCreateNewESWriterWithEmptyWhitelist(t *testing.T) {
 	dummyEsService := &dummyEsService{}
-	dummyAuthorService := &dummyAuthorService{}
+	mockAuthorService := &mockAuthorService{}
 	allowedTypes := []string{}
-	writerService := NewHandler(dummyEsService, dummyAuthorService, allowedTypes)
+	writerService := NewHandler(dummyEsService, mockAuthorService, allowedTypes)
 	assert.Equal(t, 0, len(writerService.allowedConceptTypes))
 }
 
@@ -147,7 +148,7 @@ func TestLoadData(t *testing.T) {
 		},
 	}
 
-	dummyAuthorService := &dummyAuthorService{isAuthor: false, authorIds: []service.AuthorUUID{}}
+	mockAuthorService := &mockAuthorService{}
 	for _, tc := range testCases {
 		req, err := http.NewRequest("PUT", tc.path, bytes.NewReader([]byte(tc.payload)))
 		require.NoError(t, err, `Current test "%v"`, tc.name)
@@ -155,7 +156,66 @@ func TestLoadData(t *testing.T) {
 		rr := httptest.NewRecorder()
 
 		dummyEsService := &dummyEsService{}
-		writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"valid-type"})
+		writerService := NewHandler(dummyEsService, mockAuthorService, []string{"valid-type"})
+
+		servicesRouter := mux.NewRouter()
+		servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.LoadData).Methods("PUT")
+		servicesRouter.HandleFunc("/bulk/{concept-type}/{id}", writerService.LoadBulkData).Methods("PUT")
+		servicesRouter.ServeHTTP(rr, req)
+
+		assert.Equal(t, tc.status, rr.Code, `Current test "%v"`, tc.name)
+		assert.JSONEq(t, tc.msg, rr.Body.String(), `Current test "%v"`, tc.name)
+	}
+}
+
+func TestLoadDataNoAuthors(t *testing.T) {
+	testCases := []struct {
+		name    string
+		path    string
+		payload string
+		status  int
+		msg     string
+	}{
+		{
+			name:    "Succesful write",
+			payload: `{"uuid":"8ff7dfef-0330-3de0-b37a-2d6aa9c98580","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report","type":"Genre"}`,
+			status:  http.StatusOK,
+			msg:     `{"message":"Concept written successfully"}`,
+			path:    "/valid-type/8ff7dfef-0330-3de0-b37a-2d6aa9c98580",
+		},
+		{
+			name:    "Succesful aggregate model write",
+			payload: `{"prefUUID":"8ff7dfef-0330-3de0-b37a-2d6aa9c98580","prefLabel":"Smartlogics Brands PrefLabel","type":"Brand","strapline":"Some strapline","descriptionXML":"Some description","_imageUrl":"Some image url","sourceRepresentations":[{"uuid":"4ebbd9c4-3bb7-4d18-a14c-4c45aac5d966","prefLabel":"TMEs PrefLabel","type":"Brand","authority":"TME","authorityValue":"745212"},{"uuid":"56388858-38d6-4dfc-a001-506394259b51","prefLabel":"Smartlogics Brands PrefLabel","type":"Brand","authority":"Smartlogic","authorityValue":"123456789","lastModifiedEpoch":1498127042,"strapline":"Some strapline","descriptionXML":"Some description","_imageUrl":"Some image url"}]}`,
+			status:  http.StatusOK,
+			msg:     `{"message":"Concept written successfully"}`,
+			path:    "/valid-type/8ff7dfef-0330-3de0-b37a-2d6aa9c98580",
+		},
+		{
+			name:    "People write with no author list",
+			payload: `{"uuid":"8ff7dfef-0330-3de0-b37a-2d6aa9c98580","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report","type":"Person"}`,
+			status:  http.StatusServiceUnavailable,
+			msg:     `{"message":"Author list is unavailable"}`,
+			path:    "/people/8ff7dfef-0330-3de0-b37a-2d6aa9c98580",
+		},
+		{
+			name:    "Body contains invalid json",
+			payload: `{wrong data}`,
+			status:  http.StatusBadRequest,
+			msg:     `{"message":"Request body is not in the expected concept model format"}`,
+			path:    "/valid-type/8ff7dfef-0330-3de0-b37a-2d6aa9c98580",
+		},
+	}
+
+	mockAuthorService := &mockAuthorService{}
+	mockAuthorService.On("IsFTAuthor", mock.AnythingOfType("string")).Return(false, service.ErrNoAuthors)
+	for _, tc := range testCases {
+		req, err := http.NewRequest("PUT", tc.path, bytes.NewReader([]byte(tc.payload)))
+		require.NoError(t, err, `Current test "%v"`, tc.name)
+
+		rr := httptest.NewRecorder()
+
+		dummyEsService := &dummyEsService{}
+		writerService := NewHandler(dummyEsService, mockAuthorService, []string{"valid-type", "people"})
 
 		servicesRouter := mux.NewRouter()
 		servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.LoadData).Methods("PUT")
@@ -185,7 +245,7 @@ func TestLoadDataEsClientServerErrors(t *testing.T) {
 		},
 	}
 
-	dummyAuthorService := &dummyAuthorService{isAuthor: false, authorIds: []service.AuthorUUID{}}
+	mockAuthorService := &mockAuthorService{}
 	for _, tc := range testCases {
 		req, err := http.NewRequest("PUT", "/valid-type/8ff7dfef-0330-3de0-b37a-2d6aa9c98580", bytes.NewReader([]byte(`{"uuid":"8ff7dfef-0330-3de0-b37a-2d6aa9c98580","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report","type":"Genre"}`)))
 		require.NoError(t, err)
@@ -193,7 +253,7 @@ func TestLoadDataEsClientServerErrors(t *testing.T) {
 		rr := httptest.NewRecorder()
 
 		dummyEsService := &dummyEsService{returnsError: tc.err}
-		writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"valid-type"})
+		writerService := NewHandler(dummyEsService, mockAuthorService, []string{"valid-type"})
 
 		servicesRouter := mux.NewRouter()
 		servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.LoadData).Methods("PUT")
@@ -225,8 +285,8 @@ func TestReadData(t *testing.T) {
 
 	rawmsg := json.RawMessage(rawModel)
 	dummyEsService := &dummyEsService{found: true, source: &rawmsg}
-	dummyAuthorService := &dummyAuthorService{isAuthor: false, authorIds: []service.AuthorUUID{}}
-	writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"genres"})
+	mockAuthorService := &mockAuthorService{}
+	writerService := NewHandler(dummyEsService, mockAuthorService, []string{"genres"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.ReadData).Methods("GET")
@@ -259,8 +319,8 @@ func TestReadDataNotFound(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	dummyEsService := &dummyEsService{found: false}
-	dummyAuthorService := &dummyAuthorService{}
-	writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"organisations"})
+	mockAuthorService := &mockAuthorService{}
+	writerService := NewHandler(dummyEsService, mockAuthorService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.ReadData).Methods("GET")
@@ -284,8 +344,8 @@ func TestReadDataEsServerError(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	dummyEsService := &dummyEsService{returnsError: errTest}
-	dummyAuthorService := &dummyAuthorService{}
-	writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"organisations"})
+	mockAuthorService := &mockAuthorService{}
+	writerService := NewHandler(dummyEsService, mockAuthorService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.ReadData).Methods("GET")
@@ -309,8 +369,8 @@ func TestReadDataEsServerUnavailable(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	dummyEsService := &dummyEsService{returnsError: service.ErrNoElasticClient}
-	dummyAuthorService := &dummyAuthorService{}
-	writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"organisations"})
+	mockAuthorService := &mockAuthorService{}
+	writerService := NewHandler(dummyEsService, mockAuthorService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.ReadData).Methods("GET")
@@ -328,8 +388,8 @@ func TestDeleteData(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	dummyEsService := &dummyEsService{found: true}
-	dummyAuthorService := &dummyAuthorService{}
-	writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"organisations"})
+	mockAuthorService := &mockAuthorService{}
+	writerService := NewHandler(dummyEsService, mockAuthorService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.DeleteData).Methods("DELETE")
@@ -353,8 +413,8 @@ func TestDeleteDataNotFound(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	dummyEsService := &dummyEsService{found: false}
-	dummyAuthorService := &dummyAuthorService{}
-	writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"organisations"})
+	mockAuthorService := &mockAuthorService{}
+	writerService := NewHandler(dummyEsService, mockAuthorService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.DeleteData).Methods("DELETE")
@@ -378,8 +438,8 @@ func TestDeleteDataEsServerError(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	dummyEsService := &dummyEsService{returnsError: errTest}
-	dummyAuthorService := &dummyAuthorService{}
-	writerService := NewHandler(dummyEsService, dummyAuthorService, []string{"organisations"})
+	mockAuthorService := &mockAuthorService{}
+	writerService := NewHandler(dummyEsService, mockAuthorService, []string{"organisations"})
 
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.DeleteData).Methods("DELETE")
@@ -434,24 +494,24 @@ func (service *dummyEsService) CloseBulkProcessor() error {
 	return nil
 }
 
-type dummyAuthorService struct {
-	isAuthor  bool
-	authorIds []service.AuthorUUID
-	gtg       error
+type mockAuthorService struct {
+	mock.Mock
 }
 
-func (service *dummyAuthorService) LoadAuthorIdentifiers() error {
-	return nil
+func (m *mockAuthorService) LoadAuthorIdentifiers() error {
+	args := m.Called()
+	return args.Error(0)
 }
 
-func (service *dummyAuthorService) RefreshAuthorIdentifiers() {
-
+func (m *mockAuthorService) RefreshAuthorIdentifiers() {
 }
 
-func (service *dummyAuthorService) IsFTAuthor(UUID string) bool {
-	return service.isAuthor
+func (m *mockAuthorService) IsFTAuthor(UUID string) (bool, error) {
+	args := m.Called(UUID)
+	return args.Bool(0), args.Error(1)
 }
 
-func (service *dummyAuthorService) IsGTG() error {
-	return service.gtg
+func (m *mockAuthorService) IsGTG() error {
+	args := m.Called()
+	return args.Error(0)
 }

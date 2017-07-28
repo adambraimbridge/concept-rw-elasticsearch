@@ -3,6 +3,7 @@ package service
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -17,6 +18,10 @@ const contentType = "application/json"
 const authorTransformerIdsPath = "/__v1-authors-transformer/transformers/authors/__ids"
 const gtgPath = "/__v1-authors-transformer/__gtg"
 
+var (
+	ErrNoAuthors = errors.New("Author list is unavailable")
+)
+
 type AuthorUUID struct {
 	UUID string `json:"ID"`
 }
@@ -24,7 +29,7 @@ type AuthorUUID struct {
 type AuthorService interface {
 	LoadAuthorIdentifiers() error
 	RefreshAuthorIdentifiers()
-	IsFTAuthor(UUID string) bool
+	IsFTAuthor(UUID string) (bool, error)
 	IsGTG() error
 }
 
@@ -105,12 +110,17 @@ func (as *curatedAuthorService) RefreshAuthorIdentifiers() {
 
 }
 
-func (as *curatedAuthorService) IsFTAuthor(uuid string) bool {
+func (as *curatedAuthorService) IsFTAuthor(uuid string) (bool, error) {
 	as.authorLock.RLock()
 	defer as.authorLock.RUnlock()
+
+	if len(as.authorUUIDs) == 0 {
+		return false, ErrNoAuthors
+	}
+
 	_, found := as.authorUUIDs[uuid]
 
-	return found
+	return found, nil
 }
 
 func (as *curatedAuthorService) IsGTG() error {

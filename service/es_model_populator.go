@@ -12,8 +12,8 @@ const (
 )
 
 type ModelPopulator interface {
-	ConvertConceptToESConceptModel(concept ConceptModel, conceptType string) interface{}
-	ConvertAggregateConceptToESConceptModel(concept AggregateConceptModel, conceptType string) interface{}
+	ConvertConceptToESConceptModel(concept ConceptModel, conceptType string) (interface{}, error)
+	ConvertAggregateConceptToESConceptModel(concept AggregateConceptModel, conceptType string) (interface{}, error)
 }
 
 type EsModelPopulator struct {
@@ -24,25 +24,33 @@ func NewEsModelPopulator(authorService AuthorService) ModelPopulator {
 	return &EsModelPopulator{authorService}
 }
 
-func (mp *EsModelPopulator) ConvertConceptToESConceptModel(concept ConceptModel, conceptType string) interface{} {
+func (mp *EsModelPopulator) ConvertConceptToESConceptModel(concept ConceptModel, conceptType string) (interface{}, error) {
 	esModel := convertToESConceptModel(concept, conceptType)
 
 	switch conceptType {
 	case PERSON:
-		return mp.convertToESPersonConceptModel(esModel, concept.UUID, conceptType)
+		person, err := mp.convertToESPersonConceptModel(esModel, concept.UUID, conceptType)
+		if err != nil {
+			return nil, err
+		}
+		return *person, nil
 	default:
-		return esModel
+		return esModel, nil
 	}
 }
 
-func (mp *EsModelPopulator) ConvertAggregateConceptToESConceptModel(concept AggregateConceptModel, conceptType string) interface{} {
+func (mp *EsModelPopulator) ConvertAggregateConceptToESConceptModel(concept AggregateConceptModel, conceptType string) (interface{}, error) {
 	esModel := convertAggregateConceptToESConceptModel(concept, conceptType)
 
 	switch conceptType {
 	case PERSON:
-		return mp.convertToESPersonConceptModel(esModel, concept.PrefUUID, conceptType)
+		person, err := mp.convertToESPersonConceptModel(esModel, concept.PrefUUID, conceptType)
+		if err != nil {
+			return nil, err
+		}
+		return *person, nil
 	default:
-		return esModel
+		return esModel, nil
 	}
 }
 
@@ -72,12 +80,17 @@ func newESConceptModel(uuid string, conceptType string, directType string, alias
 	return esModel
 }
 
-func (mp *EsModelPopulator) convertToESPersonConceptModel(esConceptModel EsConceptModel, uuid string, conceptType string) EsPersonConceptModel {
-	esPersonModel := EsPersonConceptModel{
-		esConceptModel,
-		strconv.FormatBool(mp.authorService.IsFTAuthor(uuid)),
+func (mp *EsModelPopulator) convertToESPersonConceptModel(esConceptModel EsConceptModel, uuid string, conceptType string) (*EsPersonConceptModel, error) {
+	isFTAuthor, err := mp.authorService.IsFTAuthor(uuid)
+	if err != nil {
+		return nil, err
 	}
-	return esPersonModel
+
+	esPersonModel := &EsPersonConceptModel{
+		esConceptModel,
+		strconv.FormatBool(isFTAuthor),
+	}
+	return esPersonModel, nil
 }
 
 func getTypes(conceptType string) []string {

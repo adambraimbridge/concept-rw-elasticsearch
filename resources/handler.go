@@ -39,13 +39,20 @@ func NewHandler(elasticService service.EsServiceI, authorService service.AuthorS
 // LoadData processes a single ES concept entity
 func (h *Handler) LoadData(w http.ResponseWriter, r *http.Request) {
 	conceptType, concept, payload, err := h.processPayload(r)
-	if err == errUnsupportedConceptType {
-		writeMessage(w, err.Error(), http.StatusNotFound)
-		return
-	}
 
 	if err != nil {
-		writeMessage(w, err.Error(), http.StatusBadRequest)
+		var errStatus int
+		switch err {
+		case errUnsupportedConceptType:
+			errStatus = http.StatusNotFound
+
+		case service.ErrNoAuthors:
+			errStatus = http.StatusServiceUnavailable
+
+		default:
+			errStatus = http.StatusBadRequest
+		}
+		writeMessage(w, err.Error(), errStatus)
 		return
 	}
 
@@ -132,8 +139,8 @@ func (h *Handler) processConceptModel(uuid string, conceptType string, body []by
 		return nil, nil, errInvalidConceptModel
 	}
 
-	payload := h.modelPopulator.ConvertConceptToESConceptModel(concept, conceptType)
-	return concept, &payload, nil
+	payload, err := h.modelPopulator.ConvertConceptToESConceptModel(concept, conceptType)
+	return concept, &payload, err
 }
 
 func (h *Handler) processAggregateConceptModel(uuid string, conceptType string, body []byte) (service.Concept, *interface{}, error) {
@@ -152,8 +159,8 @@ func (h *Handler) processAggregateConceptModel(uuid string, conceptType string, 
 		return nil, nil, errInvalidConceptModel
 	}
 
-	payload := h.modelPopulator.ConvertAggregateConceptToESConceptModel(concept, conceptType)
-	return concept, &payload, nil
+	payload, err := h.modelPopulator.ConvertAggregateConceptToESConceptModel(concept, conceptType)
+	return concept, &payload, err
 }
 
 func (h *Handler) ReadData(writer http.ResponseWriter, request *http.Request) {
