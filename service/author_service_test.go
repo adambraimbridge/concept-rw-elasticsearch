@@ -119,6 +119,7 @@ func TestRefreshAuthorIdentifiersResponseSuccess(t *testing.T) {
 	}
 
 	as.RefreshAuthorIdentifiers()
+	defer as.(*curatedAuthorService).refreshTicker.Stop()
 
 	time.Sleep(time.Millisecond * 35)
 	m.countLock.RLock()
@@ -144,6 +145,7 @@ func TestRefreshAuthorIdentifiersWithErrorContinues(t *testing.T) {
 		assert.True(t, as.IsFTAuthor(expectedUUID), "The UUID is not in the author uuid map")
 	}
 	as.RefreshAuthorIdentifiers()
+	defer as.(*curatedAuthorService).refreshTicker.Stop()
 
 	time.Sleep(time.Millisecond * 35)
 	m.countLock.RLock()

@@ -5,13 +5,24 @@ import (
 	"errors"
 	"sync"
 
-	log "github.com/Sirupsen/logrus"
+	tid "github.com/Financial-Times/transactionid-utils-go"
+	log "github.com/sirupsen/logrus"
 	"gopkg.in/olivere/elastic.v5"
+	"strconv"
 )
 
 var (
 	ErrNoElasticClient error = errors.New("No ElasticSearch client available")
 )
+
+const conceptTypeField = "conceptType"
+const uuidField = "uuid"
+const prefUUIDField = "prefUUID"
+const statusField = "status"
+const operationField = "operation"
+const writeOperation = "write"
+const deleteOperation = "delete"
+const unknownStatus = "unknown"
 
 type esService struct {
 	sync.RWMutex
@@ -21,20 +32,17 @@ type esService struct {
 	bulkProcessorConfig *BulkProcessorConfig
 }
 
-type EsServiceI interface {
-	LoadData(conceptType string, uuid string, payload interface{}) (*elastic.IndexResponse, error)
+type EsService interface {
+	LoadData(ctx context.Context, conceptType string, uuid string, payload interface{}) (*elastic.IndexResponse, error)
 	ReadData(conceptType string, uuid string) (*elastic.GetResult, error)
-	DeleteData(conceptType string, uuid string) (*elastic.DeleteResponse, error)
+	DeleteData(ctx context.Context, conceptType string, uuid string) (*elastic.DeleteResponse, error)
 	LoadBulkData(conceptType string, uuid string, payload interface{})
-	CleanupData(conceptType string, concept Concept)
+	CleanupData(ctx context.Context, conceptType string, concept Concept)
 	CloseBulkProcessor() error
-}
-
-type EsHealthServiceI interface {
 	GetClusterHealth() (*elastic.ClusterHealthResponse, error)
 }
 
-func NewEsService(ch chan *elastic.Client, indexName string, bulkProcessorConfig *BulkProcessorConfig) *esService {
+func NewEsService(ch chan *elastic.Client, indexName string, bulkProcessorConfig *BulkProcessorConfig) EsService {
 	es := &esService{bulkProcessorConfig: bulkProcessorConfig, indexName: indexName}
 	go func() {
 		for ec := range ch {
@@ -74,17 +82,46 @@ func (es *esService) GetClusterHealth() (*elastic.ClusterHealthResponse, error) 
 	return es.elasticClient.ClusterHealth().Do(context.Background())
 }
 
-func (es *esService) LoadData(conceptType string, uuid string, payload interface{}) (*elastic.IndexResponse, error) {
+func (es *esService) LoadData(ctx context.Context, conceptType string, uuid string, payload interface{}) (*elastic.IndexResponse, error) {
+	loadDataLog := log.WithField(conceptTypeField, conceptType).
+		WithField(uuidField, uuid).
+		WithField(operationField, writeOperation)
+
+	transactionID, err := tid.GetTransactionIDFromContext(ctx)
+
+	if err != nil {
+		loadDataLog.WithError(err).Warn("Transaction ID not found")
+	}
+	loadDataLog = loadDataLog.WithField(tid.TransactionIDKey, transactionID)
+
 	if err := es.checkElasticClient(); err != nil {
+		loadDataLog.WithError(err).
+			WithField(statusField, unknownStatus).
+			Error("Failed operation to Elasticsearch")
 		return nil, err
 	}
 
-	return es.elasticClient.Index().
+	resp, err := es.elasticClient.Index().
 		Index(es.indexName).
 		Type(conceptType).
 		Id(uuid).
 		BodyJson(payload).
-		Do(context.Background())
+		Do(ctx)
+
+	if err != nil {
+		var status string
+		switch err.(type) {
+		case *elastic.Error:
+			status = strconv.Itoa(err.(*elastic.Error).Status)
+		default:
+			status = unknownStatus
+		}
+		loadDataLog.WithError(err).
+			WithField(statusField, status).
+			Error("Failed operation to Elasticsearch")
+	}
+
+	return resp, err
 }
 
 func (es *esService) checkElasticClient() error {
@@ -116,18 +153,38 @@ func (es *esService) ReadData(conceptType string, uuid string) (*elastic.GetResu
 	}
 }
 
-func (es *esService) CleanupData(conceptType string, concept Concept) {
+func (es *esService) CleanupData(ctx context.Context, conceptType string, concept Concept) {
+	cleanupDataLog := log.WithField(prefUUIDField, concept.PreferredUUID()).WithField(conceptTypeField, conceptType)
+	transactionID, err := tid.GetTransactionIDFromContext(ctx)
+	if err != nil {
+		cleanupDataLog.WithError(err).Warn("Transaction ID not found for cleaning up data")
+	}
+	cleanupDataLog = cleanupDataLog.WithField(tid.TransactionIDKey, transactionID)
 	for _, uuid := range concept.ConcordedUUIDs() {
-		log.WithField("prefUUID", concept.PreferredUUID()).WithField("uuid", uuid).Info("Cleaning up concorded uuids")
-		_, err := es.DeleteData(conceptType, uuid)
+		cleanupDataLog.WithField(uuidField, uuid).Info("Cleaning up concorded uuids")
+		_, err := es.DeleteData(ctx, conceptType, uuid)
 		if err != nil {
-			log.WithField("prefUUID", concept.PreferredUUID()).WithField("uuid", uuid).Warn("Failed to delete concorded uuid.")
+			cleanupDataLog.WithError(err).WithField(uuidField, uuid).Error("Failed to delete concorded uuid.")
 		}
 	}
 }
 
-func (es *esService) DeleteData(conceptType string, uuid string) (*elastic.DeleteResponse, error) {
+func (es *esService) DeleteData(ctx context.Context, conceptType string, uuid string) (*elastic.DeleteResponse, error) {
+	deleteDataLog := log.WithField(conceptTypeField, conceptType).
+		WithField(uuidField, uuid).
+		WithField(operationField, deleteOperation)
+
+	transactionID, err := tid.GetTransactionIDFromContext(ctx)
+
+	if err != nil {
+		deleteDataLog.WithError(err).Warn("Transaction ID not found")
+	}
+	deleteDataLog = deleteDataLog.WithField(tid.TransactionIDKey, transactionID)
+
 	if err := es.checkElasticClient(); err != nil {
+		deleteDataLog.WithError(err).
+			WithField(statusField, unknownStatus).
+			Error("Failed operation to Elasticsearch")
 		return nil, err
 	}
 
@@ -135,13 +192,25 @@ func (es *esService) DeleteData(conceptType string, uuid string) (*elastic.Delet
 		Index(es.indexName).
 		Type(conceptType).
 		Id(uuid).
-		Do(context.Background())
+		Do(ctx)
+
+	if err != nil {
+		var status string
+		switch err.(type) {
+		case *elastic.Error:
+			status = strconv.Itoa(err.(*elastic.Error).Status)
+		default:
+			status = unknownStatus
+		}
+		deleteDataLog.WithError(err).
+			WithField(statusField, status).
+			Error("Failed operation to Elasticsearch")
+	}
 
 	if elastic.IsNotFound(err) {
 		return &elastic.DeleteResponse{Found: false}, nil
-	} else {
-		return resp, err
 	}
+	return resp, err
 }
 
 func (es *esService) LoadBulkData(conceptType string, uuid string, payload interface{}) {

@@ -10,7 +10,7 @@ import (
 	"time"
 
 	transactionid "github.com/Financial-Times/transactionid-utils-go"
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 const contentType = "application/json"
@@ -33,10 +33,10 @@ type curatedAuthorService struct {
 	httpClient             *http.Client
 	serviceURL             string
 	authorUUIDs            map[string]struct{}
-	authorRefreshInterval  time.Duration
 	authorLock             *sync.RWMutex
 	publishClusterUser     string
 	publishClusterpassword string
+	refreshTicker          *time.Ticker
 }
 
 func NewAuthorService(serviceURL string, pubClusterKey string, authorRefreshInterval time.Duration, client *http.Client) (AuthorService, error) {
@@ -44,7 +44,15 @@ func NewAuthorService(serviceURL string, pubClusterKey string, authorRefreshInte
 		return nil, fmt.Errorf("credentials missing credentials, author service cannot make request to author transformer")
 	}
 	credentials := strings.Split(pubClusterKey, ":")
-	cas := &curatedAuthorService{client, serviceURL, nil, authorRefreshInterval, &sync.RWMutex{}, credentials[0], credentials[1]}
+	cas := &curatedAuthorService{
+		client,
+		serviceURL,
+		nil,
+		&sync.RWMutex{},
+		credentials[0],
+		credentials[1],
+		time.NewTicker(authorRefreshInterval),
+	}
 	return cas, cas.LoadAuthorIdentifiers()
 }
 
@@ -90,16 +98,14 @@ func (as *curatedAuthorService) LoadAuthorIdentifiers() error {
 }
 
 func (as *curatedAuthorService) RefreshAuthorIdentifiers() {
-	ticker := time.NewTicker(as.authorRefreshInterval)
 	go func() {
-		for range ticker.C {
+		for range as.refreshTicker.C {
 			err := as.LoadAuthorIdentifiers()
 			if err != nil { //log and use the map in memory
 				log.Errorf("Error on author identifier list refresh attempt %v", err)
 			} else {
 				log.Infof("Author identifier list has been refreshed")
 			}
-
 		}
 	}()
 
