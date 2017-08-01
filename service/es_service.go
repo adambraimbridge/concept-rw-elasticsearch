@@ -194,6 +194,11 @@ func (es *esService) DeleteData(ctx context.Context, conceptType string, uuid st
 		Id(uuid).
 		Do(ctx)
 
+
+	if elastic.IsNotFound(err) {
+		return &elastic.DeleteResponse{Found: false}, nil
+	}
+
 	if err != nil {
 		var status string
 		switch err.(type) {
@@ -207,9 +212,6 @@ func (es *esService) DeleteData(ctx context.Context, conceptType string, uuid st
 			Error("Failed operation to Elasticsearch")
 	}
 
-	if elastic.IsNotFound(err) {
-		return &elastic.DeleteResponse{Found: false}, nil
-	}
 	return resp, err
 }
 
