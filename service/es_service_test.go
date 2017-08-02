@@ -277,14 +277,7 @@ func TestDeleteNotFoundConcept(t *testing.T) {
 
 	assert.False(t, resp.Found, "document is not found")
 
-	assert.Equal(t, log.ErrorLevel, hook.LastEntry().Level)
-	assert.Equal(t, "Failed operation to Elasticsearch", hook.LastEntry().Message)
-	assert.Equal(t, conceptType+"s", hook.LastEntry().Data[conceptTypeField])
-	assert.Equal(t, testUuid, hook.LastEntry().Data[uuidField])
-	assert.EqualError(t, hook.LastEntry().Data["error"].(error), "elastic: Error 404 (Not Found)")
-	assert.Equal(t, "404", hook.LastEntry().Data[statusField])
-	assert.Equal(t, "delete", hook.LastEntry().Data[operationField])
-	assert.Equal(t, testTID, hook.LastEntry().Data[tid.TransactionIDKey])
+	assert.Empty(t, hook.AllEntries(), "It logged nothing")
 }
 
 func TestDeleteWithGenericError(t *testing.T) {
