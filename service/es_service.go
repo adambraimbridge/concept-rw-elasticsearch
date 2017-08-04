@@ -25,6 +25,8 @@ const writeOperation = "write"
 const deleteOperation = "delete"
 const unknownStatus = "unknown"
 
+const tidNotFound = "not found"
+
 type esService struct {
 	sync.RWMutex
 	elasticClient       *elastic.Client
@@ -125,9 +127,8 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 		WithField(operationField, writeOperation)
 
 	transactionID, err := tid.GetTransactionIDFromContext(ctx)
-
 	if err != nil {
-		loadDataLog.WithError(err).Warn("Transaction ID not found")
+		transactionID = tidNotFound
 	}
 	loadDataLog = loadDataLog.WithField(tid.TransactionIDKey, transactionID)
 
@@ -191,9 +192,10 @@ func (es *esService) CleanupData(ctx context.Context, conceptType string, concep
 	cleanupDataLog := log.WithField(prefUUIDField, concept.PreferredUUID()).WithField(conceptTypeField, conceptType)
 	transactionID, err := tid.GetTransactionIDFromContext(ctx)
 	if err != nil {
-		cleanupDataLog.WithError(err).Warn("Transaction ID not found for cleaning up data")
+		transactionID = tidNotFound
 	}
 	cleanupDataLog = cleanupDataLog.WithField(tid.TransactionIDKey, transactionID)
+
 	for _, uuid := range concept.ConcordedUUIDs() {
 		cleanupDataLog.WithField(uuidField, uuid).Info("Cleaning up concorded uuids")
 		_, err := es.DeleteData(ctx, conceptType, uuid)
@@ -209,9 +211,8 @@ func (es *esService) DeleteData(ctx context.Context, conceptType string, uuid st
 		WithField(operationField, deleteOperation)
 
 	transactionID, err := tid.GetTransactionIDFromContext(ctx)
-
 	if err != nil {
-		deleteDataLog.WithError(err).Warn("Transaction ID not found")
+		transactionID = tidNotFound
 	}
 	deleteDataLog = deleteDataLog.WithField(tid.TransactionIDKey, transactionID)
 
