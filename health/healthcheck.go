@@ -7,15 +7,15 @@ import (
 
 	"github.com/Financial-Times/concept-rw-elasticsearch/service"
 	fthealth "github.com/Financial-Times/go-fthealth/v1_1"
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 type HealthService struct {
-	esHealthService service.EsHealthServiceI
+	esHealthService service.EsService
 	authorService   service.AuthorService
 }
 
-func NewHealthService(esHealthService service.EsHealthServiceI, authorService service.AuthorService) *HealthService {
+func NewHealthService(esHealthService service.EsService, authorService service.AuthorService) *HealthService {
 	return &HealthService{
 		esHealthService: esHealthService,
 		authorService:   authorService,
@@ -148,7 +148,6 @@ func (service *HealthService) GoodToGo(writer http.ResponseWriter, req *http.Req
 			return
 		}
 	}
-
 }
 
 //HealthDetails returns the response from elasticsearch service /__health endpoint - describing the cluster health

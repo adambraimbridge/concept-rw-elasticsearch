@@ -14,6 +14,7 @@ type ConceptModel struct {
 	UUID                   string                 `json:"uuid"`
 	DirectType             string                 `json:"type"`
 	PrefLabel              string                 `json:"prefLabel"`
+	Authority              string                 `json:"authority,omitempty"`
 	Aliases                []string               `json:"aliases,omitempty"`
 	AlternativeIdentifiers map[string]interface{} `json:"alternativeIdentifiers,omitempty"`
 }
@@ -32,12 +33,13 @@ type SourceConcept struct {
 }
 
 type EsConceptModel struct {
-	Id         string   `json:"id"`
-	ApiUrl     string   `json:"apiUrl"`
-	PrefLabel  string   `json:"prefLabel"`
-	Types      []string `json:"types"`
-	DirectType string   `json:"directType"`
-	Aliases    []string `json:"aliases,omitempty"`
+	Id          string   `json:"id"`
+	ApiUrl      string   `json:"apiUrl"`
+	PrefLabel   string   `json:"prefLabel"`
+	Types       []string `json:"types"`
+	Authorities []string `json:"authorities"`
+	DirectType  string   `json:"directType"`
+	Aliases     []string `json:"aliases,omitempty"`
 }
 
 type EsPersonConceptModel struct {
@@ -55,6 +57,11 @@ func (c ConceptModel) PreferredUUID() string {
 
 func (c ConceptModel) GetAuthorities() []string {
 	var authorities []string
+
+	if c.AlternativeIdentifiers == nil && c.Authority != "" {
+		return []string{c.Authority}
+	}
+
 	for authority := range c.AlternativeIdentifiers {
 		if authority == "uuids" {
 			continue // exclude the "uuids" alternativeIdentifier

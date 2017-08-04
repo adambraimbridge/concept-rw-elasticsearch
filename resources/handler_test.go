@@ -8,6 +8,8 @@ import (
 	"reflect"
 	"testing"
 
+	"context"
+
 	"github.com/Financial-Times/concept-rw-elasticsearch/service"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
@@ -69,9 +71,9 @@ func TestLoadData(t *testing.T) {
 			path:    "/valid-type/8ff7dfef-0330-3de0-b37a-2d6aa9c98580",
 		},
 		{
-			name:    "Path contains no type",
+			name:    "Path contains unsupported concept type",
 			payload: `{"uuid":"different-uuid","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report","type":"Genre"}`,
-			status:  http.StatusBadRequest,
+			status:  http.StatusNotFound,
 			msg:     `{"message":"Unsupported or invalid concept type"}`,
 			path:    "/invalid-type/8ff7dfef-0330-3de0-b37a-2d6aa9c98580",
 		},
@@ -130,6 +132,13 @@ func TestLoadData(t *testing.T) {
 			status:  http.StatusBadRequest,
 			msg:     `{"message":"Request body is not in the expected concept model format"}`,
 			path:    "/bulk/valid-type/8ff7dfef-0330-3de0-b37a-2d6aa9c98580",
+		},
+		{
+			name:    "Bulk request unsupported concept type",
+			payload: `{"uuid":"8ff7dfef-0330-3de0-b37a-2d6aa9c98580","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report","type":"Genre"}`,
+			status:  http.StatusNotFound,
+			msg:     `{"message":"Unsupported or invalid concept type"}`,
+			path:    "/bulk/invalid-type/8ff7dfef-0330-3de0-b37a-2d6aa9c98580",
 		},
 		{
 			name:    "Bulk path contains different uuid to body",
@@ -393,14 +402,15 @@ type dummyEsService struct {
 	source       *json.RawMessage
 }
 
-func (service *dummyEsService) LoadData(conceptType string, uuid string, payload interface{}) (*elastic.IndexResponse, error) {
+func (service *dummyEsService) LoadData(ctx context.Context, conceptType string, uuid string, payload interface{}) (*elastic.IndexResponse, error) {
 	if service.returnsError != nil {
 		return nil, service.returnsError
 	}
 	return &elastic.IndexResponse{}, nil
 }
 
-func (service *dummyEsService) CleanupData(conceptType string, concept service.Concept) {}
+func (service *dummyEsService) CleanupData(ctx context.Context, conceptType string, concept service.Concept) {
+}
 
 func (service *dummyEsService) ReadData(conceptType string, uuid string) (*elastic.GetResult, error) {
 	if service.returnsError != nil {
@@ -409,7 +419,7 @@ func (service *dummyEsService) ReadData(conceptType string, uuid string) (*elast
 	return &elastic.GetResult{Found: service.found, Source: service.source}, nil
 }
 
-func (service *dummyEsService) DeleteData(conceptType string, uuid string) (*elastic.DeleteResponse, error) {
+func (service *dummyEsService) DeleteData(ctx context.Context, conceptType string, uuid string) (*elastic.DeleteResponse, error) {
 	if service.returnsError != nil {
 		return nil, service.returnsError
 	}
@@ -420,11 +430,19 @@ func (service *dummyEsService) LoadBulkData(conceptType string, uuid string, pay
 
 }
 
+func (service *dummyEsService) IsIndexReadOnly() (bool, string, error) {
+	return true, "", nil
+}
+
 func (service *dummyEsService) CloseBulkProcessor() error {
 	if service.returnsError != nil {
 		return service.returnsError
 	}
 	return nil
+}
+
+func (service *dummyEsService) GetClusterHealth() (*elastic.ClusterHealthResponse, error) {
+	return nil, nil
 }
 
 type dummyAuthorService struct {

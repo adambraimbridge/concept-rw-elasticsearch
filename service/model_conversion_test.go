@@ -14,6 +14,8 @@ var testAggregateConceptModelJSON = `{"prefUUID":"56388858-38d6-4dfc-a001-506394
 
 var testConceptModelJSON = `{"uuid":"2384fa7a-d514-3d6a-a0ea-3a711f66d0d8","type":"PublicCompany","properName":"Apple, Inc.","prefLabel":"Apple, Inc.","legalName":"Apple Inc.","shortName":"Apple","hiddenLabel":"APPLE INC","alternativeIdentifiers":{"TME":["TnN0ZWluX09OX0ZvcnR1bmVDb21wYW55X0FBUEw=-T04="],"uuids":["2384fa7a-d514-3d6a-a0ea-3a711f66d0d8","2abff0bd-544d-31c3-899b-fba2f60d53dd"],"factsetIdentifier":"000C7F-E","leiCode":"HWUPKR0MPOU8FGXBT394"},"formerNames":["Apple Computer, Inc."],"aliases":["Apple Inc","Apple Computers","Apple","Apple Canada","Apple Computer","Apple Computer, Inc.","APPLE INC","Apple Incorporated","Apple Computer Inc","Apple Inc.","Apple, Inc."],"industryClassification":"7a01c847-a9bd-33be-b991-c6fbd8871a46"}`
 
+var testIntermediateConceptModelJSON = `{"uuid":"7e3f1354-53ba-3c3e-b9bb-5fcb8941df8c","prefLabel":"ICOmedy","type":"AlphavilleSeries","authority":"TME","authorityValue":"NDQ1NjhiMzktMjJmNy00OWEzLWExNDctNDFiNDk4OGU2MTdj-QWxwaGF2aWxsZVNlcmllc0NsYXNzaWZpY2F0aW9u"}`
+
 func newTestModelPopulator() ModelPopulator {
 	testAuthorService := curatedAuthorService{
 		httpClient:  nil,
@@ -25,7 +27,6 @@ func newTestModelPopulator() ModelPopulator {
 }
 
 func TestConvertToESConceptModel(t *testing.T) {
-	assert := assert.New(t)
 	testModelPopulator := newTestModelPopulator()
 
 	tests := []struct {
@@ -37,6 +38,11 @@ func TestConvertToESConceptModel(t *testing.T) {
 				UUID:       "2384fa7a-d514-3d6a-a0ea-3a711f66d0d8",
 				DirectType: "PublicCompany",
 				PrefLabel:  "Apple, Inc.",
+				AlternativeIdentifiers: map[string]interface{}{
+					"Factset": "789",
+					"TME":     []string{"123", "456"},
+					"uuids":   []string{"uuid"},
+				},
 				Aliases: []string{"Apple Inc", "Apple Computers",
 					"Apple",
 					"Apple Canada",
@@ -59,7 +65,8 @@ func TestConvertToESConceptModel(t *testing.T) {
 					"http://www.ft.com/ontology/company/Company",
 					"http://www.ft.com/ontology/company/PublicCompany",
 				},
-				DirectType: "http://www.ft.com/ontology/company/PublicCompany",
+				Authorities: []string{"Factset", "TME"},
+				DirectType:  "http://www.ft.com/ontology/company/PublicCompany",
 				Aliases: []string{
 					"Apple Inc",
 					"Apple Computers",
@@ -101,17 +108,17 @@ func TestConvertToESConceptModel(t *testing.T) {
 
 	for _, testModel := range tests {
 		esModel := testModelPopulator.ConvertConceptToESConceptModel(testModel.conceptModel, "organisations").(EsConceptModel)
-		assert.Equal(testModel.esConceptModel.Id, esModel.Id, fmt.Sprintf("Expected Id %s differs from actual id %s ", testModel.esConceptModel.Id, esModel.Id))
-		assert.Equal(testModel.esConceptModel.ApiUrl, esModel.ApiUrl, fmt.Sprintf("Expected ApiUrl %s differs from actual ApiUrl %s ", testModel.esConceptModel.ApiUrl, esModel.ApiUrl))
-		assert.Equal(testModel.esConceptModel.DirectType, esModel.DirectType, fmt.Sprintf("Expected DirectType %s differs from actual DirectType %s ", testModel.esConceptModel.DirectType, esModel.DirectType))
-		assert.Equal(testModel.esConceptModel.PrefLabel, esModel.PrefLabel, fmt.Sprintf("Expected PrefLabel %s differs from actual PrefLabel %s ", testModel.esConceptModel.PrefLabel, esModel.PrefLabel))
-		assert.Equal(testModel.esConceptModel.Types, esModel.Types, fmt.Sprintf("Expected Types %s differ from actual Types %s ", testModel.esConceptModel.Types, esModel.Types))
-		assert.Equal(testModel.esConceptModel.Aliases, esModel.Aliases, fmt.Sprintf("Expected Aliases %s differ from actual Aliases %s ", testModel.esConceptModel.Aliases, esModel.Aliases))
+		assert.Equal(t, testModel.esConceptModel.Id, esModel.Id, fmt.Sprintf("Expected Id %s differs from actual id %s ", testModel.esConceptModel.Id, esModel.Id))
+		assert.Equal(t, testModel.esConceptModel.ApiUrl, esModel.ApiUrl, fmt.Sprintf("Expected ApiUrl %s differs from actual ApiUrl %s ", testModel.esConceptModel.ApiUrl, esModel.ApiUrl))
+		assert.Equal(t, testModel.esConceptModel.DirectType, esModel.DirectType, fmt.Sprintf("Expected DirectType %s differs from actual DirectType %s ", testModel.esConceptModel.DirectType, esModel.DirectType))
+		assert.Equal(t, testModel.esConceptModel.PrefLabel, esModel.PrefLabel, fmt.Sprintf("Expected PrefLabel %s differs from actual PrefLabel %s ", testModel.esConceptModel.PrefLabel, esModel.PrefLabel))
+		assert.Equal(t, testModel.esConceptModel.Types, esModel.Types, fmt.Sprintf("Expected Types %s differ from actual Types %s ", testModel.esConceptModel.Types, esModel.Types))
+		assert.Equal(t, testModel.esConceptModel.Aliases, esModel.Aliases, fmt.Sprintf("Expected Aliases %s differ from actual Aliases %s ", testModel.esConceptModel.Aliases, esModel.Aliases))
+		assert.Subset(t, testModel.esConceptModel.Authorities, esModel.Authorities, fmt.Sprintf("Expected Authorities %s differ from actual Authorities %s ", testModel.esConceptModel.Authorities, esModel.Authorities))
 	}
 }
 
 func TestConvertAggregateConceptToESConceptModel(t *testing.T) {
-	assert := assert.New(t)
 	testModelPopulator := newTestModelPopulator()
 
 	tests := []struct {
@@ -158,7 +165,8 @@ func TestConvertAggregateConceptToESConceptModel(t *testing.T) {
 					"http://www.ft.com/ontology/company/Company",
 					"http://www.ft.com/ontology/company/PublicCompany",
 				},
-				DirectType: "http://www.ft.com/ontology/company/PublicCompany",
+				Authorities: []string{"TME", "Factset"},
+				DirectType:  "http://www.ft.com/ontology/company/PublicCompany",
 				Aliases: []string{
 					"Apple Inc",
 					"Apple Computers",
@@ -200,12 +208,13 @@ func TestConvertAggregateConceptToESConceptModel(t *testing.T) {
 
 	for _, testModel := range tests {
 		esModel := testModelPopulator.ConvertAggregateConceptToESConceptModel(testModel.conceptModel, "organisations").(EsConceptModel)
-		assert.Equal(testModel.esConceptModel.Id, esModel.Id, fmt.Sprintf("Expected Id %s differs from actual id %s ", testModel.esConceptModel.Id, esModel.Id))
-		assert.Equal(testModel.esConceptModel.ApiUrl, esModel.ApiUrl, fmt.Sprintf("Expected ApiUrl %s differs from actual ApiUrl %s ", testModel.esConceptModel.ApiUrl, esModel.ApiUrl))
-		assert.Equal(testModel.esConceptModel.DirectType, esModel.DirectType, fmt.Sprintf("Expected DirectType %s differs from actual DirectType %s ", testModel.esConceptModel.DirectType, esModel.DirectType))
-		assert.Equal(testModel.esConceptModel.PrefLabel, esModel.PrefLabel, fmt.Sprintf("Expected PrefLabel %s differs from actual PrefLabel %s ", testModel.esConceptModel.PrefLabel, esModel.PrefLabel))
-		assert.Equal(testModel.esConceptModel.Types, esModel.Types, fmt.Sprintf("Expected Types %s differ from actual Types %s ", testModel.esConceptModel.Types, esModel.Types))
-		assert.Equal(testModel.esConceptModel.Aliases, esModel.Aliases, fmt.Sprintf("Expected Aliases %s differ from actual Aliases %s ", testModel.esConceptModel.Aliases, esModel.Aliases))
+		assert.Equal(t, testModel.esConceptModel.Id, esModel.Id, fmt.Sprintf("Expected Id %s differs from actual id %s ", testModel.esConceptModel.Id, esModel.Id))
+		assert.Equal(t, testModel.esConceptModel.ApiUrl, esModel.ApiUrl, fmt.Sprintf("Expected ApiUrl %s differs from actual ApiUrl %s ", testModel.esConceptModel.ApiUrl, esModel.ApiUrl))
+		assert.Equal(t, testModel.esConceptModel.DirectType, esModel.DirectType, fmt.Sprintf("Expected DirectType %s differs from actual DirectType %s ", testModel.esConceptModel.DirectType, esModel.DirectType))
+		assert.Equal(t, testModel.esConceptModel.PrefLabel, esModel.PrefLabel, fmt.Sprintf("Expected PrefLabel %s differs from actual PrefLabel %s ", testModel.esConceptModel.PrefLabel, esModel.PrefLabel))
+		assert.Equal(t, testModel.esConceptModel.Types, esModel.Types, fmt.Sprintf("Expected Types %s differ from actual Types %s ", testModel.esConceptModel.Types, esModel.Types))
+		assert.Equal(t, testModel.esConceptModel.Aliases, esModel.Aliases, fmt.Sprintf("Expected Aliases %s differ from actual Aliases %s ", testModel.esConceptModel.Aliases, esModel.Aliases))
+		assert.Subset(t, testModel.esConceptModel.Authorities, esModel.Authorities, fmt.Sprintf("Expected Authorities %s differ from actual Authorities %s ", testModel.esConceptModel.Authorities, esModel.Authorities))
 	}
 }
 
@@ -222,10 +231,28 @@ func TestConceptFuncsForConceptModel(t *testing.T) {
 		assert.Contains(t, actual, val)
 	}
 
+	actual = concept.ConcordedUUIDs()
+	assert.Empty(t, actual)
+	assert.Equal(t, "2384fa7a-d514-3d6a-a0ea-3a711f66d0d8", concept.PreferredUUID())
+}
+
+func TestConceptFuncsForIntermediateConceptModel(t *testing.T) {
+	concept := ConceptModel{}
+	err := json.Unmarshal([]byte(testIntermediateConceptModelJSON), &concept)
+	require.NoError(t, err)
+
+	expected := []string{"TME"}
+	actual := concept.GetAuthorities()
+
+	assert.Len(t, actual, 1)
+	for _, val := range expected {
+		assert.Contains(t, actual, val)
+	}
+
 	expected = []string{}
 	actual = concept.ConcordedUUIDs()
 	assert.Equal(t, expected, actual)
-	assert.Equal(t, "2384fa7a-d514-3d6a-a0ea-3a711f66d0d8", concept.PreferredUUID())
+	assert.Equal(t, "7e3f1354-53ba-3c3e-b9bb-5fcb8941df8c", concept.PreferredUUID())
 }
 
 func TestConceptFuncsForAggregatedConceptModel(t *testing.T) {

@@ -12,10 +12,10 @@ import (
 	"github.com/Financial-Times/concept-rw-elasticsearch/service"
 	"github.com/Financial-Times/http-handlers-go/httphandlers"
 	status "github.com/Financial-Times/service-status-go/httphandlers"
-	log "github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
 	"github.com/jawher/mow.cli"
 	"github.com/rcrowley/go-metrics"
+	log "github.com/sirupsen/logrus"
 	"gopkg.in/olivere/elastic.v5"
 )
 
