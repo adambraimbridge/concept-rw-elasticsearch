@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"context"
+
 	"github.com/Financial-Times/concept-rw-elasticsearch/service"
 	tid "github.com/Financial-Times/transactionid-utils-go"
 	"github.com/gorilla/mux"
@@ -84,8 +85,11 @@ func (h *Handler) LoadBulkData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	transactionID := tid.GetTransactionIDFromRequest(r)
+	ctx := tid.TransactionAwareContext(context.Background(), transactionID)
+
 	h.elasticService.LoadBulkData(conceptType, concept.PreferredUUID(), *payload)
-	h.elasticService.CleanupData(context.Background(), conceptType, concept)
+	h.elasticService.CleanupData(ctx, conceptType, concept)
 	writeMessage(w, "Concept written successfully", http.StatusOK)
 }
 

@@ -3,12 +3,13 @@ package service
 import (
 	"context"
 	"errors"
+	"strconv"
+	"strings"
 	"sync"
 
 	tid "github.com/Financial-Times/transactionid-utils-go"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/olivere/elastic.v5"
-	"strconv"
 )
 
 var (
@@ -23,6 +24,8 @@ const operationField = "operation"
 const writeOperation = "write"
 const deleteOperation = "delete"
 const unknownStatus = "unknown"
+
+const tidNotFound = "not found"
 
 type esService struct {
 	sync.RWMutex
@@ -40,6 +43,7 @@ type EsService interface {
 	CleanupData(ctx context.Context, conceptType string, concept Concept)
 	CloseBulkProcessor() error
 	GetClusterHealth() (*elastic.ClusterHealthResponse, error)
+	IsIndexReadOnly() (bool, string, error)
 }
 
 func NewEsService(ch chan *elastic.Client, indexName string, bulkProcessorConfig *BulkProcessorConfig) EsService {
@@ -82,22 +86,54 @@ func (es *esService) GetClusterHealth() (*elastic.ClusterHealthResponse, error) 
 	return es.elasticClient.ClusterHealth().Do(context.Background())
 }
 
+func (es *esService) IsIndexReadOnly() (bool, string, error) {
+	es.RLock()
+	defer es.RUnlock()
+
+	if err := es.checkElasticClient(); err != nil {
+		return false, "", err
+	}
+
+	resp, err := es.elasticClient.IndexGetSettings(es.indexName).Do(context.Background())
+	if err != nil {
+		return false, "", err
+	}
+
+	for k, v := range resp {
+		if strings.HasPrefix(k, es.indexName) {
+			readOnly, err := es.isIndexReadOnly(v.Settings)
+			return readOnly, k, err
+		}
+	}
+
+	return false, "", errors.New("No index settings found")
+}
+
+func (es *esService) isIndexReadOnly(settings map[string]interface{}) (bool, error) {
+	indexSettings := settings["index"].(map[string]interface{})
+	if block, hasBlockSetting := indexSettings["blocks"]; hasBlockSetting {
+		if writeBlocked, hasWriteBlockSetting := block.(map[string]interface{})["write"]; hasWriteBlockSetting {
+			readOnly, err := strconv.ParseBool(writeBlocked.(string))
+			return readOnly, err
+		}
+	}
+
+	return false, nil
+}
+
 func (es *esService) LoadData(ctx context.Context, conceptType string, uuid string, payload interface{}) (*elastic.IndexResponse, error) {
 	loadDataLog := log.WithField(conceptTypeField, conceptType).
 		WithField(uuidField, uuid).
 		WithField(operationField, writeOperation)
 
 	transactionID, err := tid.GetTransactionIDFromContext(ctx)
-
 	if err != nil {
-		loadDataLog.WithError(err).Warn("Transaction ID not found")
+		transactionID = tidNotFound
 	}
 	loadDataLog = loadDataLog.WithField(tid.TransactionIDKey, transactionID)
 
 	if err := es.checkElasticClient(); err != nil {
-		loadDataLog.WithError(err).
-			WithField(statusField, unknownStatus).
-			Error("Failed operation to Elasticsearch")
+		loadDataLog.WithError(err).WithField(statusField, unknownStatus).Error("Failed operation to Elasticsearch")
 		return nil, err
 	}
 
@@ -116,9 +152,8 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 		default:
 			status = unknownStatus
 		}
-		loadDataLog.WithError(err).
-			WithField(statusField, status).
-			Error("Failed operation to Elasticsearch")
+
+		loadDataLog.WithError(err).WithField(statusField, status).Error("Failed operation to Elasticsearch")
 	}
 
 	return resp, err
@@ -157,9 +192,10 @@ func (es *esService) CleanupData(ctx context.Context, conceptType string, concep
 	cleanupDataLog := log.WithField(prefUUIDField, concept.PreferredUUID()).WithField(conceptTypeField, conceptType)
 	transactionID, err := tid.GetTransactionIDFromContext(ctx)
 	if err != nil {
-		cleanupDataLog.WithError(err).Warn("Transaction ID not found for cleaning up data")
+		transactionID = tidNotFound
 	}
 	cleanupDataLog = cleanupDataLog.WithField(tid.TransactionIDKey, transactionID)
+
 	for _, uuid := range concept.ConcordedUUIDs() {
 		cleanupDataLog.WithField(uuidField, uuid).Info("Cleaning up concorded uuids")
 		_, err := es.DeleteData(ctx, conceptType, uuid)
@@ -175,9 +211,8 @@ func (es *esService) DeleteData(ctx context.Context, conceptType string, uuid st
 		WithField(operationField, deleteOperation)
 
 	transactionID, err := tid.GetTransactionIDFromContext(ctx)
-
 	if err != nil {
-		deleteDataLog.WithError(err).Warn("Transaction ID not found")
+		transactionID = tidNotFound
 	}
 	deleteDataLog = deleteDataLog.WithField(tid.TransactionIDKey, transactionID)
 
@@ -193,7 +228,6 @@ func (es *esService) DeleteData(ctx context.Context, conceptType string, uuid st
 		Type(conceptType).
 		Id(uuid).
 		Do(ctx)
-
 
 	if elastic.IsNotFound(err) {
 		return &elastic.DeleteResponse{Found: false}, nil

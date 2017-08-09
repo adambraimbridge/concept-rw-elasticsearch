@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"context"
+
 	"github.com/Financial-Times/concept-rw-elasticsearch/service"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
@@ -427,6 +428,10 @@ func (service *dummyEsService) DeleteData(ctx context.Context, conceptType strin
 
 func (service *dummyEsService) LoadBulkData(conceptType string, uuid string, payload interface{}) {
 
+}
+
+func (service *dummyEsService) IsIndexReadOnly() (bool, string, error) {
+	return true, "", nil
 }
 
 func (service *dummyEsService) CloseBulkProcessor() error {
