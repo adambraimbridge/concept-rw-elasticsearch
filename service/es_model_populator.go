@@ -5,6 +5,7 @@ import (
 
 	"github.com/Financial-Times/neo-model-utils-go/mapper"
 	log "github.com/sirupsen/logrus"
+	"time"
 )
 
 const (
@@ -77,6 +78,7 @@ func newESConceptModel(uuid string, conceptType string, directType string, alias
 	esModel.Aliases = aliases
 	esModel.PrefLabel = prefLabel
 	esModel.Authorities = authorities
+	esModel.LastModifiedEpoch = time.Now().Unix()
 	return esModel
 }
 
