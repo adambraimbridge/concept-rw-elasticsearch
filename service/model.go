@@ -41,6 +41,7 @@ type EsConceptModel struct {
 	DirectType        string   `json:"directType"`
 	Aliases           []string `json:"aliases,omitempty"`
 	LastModifiedEpoch int64    `json:"lastModifiedEpoch"`
+	PublishReference  string   `json:"publishReference"`
 }
 
 type EsPersonConceptModel struct {

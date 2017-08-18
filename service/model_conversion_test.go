@@ -6,6 +6,7 @@ import (
 	"sync"
 	"testing"
 
+	tid "github.com/Financial-Times/transactionid-utils-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"time"
@@ -108,7 +109,9 @@ func TestConvertToESConceptModel(t *testing.T) {
 	}
 
 	for _, testModel := range tests {
-		actual, _ := testModelPopulator.ConvertConceptToESConceptModel(testModel.conceptModel, "organisations")
+		testTID := tid.NewTransactionID()
+
+		actual, _ := testModelPopulator.ConvertConceptToESConceptModel(testModel.conceptModel, "organisations", testTID)
 		esModel := actual.(EsConceptModel)
 		assert.Equal(t, testModel.esConceptModel.Id, esModel.Id, fmt.Sprintf("Expected Id %s differs from actual id %s ", testModel.esConceptModel.Id, esModel.Id))
 		assert.Equal(t, testModel.esConceptModel.ApiUrl, esModel.ApiUrl, fmt.Sprintf("Expected ApiUrl %s differs from actual ApiUrl %s ", testModel.esConceptModel.ApiUrl, esModel.ApiUrl))
@@ -118,6 +121,7 @@ func TestConvertToESConceptModel(t *testing.T) {
 		assert.Equal(t, testModel.esConceptModel.Aliases, esModel.Aliases, fmt.Sprintf("Expected Aliases %s differ from actual Aliases %s ", testModel.esConceptModel.Aliases, esModel.Aliases))
 		assert.Subset(t, testModel.esConceptModel.Authorities, esModel.Authorities, fmt.Sprintf("Expected Authorities %s differ from actual Authorities %s ", testModel.esConceptModel.Authorities, esModel.Authorities))
 		assert.WithinDuration(t, time.Now(), time.Unix(esModel.LastModifiedEpoch, 0), 3*time.Second)
+		assert.Equal(t, testTID, esModel.PublishReference)
 	}
 }
 
@@ -210,7 +214,9 @@ func TestConvertAggregateConceptToESConceptModel(t *testing.T) {
 	}
 
 	for _, testModel := range tests {
-		actual, _ := testModelPopulator.ConvertAggregateConceptToESConceptModel(testModel.conceptModel, "organisations")
+		testTID := tid.NewTransactionID()
+
+		actual, _ := testModelPopulator.ConvertAggregateConceptToESConceptModel(testModel.conceptModel, "organisations", testTID)
 		esModel := actual.(EsConceptModel)
 		assert.Equal(t, testModel.esConceptModel.Id, esModel.Id, fmt.Sprintf("Expected Id %s differs from actual id %s ", testModel.esConceptModel.Id, esModel.Id))
 		assert.Equal(t, testModel.esConceptModel.ApiUrl, esModel.ApiUrl, fmt.Sprintf("Expected ApiUrl %s differs from actual ApiUrl %s ", testModel.esConceptModel.ApiUrl, esModel.ApiUrl))
@@ -220,6 +226,7 @@ func TestConvertAggregateConceptToESConceptModel(t *testing.T) {
 		assert.Equal(t, testModel.esConceptModel.Aliases, esModel.Aliases, fmt.Sprintf("Expected Aliases %s differ from actual Aliases %s ", testModel.esConceptModel.Aliases, esModel.Aliases))
 		assert.Subset(t, testModel.esConceptModel.Authorities, esModel.Authorities, fmt.Sprintf("Expected Authorities %s differ from actual Authorities %s ", testModel.esConceptModel.Authorities, esModel.Authorities))
 		assert.WithinDuration(t, time.Now(), time.Unix(esModel.LastModifiedEpoch, 0), 3*time.Second)
+		assert.Equal(t, testTID, esModel.PublishReference)
 	}
 }
 
@@ -336,7 +343,9 @@ func TestConvertPersonToESConceptModel(t *testing.T) {
 	}
 
 	for _, testModel := range tests {
-		actual, _ := testModelPopulator.ConvertConceptToESConceptModel(testModel.conceptModel, "people")
+		testTID := tid.NewTransactionID()
+
+		actual, _ := testModelPopulator.ConvertConceptToESConceptModel(testModel.conceptModel, "people", testTID)
 		esModel := actual.(EsPersonConceptModel)
 		assert.Equal(testModel.esPersonConceptModel.Id, esModel.Id, fmt.Sprintf("Expected Id %s differs from actual id %s ", testModel.esPersonConceptModel.Id, esModel.Id))
 		assert.Equal(testModel.esPersonConceptModel.ApiUrl, esModel.ApiUrl, fmt.Sprintf("Expected ApiUrl %s differs from actual ApiUrl %s ", testModel.esPersonConceptModel.ApiUrl, esModel.ApiUrl))
@@ -346,6 +355,7 @@ func TestConvertPersonToESConceptModel(t *testing.T) {
 		assert.Equal(testModel.esPersonConceptModel.Aliases, esModel.Aliases, fmt.Sprintf("Expected Aliases %s differ from actual Aliases %s ", testModel.esPersonConceptModel.Aliases, esModel.Aliases))
 		assert.Equal(testModel.esPersonConceptModel.IsFTAuthor, esModel.IsFTAuthor, fmt.Sprintf("Expected IsFTAuthor %s differ from actual IsFTAuthor %s ", testModel.esPersonConceptModel.IsFTAuthor, esModel.IsFTAuthor))
 		assert.WithinDuration(time.Now(), time.Unix(esModel.LastModifiedEpoch, 0), 3*time.Second)
+		assert.Equal(testTID, esModel.PublishReference)
 	}
 }
 
@@ -366,7 +376,7 @@ func TestConvertPersonToESConceptModelNoAuthors(t *testing.T) {
 		Aliases:    []string{},
 	}
 
-	actual, err := testModelPopulator.ConvertConceptToESConceptModel(conceptModel, "people")
+	actual, err := testModelPopulator.ConvertConceptToESConceptModel(conceptModel, "people", tid.NewTransactionID())
 	assert.Empty(actual, "expected empty model returned")
 	assert.EqualError(err, "Author list is unavailable", "expected an error for conversion")
 }

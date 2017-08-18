@@ -13,8 +13,8 @@ const (
 )
 
 type ModelPopulator interface {
-	ConvertConceptToESConceptModel(concept ConceptModel, conceptType string) (interface{}, error)
-	ConvertAggregateConceptToESConceptModel(concept AggregateConceptModel, conceptType string) (interface{}, error)
+	ConvertConceptToESConceptModel(concept ConceptModel, conceptType string, publishRef string) (interface{}, error)
+	ConvertAggregateConceptToESConceptModel(concept AggregateConceptModel, conceptType string, publishRef string) (interface{}, error)
 }
 
 type EsModelPopulator struct {
@@ -25,8 +25,8 @@ func NewEsModelPopulator(authorService AuthorService) ModelPopulator {
 	return &EsModelPopulator{authorService}
 }
 
-func (mp *EsModelPopulator) ConvertConceptToESConceptModel(concept ConceptModel, conceptType string) (interface{}, error) {
-	esModel := convertToESConceptModel(concept, conceptType)
+func (mp *EsModelPopulator) ConvertConceptToESConceptModel(concept ConceptModel, conceptType string, publishRef string) (interface{}, error) {
+	esModel := convertToESConceptModel(concept, conceptType, publishRef)
 
 	switch conceptType {
 	case PERSON:
@@ -40,8 +40,8 @@ func (mp *EsModelPopulator) ConvertConceptToESConceptModel(concept ConceptModel,
 	}
 }
 
-func (mp *EsModelPopulator) ConvertAggregateConceptToESConceptModel(concept AggregateConceptModel, conceptType string) (interface{}, error) {
-	esModel := convertAggregateConceptToESConceptModel(concept, conceptType)
+func (mp *EsModelPopulator) ConvertAggregateConceptToESConceptModel(concept AggregateConceptModel, conceptType string, publishRef string) (interface{}, error) {
+	esModel := convertAggregateConceptToESConceptModel(concept, conceptType, publishRef)
 
 	switch conceptType {
 	case PERSON:
@@ -55,15 +55,15 @@ func (mp *EsModelPopulator) ConvertAggregateConceptToESConceptModel(concept Aggr
 	}
 }
 
-func convertAggregateConceptToESConceptModel(concept AggregateConceptModel, conceptType string) EsConceptModel {
-	return newESConceptModel(concept.PrefUUID, conceptType, concept.DirectType, concept.Aliases, concept.GetAuthorities(), concept.PrefLabel)
+func convertAggregateConceptToESConceptModel(concept AggregateConceptModel, conceptType string, publishRef string) EsConceptModel {
+	return newESConceptModel(concept.PrefUUID, conceptType, concept.DirectType, concept.Aliases, concept.GetAuthorities(), concept.PrefLabel, publishRef)
 }
 
-func convertToESConceptModel(concept ConceptModel, conceptType string) EsConceptModel {
-	return newESConceptModel(concept.UUID, conceptType, concept.DirectType, concept.Aliases, concept.GetAuthorities(), concept.PrefLabel)
+func convertToESConceptModel(concept ConceptModel, conceptType string, publishRef string) EsConceptModel {
+	return newESConceptModel(concept.UUID, conceptType, concept.DirectType, concept.Aliases, concept.GetAuthorities(), concept.PrefLabel, publishRef)
 }
 
-func newESConceptModel(uuid string, conceptType string, directType string, aliases []string, authorities []string, prefLabel string) EsConceptModel {
+func newESConceptModel(uuid string, conceptType string, directType string, aliases []string, authorities []string, prefLabel string, publishRef string) EsConceptModel {
 	esModel := EsConceptModel{}
 	esModel.ApiUrl = mapper.APIURL(uuid, []string{directType}, "")
 	esModel.Id = mapper.IDURL(uuid)
@@ -79,6 +79,7 @@ func newESConceptModel(uuid string, conceptType string, directType string, alias
 	esModel.PrefLabel = prefLabel
 	esModel.Authorities = authorities
 	esModel.LastModifiedEpoch = time.Now().Unix()
+	esModel.PublishReference = publishRef
 	return esModel
 }
 
