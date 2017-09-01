@@ -40,7 +40,7 @@ type curatedAuthorService struct {
 	authorUUIDs            map[string]struct{}
 	authorLock             *sync.RWMutex
 	publishClusterUser     string
-	publishClusterpassword string
+	publishClusterPassword string
 	refreshTicker          *time.Ticker
 }
 
@@ -70,7 +70,7 @@ func (as *curatedAuthorService) LoadAuthorIdentifiers() error {
 	req.Header.Add("Content-Type", contentType)
 	req.Header.Add("X-Request-Id", tid)
 	req.Header.Add("User-Agent", "UPP concept-rw-elasticsearch")
-	req.SetBasicAuth(as.publishClusterUser, as.publishClusterpassword)
+	req.SetBasicAuth(as.publishClusterUser, as.publishClusterPassword)
 	log.WithField("transaction_id", tid).Info("Requesting author list from v1 authors transformer." + req.RequestURI)
 
 	resp, err := as.httpClient.Do(req)
@@ -131,7 +131,7 @@ func (as *curatedAuthorService) IsFTAuthor(uuid string) (bool, error) {
 
 func (as *curatedAuthorService) IsGTG() error {
 	req, err := http.NewRequest("GET", as.serviceURL+gtgPath, nil)
-	req.SetBasicAuth(as.publishClusterUser, as.publishClusterpassword)
+	req.SetBasicAuth(as.publishClusterUser, as.publishClusterPassword)
 	if err != nil {
 		return err
 	}
