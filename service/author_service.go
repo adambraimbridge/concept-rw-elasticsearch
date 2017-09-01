@@ -131,6 +131,7 @@ func (as *curatedAuthorService) IsFTAuthor(uuid string) (bool, error) {
 
 func (as *curatedAuthorService) IsGTG() error {
 	req, err := http.NewRequest("GET", as.serviceURL+gtgPath, nil)
+	req.SetBasicAuth(as.publishClusterUser, as.publishClusterpassword)
 	if err != nil {
 		return err
 	}
