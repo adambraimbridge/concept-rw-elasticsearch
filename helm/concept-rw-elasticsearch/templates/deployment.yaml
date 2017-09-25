@@ -47,6 +47,16 @@ spec:
             configMapKeyRef:
               name: global-config
               key: aws.region
+        - name: PUBLISH_CLUSTER_CREDENTIALS
+          valueFrom:
+            secretKeyRef:
+              name: global-secrets
+              key: upp.publish_cluster_basic_auth
+        - name: PUBLISH_CLUSTER_URL
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: upp.publish_cluster_url
         ports:
         - containerPort: 8080
         livenessProbe:
