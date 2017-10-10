@@ -120,8 +120,12 @@ func TestConvertToESConceptModel(t *testing.T) {
 		assert.Equal(t, testModel.esConceptModel.Types, esModel.Types, fmt.Sprintf("Expected Types %s differ from actual Types %s ", testModel.esConceptModel.Types, esModel.Types))
 		assert.Equal(t, testModel.esConceptModel.Aliases, esModel.Aliases, fmt.Sprintf("Expected Aliases %s differ from actual Aliases %s ", testModel.esConceptModel.Aliases, esModel.Aliases))
 		assert.Subset(t, testModel.esConceptModel.Authorities, esModel.Authorities, fmt.Sprintf("Expected Authorities %s differ from actual Authorities %s ", testModel.esConceptModel.Authorities, esModel.Authorities))
-		assert.WithinDuration(t, time.Now(), time.Unix(esModel.LastModifiedEpoch, 0), 3*time.Second)
 		assert.Equal(t, testTID, esModel.PublishReference)
+
+		actualLastModified, err := time.Parse(time.RFC3339, esModel.LastModified)
+		assert.NoError(t, err)
+		assert.WithinDuration(t, time.Now(), actualLastModified, 3*time.Second)
+
 	}
 }
 
@@ -225,8 +229,11 @@ func TestConvertAggregateConceptToESConceptModel(t *testing.T) {
 		assert.Equal(t, testModel.esConceptModel.Types, esModel.Types, fmt.Sprintf("Expected Types %s differ from actual Types %s ", testModel.esConceptModel.Types, esModel.Types))
 		assert.Equal(t, testModel.esConceptModel.Aliases, esModel.Aliases, fmt.Sprintf("Expected Aliases %s differ from actual Aliases %s ", testModel.esConceptModel.Aliases, esModel.Aliases))
 		assert.Subset(t, testModel.esConceptModel.Authorities, esModel.Authorities, fmt.Sprintf("Expected Authorities %s differ from actual Authorities %s ", testModel.esConceptModel.Authorities, esModel.Authorities))
-		assert.WithinDuration(t, time.Now(), time.Unix(esModel.LastModifiedEpoch, 0), 3*time.Second)
 		assert.Equal(t, testTID, esModel.PublishReference)
+
+		actualLastModified, err := time.Parse(time.RFC3339, esModel.LastModified)
+		assert.NoError(t, err)
+		assert.WithinDuration(t, time.Now(), actualLastModified, 3*time.Second)
 	}
 }
 
@@ -354,8 +361,11 @@ func TestConvertPersonToESConceptModel(t *testing.T) {
 		assert.Equal(testModel.esPersonConceptModel.Types, esModel.Types, fmt.Sprintf("Expected Types %s differ from actual Types %s ", testModel.esPersonConceptModel.Types, esModel.Types))
 		assert.Equal(testModel.esPersonConceptModel.Aliases, esModel.Aliases, fmt.Sprintf("Expected Aliases %s differ from actual Aliases %s ", testModel.esPersonConceptModel.Aliases, esModel.Aliases))
 		assert.Equal(testModel.esPersonConceptModel.IsFTAuthor, esModel.IsFTAuthor, fmt.Sprintf("Expected IsFTAuthor %s differ from actual IsFTAuthor %s ", testModel.esPersonConceptModel.IsFTAuthor, esModel.IsFTAuthor))
-		assert.WithinDuration(time.Now(), time.Unix(esModel.LastModifiedEpoch, 0), 3*time.Second)
 		assert.Equal(testTID, esModel.PublishReference)
+
+		actualLastModified, err := time.Parse(time.RFC3339, esModel.LastModified)
+		assert.NoError(err)
+		assert.WithinDuration(time.Now(), actualLastModified, 3*time.Second)
 	}
 }
 

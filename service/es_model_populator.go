@@ -78,7 +78,7 @@ func newESConceptModel(uuid string, conceptType string, directType string, alias
 	esModel.Aliases = aliases
 	esModel.PrefLabel = prefLabel
 	esModel.Authorities = authorities
-	esModel.LastModifiedEpoch = time.Now().Unix()
+	esModel.LastModified = time.Now().Format(time.RFC3339)
 	esModel.PublishReference = publishRef
 	return esModel
 }
