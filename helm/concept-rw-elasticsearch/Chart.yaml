@@ -1,0 +1,4 @@
+apiVersion: v1
+description: concept-rw-elasticsearch Helm chart for Kubernetes
+name: concept-rw-elasticsearch
+version: 0.0.0

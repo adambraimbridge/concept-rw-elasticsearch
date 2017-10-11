@@ -39,6 +39,10 @@ func (m *mockAuthorTransformerServer) startMockAuthorTransformerServer(t *testin
 	}).Methods("GET")
 
 	r.HandleFunc(gtgPath, func(w http.ResponseWriter, req *http.Request) {
+		user, password, ok := req.BasicAuth()
+		assert.True(t, ok)
+		assert.Equal(t, "username", user)
+		assert.Equal(t, "password", password)
 		w.WriteHeader(m.GTG())
 	})
 
