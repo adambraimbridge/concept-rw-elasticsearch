@@ -44,7 +44,7 @@ func (h *Handler) LoadData(w http.ResponseWriter, r *http.Request) {
 	transactionID := tid.GetTransactionIDFromRequest(r)
 	ctx := tid.TransactionAwareContext(context.Background(), transactionID)
 
-	conceptType, concept, payload, err := h.processPayload(r)
+	conceptType, concept, payload, err := h.processPayload(ctx, r)
 
 	if err != nil {
 		var errStatus int
@@ -62,7 +62,7 @@ func (h *Handler) LoadData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = h.elasticService.LoadData(ctx, conceptType, concept.PreferredUUID(), *payload)
+	_, err = h.elasticService.LoadData(ctx, conceptType, concept.PreferredUUID(), payload)
 	if err == service.ErrNoElasticClient {
 		writeMessage(w, "ES unavailable", http.StatusServiceUnavailable)
 		return
@@ -81,7 +81,10 @@ func (h *Handler) LoadData(w http.ResponseWriter, r *http.Request) {
 
 // LoadBulkData write a concept to ES via the ES Bulk API
 func (h *Handler) LoadBulkData(w http.ResponseWriter, r *http.Request) {
-	conceptType, concept, payload, err := h.processPayload(r)
+	transactionID := tid.GetTransactionIDFromRequest(r)
+	ctx := tid.TransactionAwareContext(context.Background(), transactionID)
+
+	conceptType, concept, payload, err := h.processPayload(ctx, r)
 	if err == errUnsupportedConceptType {
 		writeMessage(w, err.Error(), http.StatusNotFound)
 		return
@@ -92,15 +95,12 @@ func (h *Handler) LoadBulkData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	transactionID := tid.GetTransactionIDFromRequest(r)
-	ctx := tid.TransactionAwareContext(context.Background(), transactionID)
-
-	h.elasticService.LoadBulkData(conceptType, concept.PreferredUUID(), *payload)
+	h.elasticService.LoadBulkData(conceptType, concept.PreferredUUID(), payload)
 	h.elasticService.CleanupData(ctx, conceptType, concept)
 	writeMessage(w, "Concept written successfully", http.StatusOK)
 }
 
-func (h *Handler) processPayload(r *http.Request) (string, service.Concept, *interface{}, error) {
+func (h *Handler) processPayload(ctx context.Context, r *http.Request) (string, service.Concept, interface{}, error) {
 	vars := mux.Vars(r)
 	uuid := vars["id"]
 	conceptType := vars["concept-type"]
@@ -122,17 +122,17 @@ func (h *Handler) processPayload(r *http.Request) (string, service.Concept, *int
 	}
 
 	var concept service.Concept
-	var payload *interface{}
+	var payload interface{}
 	if aggConceptModel {
-		concept, payload, err = h.processAggregateConceptModel(uuid, conceptType, body)
+		concept, payload, err = h.processAggregateConceptModel(ctx, uuid, conceptType, body)
 	} else {
-		concept, payload, err = h.processConceptModel(uuid, conceptType, body)
+		concept, payload, err = h.processConceptModel(ctx, uuid, conceptType, body)
 	}
 
 	return conceptType, concept, payload, err
 }
 
-func (h *Handler) processConceptModel(uuid string, conceptType string, body []byte) (service.Concept, *interface{}, error) {
+func (h *Handler) processConceptModel(ctx context.Context, uuid string, conceptType string, body []byte) (service.Concept, interface{}, error) {
 	var concept service.ConceptModel
 	err := json.Unmarshal(body, &concept)
 	if err != nil {
@@ -148,11 +148,18 @@ func (h *Handler) processConceptModel(uuid string, conceptType string, body []by
 		return nil, nil, errInvalidConceptModel
 	}
 
-	payload, err := h.modelPopulator.ConvertConceptToESConceptModel(concept, conceptType)
-	return concept, &payload, err
+	transactionID, err := tid.GetTransactionIDFromContext(ctx)
+
+	if err != nil {
+		transactionID = tid.NewTransactionID()
+		log.WithError(err).WithField(tid.TransactionIDKey, transactionID).Warn("Transaction ID not found to process concept model. Generated new transaction ID")
+	}
+
+	payload, err := h.modelPopulator.ConvertConceptToESConceptModel(concept, conceptType, transactionID)
+	return concept, payload, err
 }
 
-func (h *Handler) processAggregateConceptModel(uuid string, conceptType string, body []byte) (service.Concept, *interface{}, error) {
+func (h *Handler) processAggregateConceptModel(ctx context.Context, uuid string, conceptType string, body []byte) (service.Concept, interface{}, error) {
 	var concept service.AggregateConceptModel
 	err := json.Unmarshal(body, &concept)
 	if err != nil {
@@ -168,7 +175,14 @@ func (h *Handler) processAggregateConceptModel(uuid string, conceptType string, 
 		return nil, nil, errInvalidConceptModel
 	}
 
-	payload, err := h.modelPopulator.ConvertAggregateConceptToESConceptModel(concept, conceptType)
+	transactionID, err := tid.GetTransactionIDFromContext(ctx)
+
+	if err != nil {
+		transactionID = tid.NewTransactionID()
+		log.WithError(err).WithField(tid.TransactionIDKey, transactionID).Warn("Transaction ID not found to process aggregate concept model. Generated new transaction ID")
+	}
+
+	payload, err := h.modelPopulator.ConvertAggregateConceptToESConceptModel(concept, conceptType, transactionID)
 	return concept, &payload, err
 }
 

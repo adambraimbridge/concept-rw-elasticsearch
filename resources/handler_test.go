@@ -11,8 +11,11 @@ import (
 	"context"
 
 	"github.com/Financial-Times/concept-rw-elasticsearch/service"
+	tid "github.com/Financial-Times/transactionid-utils-go"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
+	testLog "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -454,6 +457,24 @@ func TestDeleteDataEsServerError(t *testing.T) {
 	}
 
 	assert.Nil(t, rr.Body.Bytes(), "Response body should be empty")
+}
+
+func TestProcessConceptModelWithoutTransactionID(t *testing.T) {
+	hook := testLog.NewGlobal()
+	testUUID := "8ff7dfef-0330-3de0-b37a-2d6aa9c98580"
+	testBody := []byte(`{"uuid":"8ff7dfef-0330-3de0-b37a-2d6aa9c98580","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report","type":"Genre"}`)
+
+	dummyEsService := &dummyEsService{returnsError: errTest}
+	mockAuthorService := &mockAuthorService{}
+	h := NewHandler(dummyEsService, mockAuthorService, []string{"genres"})
+	_, payload, err := h.processConceptModel(context.Background(), testUUID, "genres", testBody)
+	assert.NoError(t, err)
+	assert.NotNil(t, payload)
+	assert.NotEmpty(t, payload.(service.EsConceptModel).PublishReference)
+
+	assert.Equal(t, log.WarnLevel, hook.LastEntry().Level)
+	assert.Equal(t, "Transaction ID not found to process concept model. Generated new transaction ID", hook.LastEntry().Message)
+	assert.Equal(t, hook.LastEntry().Data[tid.TransactionIDKey], payload.(service.EsConceptModel).PublishReference)
 }
 
 type dummyEsService struct {

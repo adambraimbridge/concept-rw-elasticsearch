@@ -33,13 +33,15 @@ type SourceConcept struct {
 }
 
 type EsConceptModel struct {
-	Id          string   `json:"id"`
-	ApiUrl      string   `json:"apiUrl"`
-	PrefLabel   string   `json:"prefLabel"`
-	Types       []string `json:"types"`
-	Authorities []string `json:"authorities"`
-	DirectType  string   `json:"directType"`
-	Aliases     []string `json:"aliases,omitempty"`
+	Id               string   `json:"id"`
+	ApiUrl           string   `json:"apiUrl"`
+	PrefLabel        string   `json:"prefLabel"`
+	Types            []string `json:"types"`
+	Authorities      []string `json:"authorities"`
+	DirectType       string   `json:"directType"`
+	Aliases          []string `json:"aliases,omitempty"`
+	LastModified     string   `json:"lastModified"`
+	PublishReference string   `json:"publishReference"`
 }
 
 type EsPersonConceptModel struct {
