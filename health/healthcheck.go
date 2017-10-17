@@ -12,13 +12,11 @@ import (
 
 type HealthService struct {
 	esHealthService service.EsService
-	authorService   service.AuthorService
 }
 
-func NewHealthService(esHealthService service.EsService, authorService service.AuthorService) *HealthService {
+func NewHealthService(esHealthService service.EsService) *HealthService {
 	return &HealthService{
 		esHealthService: esHealthService,
-		authorService:   authorService,
 	}
 }
 
@@ -42,8 +40,6 @@ func (service *HealthService) checks(includeReadOnlyCheck bool) []fthealth.Check
 	if includeReadOnlyCheck {
 		checks = append(checks, service.indexIsWriteableCheck())
 	}
-
-	checks = append(checks, service.v1AuthorsTransformerConnectivityCheck())
 
 	return checks
 }
@@ -117,26 +113,6 @@ func (service *HealthService) readOnlyChecker() (string, error) {
 	}
 
 	return fmt.Sprintf("Elasticsearch index [%v] is writeable", indexName), nil
-}
-
-func (service *HealthService) v1AuthorsTransformerConnectivityCheck() fthealth.Check {
-	return fthealth.Check{
-		ID:               "check-connectivity-to-v1-authors-transformer",
-		BusinessImpact:   "Updates that identify FT authors cannot be processed",
-		Name:             "Check connectivity to v1-authors-transformer",
-		PanicGuide:       "https://dewey.ft.com/up-crwes.html",
-		Severity:         1,
-		TechnicalSummary: "Cannot connect to the v1 authors transformer",
-		Checker:          service.v1AuthorsTransformerConnectivityChecker,
-	}
-}
-
-func (service *HealthService) v1AuthorsTransformerConnectivityChecker() (string, error) {
-	err := service.authorService.IsGTG()
-	if err != nil {
-		return "Could not connect to v1-authors-transformer", err
-	}
-	return "Successfully connected to v1-authors-transformer", nil
 }
 
 //GoodToGo returns a 503 if the healthcheck fails - suitable for use from varnish to check availability of a node

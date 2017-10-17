@@ -3,7 +3,6 @@ package service
 import (
 	"encoding/json"
 	"fmt"
-	"sync"
 	"testing"
 
 	tid "github.com/Financial-Times/transactionid-utils-go"
@@ -18,18 +17,8 @@ var testConceptModelJSON = `{"uuid":"2384fa7a-d514-3d6a-a0ea-3a711f66d0d8","type
 
 var testIntermediateConceptModelJSON = `{"uuid":"7e3f1354-53ba-3c3e-b9bb-5fcb8941df8c","prefLabel":"ICOmedy","type":"AlphavilleSeries","authority":"TME","authorityValue":"NDQ1NjhiMzktMjJmNy00OWEzLWExNDctNDFiNDk4OGU2MTdj-QWxwaGF2aWxsZVNlcmllc0NsYXNzaWZpY2F0aW9u"}`
 
-func newTestModelPopulator() ModelPopulator {
-	testAuthorService := curatedAuthorService{
-		httpClient:  nil,
-		serviceURL:  "url",
-		authorUUIDs: expectedAuthorUUIDs,
-		authorLock:  &sync.RWMutex{},
-	}
-	return NewEsModelPopulator(&testAuthorService)
-}
 
 func TestConvertToESConceptModel(t *testing.T) {
-	testModelPopulator := newTestModelPopulator()
 
 	tests := []struct {
 		conceptModel   ConceptModel
@@ -111,7 +100,7 @@ func TestConvertToESConceptModel(t *testing.T) {
 	for _, testModel := range tests {
 		testTID := tid.NewTransactionID()
 
-		actual, _ := testModelPopulator.ConvertConceptToESConceptModel(testModel.conceptModel, "organisations", testTID)
+		actual, _ := ConvertConceptToESConceptModel(testModel.conceptModel, "organisations", testTID)
 		esModel := actual.(EsConceptModel)
 		assert.Equal(t, testModel.esConceptModel.Id, esModel.Id, fmt.Sprintf("Expected Id %s differs from actual id %s ", testModel.esConceptModel.Id, esModel.Id))
 		assert.Equal(t, testModel.esConceptModel.ApiUrl, esModel.ApiUrl, fmt.Sprintf("Expected ApiUrl %s differs from actual ApiUrl %s ", testModel.esConceptModel.ApiUrl, esModel.ApiUrl))
@@ -130,7 +119,6 @@ func TestConvertToESConceptModel(t *testing.T) {
 }
 
 func TestConvertAggregateConceptToESConceptModel(t *testing.T) {
-	testModelPopulator := newTestModelPopulator()
 
 	tests := []struct {
 		conceptModel   AggregateConceptModel
@@ -220,7 +208,7 @@ func TestConvertAggregateConceptToESConceptModel(t *testing.T) {
 	for _, testModel := range tests {
 		testTID := tid.NewTransactionID()
 
-		actual, _ := testModelPopulator.ConvertAggregateConceptToESConceptModel(testModel.conceptModel, "organisations", testTID)
+		actual, _ := ConvertAggregateConceptToESConceptModel(testModel.conceptModel, "organisations", testTID)
 		esModel := actual.(EsConceptModel)
 		assert.Equal(t, testModel.esConceptModel.Id, esModel.Id, fmt.Sprintf("Expected Id %s differs from actual id %s ", testModel.esConceptModel.Id, esModel.Id))
 		assert.Equal(t, testModel.esConceptModel.ApiUrl, esModel.ApiUrl, fmt.Sprintf("Expected ApiUrl %s differs from actual ApiUrl %s ", testModel.esConceptModel.ApiUrl, esModel.ApiUrl))
@@ -295,7 +283,6 @@ func TestConceptFuncsForAggregatedConceptModel(t *testing.T) {
 
 func TestConvertPersonToESConceptModel(t *testing.T) {
 	assert := assert.New(t)
-	testModelPopulator := newTestModelPopulator()
 
 	tests := []struct {
 		conceptModel         ConceptModel
@@ -324,35 +311,12 @@ func TestConvertPersonToESConceptModel(t *testing.T) {
 				IsFTAuthor: "false",
 			},
 		},
-		{
-			ConceptModel{
-				UUID:       "2916ded0-6d1f-4449-b54c-3805da729c1d",
-				DirectType: "Person",
-				PrefLabel:  "Martin Wolf",
-				Aliases:    []string{},
-			},
-			EsPersonConceptModel{
-				EsConceptModel: EsConceptModel{
-					Id:        "http://api.ft.com/things/2916ded0-6d1f-4449-b54c-3805da729c1d",
-					ApiUrl:    "http://api.ft.com/people/2916ded0-6d1f-4449-b54c-3805da729c1d",
-					PrefLabel: "Martin Wolf",
-					Types: []string{
-						"http://www.ft.com/ontology/core/Thing",
-						"http://www.ft.com/ontology/concept/Concept",
-						"http://www.ft.com/ontology/person/Person",
-					},
-					DirectType: "http://www.ft.com/ontology/person/Person",
-					Aliases:    []string{},
-				},
-				IsFTAuthor: "true",
-			},
-		},
 	}
 
 	for _, testModel := range tests {
 		testTID := tid.NewTransactionID()
 
-		actual, _ := testModelPopulator.ConvertConceptToESConceptModel(testModel.conceptModel, "people", testTID)
+		actual, _ := ConvertConceptToESConceptModel(testModel.conceptModel, "people", testTID)
 		esModel := actual.(EsPersonConceptModel)
 		assert.Equal(testModel.esPersonConceptModel.Id, esModel.Id, fmt.Sprintf("Expected Id %s differs from actual id %s ", testModel.esPersonConceptModel.Id, esModel.Id))
 		assert.Equal(testModel.esPersonConceptModel.ApiUrl, esModel.ApiUrl, fmt.Sprintf("Expected ApiUrl %s differs from actual ApiUrl %s ", testModel.esPersonConceptModel.ApiUrl, esModel.ApiUrl))
@@ -369,27 +333,106 @@ func TestConvertPersonToESConceptModel(t *testing.T) {
 	}
 }
 
-func TestConvertPersonToESConceptModelNoAuthors(t *testing.T) {
+func TestConvertPersonToAggregateConceptModel(t *testing.T) {
 	assert := assert.New(t)
-	testAuthorService := curatedAuthorService{
-		httpClient:  nil,
-		serviceURL:  "url",
-		authorUUIDs: map[string]struct{}{},
-		authorLock:  &sync.RWMutex{},
-	}
-	testModelPopulator := NewEsModelPopulator(&testAuthorService)
 
-	conceptModel := ConceptModel{
-		UUID:       "0f07d468-fc37-3c44-bf19-a81f2aae9f36",
-		DirectType: "Person",
-		PrefLabel:  "Martin Wolf",
-		Aliases:    []string{},
+	tests := []struct {
+		aggregateConceptModel    AggregateConceptModel
+		esPersonConceptModel     EsPersonConceptModel
+	}{
+		{
+			AggregateConceptModel{ // default to false
+				PrefUUID:       "0f07d468-fc37-3c44-bf19-a81f2aae9f36",
+				DirectType: "Person",
+				PrefLabel:  "Martin Wolf",
+				Aliases:    []string{},
+			},
+			EsPersonConceptModel{
+				EsConceptModel: EsConceptModel{
+					Id:        "http://api.ft.com/things/0f07d468-fc37-3c44-bf19-a81f2aae9f36",
+					ApiUrl:    "http://api.ft.com/people/0f07d468-fc37-3c44-bf19-a81f2aae9f36",
+					PrefLabel: "Martin Wolf",
+					Types: []string{
+						"http://www.ft.com/ontology/core/Thing",
+						"http://www.ft.com/ontology/concept/Concept",
+						"http://www.ft.com/ontology/person/Person",
+					},
+					DirectType: "http://www.ft.com/ontology/person/Person",
+					Aliases:    []string{},
+				},
+				IsFTAuthor: "false",
+			},
+		},
+		{
+			AggregateConceptModel{ // matches on true
+				PrefUUID:       "0f07d468-fc37-3c44-bf19-a81f2aae9f36",
+				DirectType: "Person",
+				PrefLabel:  "Martin Wolf",
+				Aliases:    []string{},
+				isAuthor: "true",
+			},
+			EsPersonConceptModel{
+				EsConceptModel: EsConceptModel{
+					Id:        "http://api.ft.com/things/0f07d468-fc37-3c44-bf19-a81f2aae9f36",
+					ApiUrl:    "http://api.ft.com/people/0f07d468-fc37-3c44-bf19-a81f2aae9f36",
+					PrefLabel: "Martin Wolf",
+					Types: []string{
+						"http://www.ft.com/ontology/core/Thing",
+						"http://www.ft.com/ontology/concept/Concept",
+						"http://www.ft.com/ontology/person/Person",
+					},
+					DirectType: "http://www.ft.com/ontology/person/Person",
+					Aliases:    []string{},
+				},
+				IsFTAuthor: "true",
+			},
+		},
+		{
+			AggregateConceptModel{ // matches on false
+				PrefUUID:       "0f07d468-fc37-3c44-bf19-a81f2aae9f36",
+				DirectType: "Person",
+				PrefLabel:  "Martin Wolf",
+				Aliases:    []string{},
+				isAuthor: "false",
+			},
+			EsPersonConceptModel{
+				EsConceptModel: EsConceptModel{
+					Id:        "http://api.ft.com/things/0f07d468-fc37-3c44-bf19-a81f2aae9f36",
+					ApiUrl:    "http://api.ft.com/people/0f07d468-fc37-3c44-bf19-a81f2aae9f36",
+					PrefLabel: "Martin Wolf",
+					Types: []string{
+						"http://www.ft.com/ontology/core/Thing",
+						"http://www.ft.com/ontology/concept/Concept",
+						"http://www.ft.com/ontology/person/Person",
+					},
+					DirectType: "http://www.ft.com/ontology/person/Person",
+					Aliases:    []string{},
+				},
+				IsFTAuthor: "false",
+			},
+		},
 	}
 
-	actual, err := testModelPopulator.ConvertConceptToESConceptModel(conceptModel, "people", tid.NewTransactionID())
-	assert.Empty(actual, "expected empty model returned")
-	assert.EqualError(err, "Author list is unavailable", "expected an error for conversion")
+	for _, testModel := range tests {
+		testTID := tid.NewTransactionID()
+
+		actual, _ := ConvertAggregateConceptToESConceptModel(testModel.aggregateConceptModel, "people", testTID)
+		esModel := actual.(EsPersonConceptModel)
+		assert.Equal(testModel.esPersonConceptModel.Id, esModel.Id, fmt.Sprintf("Expected Id %s differs from actual id %s ", testModel.esPersonConceptModel.Id, esModel.Id))
+		assert.Equal(testModel.esPersonConceptModel.ApiUrl, esModel.ApiUrl, fmt.Sprintf("Expected ApiUrl %s differs from actual ApiUrl %s ", testModel.esPersonConceptModel.ApiUrl, esModel.ApiUrl))
+		assert.Equal(testModel.esPersonConceptModel.DirectType, esModel.DirectType, fmt.Sprintf("Expected DirectType %s differs from actual DirectType %s ", testModel.esPersonConceptModel.DirectType, esModel.DirectType))
+		assert.Equal(testModel.esPersonConceptModel.PrefLabel, esModel.PrefLabel, fmt.Sprintf("Expected PrefLabel %s differs from actual PrefLabel %s ", testModel.esPersonConceptModel.PrefLabel, esModel.PrefLabel))
+		assert.Equal(testModel.esPersonConceptModel.Types, esModel.Types, fmt.Sprintf("Expected Types %s differ from actual Types %s ", testModel.esPersonConceptModel.Types, esModel.Types))
+		assert.Equal(testModel.esPersonConceptModel.Aliases, esModel.Aliases, fmt.Sprintf("Expected Aliases %s differ from actual Aliases %s ", testModel.esPersonConceptModel.Aliases, esModel.Aliases))
+		assert.Equal(testModel.esPersonConceptModel.IsFTAuthor, esModel.IsFTAuthor, fmt.Sprintf("Expected IsFTAuthor %s differ from actual IsFTAuthor %s ", testModel.esPersonConceptModel.IsFTAuthor, esModel.IsFTAuthor))
+		assert.Equal(testTID, esModel.PublishReference)
+
+		actualLastModified, err := time.Parse(time.RFC3339, esModel.LastModified)
+		assert.NoError(err)
+		assert.WithinDuration(time.Now(), actualLastModified, 3*time.Second)
+	}
 }
+
 
 func TestReverse(t *testing.T) {
 	assert := assert.New(t)

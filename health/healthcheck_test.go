@@ -31,8 +31,7 @@ func TestHealthDetailsHealthyCluster(t *testing.T) {
 
 	esService := new(EsServiceMock)
 	esService.On("GetClusterHealth").Return(happyESCluster, nil)
-	authorService := new(AuthorServiceMock)
-	healthService := NewHealthService(esService, authorService)
+	healthService := NewHealthService(esService)
 
 	//create a responseRecorder
 	rr := httptest.NewRecorder()
@@ -63,7 +62,6 @@ func TestHealthDetailsHealthyCluster(t *testing.T) {
 	}
 
 	esService.AssertExpectations(t)
-	authorService.AssertExpectations(t)
 }
 
 func TestHealthDetailsReturnsError(t *testing.T) {
@@ -76,8 +74,7 @@ func TestHealthDetailsReturnsError(t *testing.T) {
 
 	esService := new(EsServiceMock)
 	esService.On("GetClusterHealth").Return(unhappyESCluster, errors.New("computer says no"))
-	authorService := new(AuthorServiceMock)
-	healthService := NewHealthService(esService, authorService)
+	healthService := NewHealthService(esService)
 
 	//create a responseRecorder
 	rr := httptest.NewRecorder()
@@ -103,7 +100,6 @@ func TestHealthDetailsReturnsError(t *testing.T) {
 	}
 
 	esService.AssertExpectations(t)
-	authorService.AssertExpectations(t)
 }
 
 func TestGoodToGoUnhealthyESCluster(t *testing.T) {
@@ -114,8 +110,7 @@ func TestGoodToGoUnhealthyESCluster(t *testing.T) {
 	}
 	esService := new(EsServiceMock)
 	esService.On("GetClusterHealth").Return(unhappyESCluster, errors.New("computer says no"))
-	authorService := new(AuthorServiceMock)
-	healthService := NewHealthService(esService, authorService)
+	healthService := NewHealthService(esService)
 
 	//create a responseRecorder
 	rr := httptest.NewRecorder()
@@ -134,7 +129,6 @@ func TestGoodToGoUnhealthyESCluster(t *testing.T) {
 	assert.Regexp(t, "gtg failed .+, reason: computer says no", rr.Body.String(), "GTG response body")
 
 	esService.AssertExpectations(t)
-	authorService.AssertExpectations(t)
 }
 
 func TestHappyGoodToGo(t *testing.T) {
@@ -146,9 +140,7 @@ func TestHappyGoodToGo(t *testing.T) {
 
 	esService := new(EsServiceMock)
 	esService.On("GetClusterHealth").Return(happyESCluster, nil)
-	authorService := new(AuthorServiceMock)
-	authorService.On("IsGTG").Return(nil)
-	healthService := NewHealthService(esService, authorService)
+	healthService := NewHealthService(esService)
 
 	//create a responseRecorder
 	rr := httptest.NewRecorder()
@@ -169,39 +161,6 @@ func TestHappyGoodToGo(t *testing.T) {
 	}
 
 	esService.AssertExpectations(t)
-	authorService.AssertExpectations(t)
-}
-
-func TestGoodToGoUnhealthyV1AuthorsTransformer(t *testing.T) {
-	//create a request to pass to our handler
-	req, err := http.NewRequest("GET", "/__gtg", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	esService := new(EsServiceMock)
-	esService.On("GetClusterHealth").Return(happyESCluster, nil)
-	authorService := new(AuthorServiceMock)
-	authorService.On("IsGTG").Return(errors.New("computer says no"))
-	healthService := NewHealthService(esService, authorService)
-
-	//create a responseRecorder
-	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(healthService.GoodToGo)
-
-	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
-	// directly and pass in our Request and ResponseRecorder.
-	handler.ServeHTTP(rr, req)
-
-	// Series of verifications:
-	if status := rr.Code; status != http.StatusServiceUnavailable {
-		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusServiceUnavailable)
-	}
-
-	assert.Equal(t, "gtg failed for check-connectivity-to-v1-authors-transformer, reason: computer says no", rr.Body.String())
-
-	esService.AssertExpectations(t)
-	authorService.AssertExpectations(t)
 }
 
 func TestHappyHealthCheck(t *testing.T) {
@@ -211,9 +170,7 @@ func TestHappyHealthCheck(t *testing.T) {
 	esService := new(EsServiceMock)
 	esService.On("GetClusterHealth").Return(happyESCluster, nil)
 	esService.On("IsIndexReadOnly").Return(false, "indexName", nil)
-	authorService := new(AuthorServiceMock)
-	authorService.On("IsGTG").Return(nil)
-	healthService := NewHealthService(esService, authorService)
+	healthService := NewHealthService(esService)
 
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(healthService.HealthCheckHandler())
@@ -229,7 +186,6 @@ func TestHappyHealthCheck(t *testing.T) {
 	}
 
 	esService.AssertExpectations(t)
-	authorService.AssertExpectations(t)
 }
 
 func TestHealthCheckUnhealthyESCluster(t *testing.T) {
@@ -239,9 +195,7 @@ func TestHealthCheckUnhealthyESCluster(t *testing.T) {
 	esService := new(EsServiceMock)
 	esService.On("GetClusterHealth").Return(unhappyESCluster, nil)
 	esService.On("IsIndexReadOnly").Return(false, "indexName", nil)
-	authorService := new(AuthorServiceMock)
-	authorService.On("IsGTG").Return(nil)
-	healthService := NewHealthService(esService, authorService)
+	healthService := NewHealthService(esService)
 
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(healthService.HealthCheckHandler())
@@ -261,7 +215,7 @@ func TestHealthCheckUnhealthyESCluster(t *testing.T) {
 	}
 
 	esService.AssertExpectations(t)
-	authorService.AssertExpectations(t)
+
 }
 
 func TestHealthCheckNoESClusterConnection(t *testing.T) {
@@ -271,9 +225,7 @@ func TestHealthCheckNoESClusterConnection(t *testing.T) {
 	esService := new(EsServiceMock)
 	esService.On("GetClusterHealth").Return(unhappyESCluster, errors.New("computer says no"))
 	esService.On("IsIndexReadOnly").Return(false, "indexName", nil)
-	authorService := new(AuthorServiceMock)
-	authorService.On("IsGTG").Return(nil)
-	healthService := NewHealthService(esService, authorService)
+	healthService := NewHealthService(esService)
 
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(healthService.HealthCheckHandler())
@@ -293,40 +245,9 @@ func TestHealthCheckNoESClusterConnection(t *testing.T) {
 	}
 
 	esService.AssertExpectations(t)
-	authorService.AssertExpectations(t)
+
 }
 
-func TestHealthCheckV1AuthorsTransformNotGTG(t *testing.T) {
-	req, err := http.NewRequest("GET", "/__health", nil)
-	assert.NoError(t, err, "HTTP request to healthcheck should be consistent")
-
-	esService := new(EsServiceMock)
-	esService.On("GetClusterHealth").Return(happyESCluster, nil)
-	esService.On("IsIndexReadOnly").Return(false, "indexName", nil)
-	authorService := new(AuthorServiceMock)
-	authorService.On("IsGTG").Return(errors.New("computer says no"))
-	healthService := NewHealthService(esService, authorService)
-
-	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(healthService.HealthCheckHandler())
-
-	handler.ServeHTTP(rr, req)
-	assert.Equal(t, http.StatusOK, rr.Code, "HealthCheck should return HTTP 200 OK")
-
-	checks, err := parseHealthcheck(rr.Body.String())
-	assert.NoError(t, err, "HealthCheck Response Body should be consistent")
-
-	for _, check := range checks {
-		if check.ID == "check-connectivity-to-v1-authors-transformer" {
-			assert.False(t, check.Ok)
-		} else {
-			assert.True(t, check.Ok)
-		}
-	}
-
-	esService.AssertExpectations(t)
-	authorService.AssertExpectations(t)
-}
 
 func TestHealthCheckReadOnlyIndex(t *testing.T) {
 	req, err := http.NewRequest("GET", "/__health", nil)
@@ -336,9 +257,7 @@ func TestHealthCheckReadOnlyIndex(t *testing.T) {
 	esService.On("GetClusterHealth").Return(happyESCluster, nil)
 	esService.On("IsIndexReadOnly").Return(true, "indexName", nil)
 
-	authorService := new(AuthorServiceMock)
-	authorService.On("IsGTG").Return(nil)
-	healthService := NewHealthService(esService, authorService)
+	healthService := NewHealthService(esService)
 
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(healthService.HealthCheckHandler())
@@ -358,7 +277,7 @@ func TestHealthCheckReadOnlyIndex(t *testing.T) {
 	}
 
 	esService.AssertExpectations(t)
-	authorService.AssertExpectations(t)
+
 }
 
 type EsServiceMock struct {
@@ -401,28 +320,6 @@ func (m *EsServiceMock) GetClusterHealth() (*elastic.ClusterHealthResponse, erro
 func (m *EsServiceMock) IsIndexReadOnly() (bool, string, error) {
 	args := m.Called()
 	return args.Bool(0), args.String(1), args.Error(2)
-}
-
-type AuthorServiceMock struct {
-	mock.Mock
-}
-
-func (m *AuthorServiceMock) LoadAuthorIdentifiers() error {
-	args := m.Called()
-	return args.Error(0)
-}
-
-func (m *AuthorServiceMock) IsFTAuthor(uuid string) (bool, error) {
-	args := m.Called(uuid)
-	return args.Bool(0), args.Error(1)
-}
-
-func (m *AuthorServiceMock) IsGTG() error {
-	args := m.Called()
-	return args.Error(0)
-}
-
-func (m *AuthorServiceMock) RefreshAuthorIdentifiers() {
 }
 
 func parseHealthcheck(healthcheckJSON string) ([]fthealth.CheckResult, error) {
