@@ -5,6 +5,7 @@ import (
 	"github.com/Financial-Times/neo-model-utils-go/mapper"
 	log "github.com/sirupsen/logrus"
 	"time"
+	"strconv"
 )
 
 const (
@@ -36,7 +37,7 @@ func ConvertAggregateConceptToESConceptModel(concept AggregateConceptModel, conc
 
 	switch conceptType {
 	case PERSON:
-		isFTAuthor := concept.IsAuthor
+		isFTAuthor := strconv.FormatBool(concept.IsAuthor)
 		if isFTAuthor == "" {
 			isFTAuthor = "false"
 		}

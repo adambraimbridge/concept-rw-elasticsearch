@@ -369,7 +369,7 @@ func TestConvertPersonToAggregateConceptModel(t *testing.T) {
 				DirectType: "Person",
 				PrefLabel:  "Martin Wolf",
 				Aliases:    []string{},
-				IsAuthor: "true",
+				IsAuthor: true,
 			},
 			EsPersonConceptModel{
 				EsConceptModel: EsConceptModel{
@@ -393,7 +393,7 @@ func TestConvertPersonToAggregateConceptModel(t *testing.T) {
 				DirectType: "Person",
 				PrefLabel:  "Martin Wolf",
 				Aliases:    []string{},
-				IsAuthor: "false",
+				IsAuthor: false,
 			},
 			EsPersonConceptModel{
 				EsConceptModel: EsConceptModel{

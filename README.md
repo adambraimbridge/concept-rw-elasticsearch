@@ -92,7 +92,7 @@ New concept model example
      "aliases": [
          "Anna Whitwham"
      ],
-     "isAuthor": "true",
+     "isAuthor": true,
      "sourceRepresentations": [
       {
              "uuid": "08147da5-8110-407c-a51c-a91855e6b071",
