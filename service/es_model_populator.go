@@ -36,7 +36,7 @@ func ConvertAggregateConceptToESConceptModel(concept AggregateConceptModel, conc
 
 	switch conceptType {
 	case PERSON:
-		isFTAuthor := concept.isAuthor
+		isFTAuthor := concept.IsAuthor
 		if isFTAuthor == "" {
 			isFTAuthor = "false"
 		}
