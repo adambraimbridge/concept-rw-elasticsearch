@@ -26,7 +26,7 @@ func ConvertConceptToESConceptModel(concept ConceptModel, conceptType string, pu
 			esModel,
 			"false",
 		}
-		return *esPersonModel, nil
+		return esPersonModel, nil
 	default:
 		return esModel, nil
 	}
@@ -34,25 +34,21 @@ func ConvertConceptToESConceptModel(concept ConceptModel, conceptType string, pu
 
 func ConvertAggregateConceptToESConceptModel(concept AggregateConceptModel, conceptType string, publishRef string) (interface{}, error) {
 	esModel := newESConceptModel(concept.PrefUUID, conceptType, concept.DirectType, concept.Aliases, concept.GetAuthorities(), concept.PrefLabel, publishRef)
-
 	switch conceptType {
 	case PERSON:
 		isFTAuthor := strconv.FormatBool(concept.IsAuthor)
-		if isFTAuthor == "" {
-			isFTAuthor = "false"
-		}
 		esPersonModel := &EsPersonConceptModel{
 			esModel,
 			isFTAuthor,
 		}
-		return *esPersonModel, nil
+		return esPersonModel, nil
 	default:
 		return esModel, nil
 	}
 }
 
-func newESConceptModel(uuid string, conceptType string, directType string, aliases []string, authorities []string, prefLabel string, publishRef string) EsConceptModel {
-	esModel := EsConceptModel{}
+func newESConceptModel(uuid string, conceptType string, directType string, aliases []string, authorities []string, prefLabel string, publishRef string) *EsConceptModel {
+	esModel := &EsConceptModel{}
 	esModel.ApiUrl = mapper.APIURL(uuid, []string{directType}, "")
 	esModel.Id = mapper.IDURL(uuid)
 	esModel.Types = mapper.TypeURIs(getTypes(directType))

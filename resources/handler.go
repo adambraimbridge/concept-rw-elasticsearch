@@ -177,7 +177,7 @@ func (h *Handler) processAggregateConceptModel(ctx context.Context, uuid string,
 	}
 
 	payload, err := service.ConvertAggregateConceptToESConceptModel(concept, conceptType, transactionID)
-	return concept, &payload, err
+	return concept, payload, err
 }
 
 func (h *Handler) ReadData(writer http.ResponseWriter, request *http.Request) {

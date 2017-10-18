@@ -101,7 +101,7 @@ func TestConvertToESConceptModel(t *testing.T) {
 		testTID := tid.NewTransactionID()
 
 		actual, _ := ConvertConceptToESConceptModel(testModel.conceptModel, "organisations", testTID)
-		esModel := actual.(EsConceptModel)
+		esModel := actual.(*EsConceptModel)
 		assert.Equal(t, testModel.esConceptModel.Id, esModel.Id, fmt.Sprintf("Expected Id %s differs from actual id %s ", testModel.esConceptModel.Id, esModel.Id))
 		assert.Equal(t, testModel.esConceptModel.ApiUrl, esModel.ApiUrl, fmt.Sprintf("Expected ApiUrl %s differs from actual ApiUrl %s ", testModel.esConceptModel.ApiUrl, esModel.ApiUrl))
 		assert.Equal(t, testModel.esConceptModel.DirectType, esModel.DirectType, fmt.Sprintf("Expected DirectType %s differs from actual DirectType %s ", testModel.esConceptModel.DirectType, esModel.DirectType))
@@ -209,7 +209,7 @@ func TestConvertAggregateConceptToESConceptModel(t *testing.T) {
 		testTID := tid.NewTransactionID()
 
 		actual, _ := ConvertAggregateConceptToESConceptModel(testModel.conceptModel, "organisations", testTID)
-		esModel := actual.(EsConceptModel)
+		esModel := actual.(*EsConceptModel)
 		assert.Equal(t, testModel.esConceptModel.Id, esModel.Id, fmt.Sprintf("Expected Id %s differs from actual id %s ", testModel.esConceptModel.Id, esModel.Id))
 		assert.Equal(t, testModel.esConceptModel.ApiUrl, esModel.ApiUrl, fmt.Sprintf("Expected ApiUrl %s differs from actual ApiUrl %s ", testModel.esConceptModel.ApiUrl, esModel.ApiUrl))
 		assert.Equal(t, testModel.esConceptModel.DirectType, esModel.DirectType, fmt.Sprintf("Expected DirectType %s differs from actual DirectType %s ", testModel.esConceptModel.DirectType, esModel.DirectType))
@@ -296,7 +296,7 @@ func TestConvertPersonToESConceptModel(t *testing.T) {
 				Aliases:    []string{},
 			},
 			EsPersonConceptModel{
-				EsConceptModel: EsConceptModel{
+				EsConceptModel: &EsConceptModel{
 					Id:        "http://api.ft.com/things/0f07d468-fc37-3c44-bf19-a81f2aae9f36",
 					ApiUrl:    "http://api.ft.com/people/0f07d468-fc37-3c44-bf19-a81f2aae9f36",
 					PrefLabel: "Martin Wolf",
@@ -317,7 +317,7 @@ func TestConvertPersonToESConceptModel(t *testing.T) {
 		testTID := tid.NewTransactionID()
 
 		actual, _ := ConvertConceptToESConceptModel(testModel.conceptModel, "people", testTID)
-		esModel := actual.(EsPersonConceptModel)
+		esModel := actual.(*EsPersonConceptModel)
 		assert.Equal(testModel.esPersonConceptModel.Id, esModel.Id, fmt.Sprintf("Expected Id %s differs from actual id %s ", testModel.esPersonConceptModel.Id, esModel.Id))
 		assert.Equal(testModel.esPersonConceptModel.ApiUrl, esModel.ApiUrl, fmt.Sprintf("Expected ApiUrl %s differs from actual ApiUrl %s ", testModel.esPersonConceptModel.ApiUrl, esModel.ApiUrl))
 		assert.Equal(testModel.esPersonConceptModel.DirectType, esModel.DirectType, fmt.Sprintf("Expected DirectType %s differs from actual DirectType %s ", testModel.esPersonConceptModel.DirectType, esModel.DirectType))
@@ -348,7 +348,7 @@ func TestConvertPersonToAggregateConceptModel(t *testing.T) {
 				Aliases:    []string{},
 			},
 			EsPersonConceptModel{
-				EsConceptModel: EsConceptModel{
+				EsConceptModel: &EsConceptModel{
 					Id:        "http://api.ft.com/things/0f07d468-fc37-3c44-bf19-a81f2aae9f36",
 					ApiUrl:    "http://api.ft.com/people/0f07d468-fc37-3c44-bf19-a81f2aae9f36",
 					PrefLabel: "Martin Wolf",
@@ -372,7 +372,7 @@ func TestConvertPersonToAggregateConceptModel(t *testing.T) {
 				IsAuthor: true,
 			},
 			EsPersonConceptModel{
-				EsConceptModel: EsConceptModel{
+				EsConceptModel: &EsConceptModel{
 					Id:        "http://api.ft.com/things/0f07d468-fc37-3c44-bf19-a81f2aae9f36",
 					ApiUrl:    "http://api.ft.com/people/0f07d468-fc37-3c44-bf19-a81f2aae9f36",
 					PrefLabel: "Martin Wolf",
@@ -396,7 +396,7 @@ func TestConvertPersonToAggregateConceptModel(t *testing.T) {
 				IsAuthor: false,
 			},
 			EsPersonConceptModel{
-				EsConceptModel: EsConceptModel{
+				EsConceptModel: &EsConceptModel{
 					Id:        "http://api.ft.com/things/0f07d468-fc37-3c44-bf19-a81f2aae9f36",
 					ApiUrl:    "http://api.ft.com/people/0f07d468-fc37-3c44-bf19-a81f2aae9f36",
 					PrefLabel: "Martin Wolf",
@@ -417,7 +417,7 @@ func TestConvertPersonToAggregateConceptModel(t *testing.T) {
 		testTID := tid.NewTransactionID()
 
 		actual, _ := ConvertAggregateConceptToESConceptModel(testModel.aggregateConceptModel, "people", testTID)
-		esModel := actual.(EsPersonConceptModel)
+		esModel := actual.(*EsPersonConceptModel)
 		assert.Equal(testModel.esPersonConceptModel.Id, esModel.Id, fmt.Sprintf("Expected Id %s differs from actual id %s ", testModel.esPersonConceptModel.Id, esModel.Id))
 		assert.Equal(testModel.esPersonConceptModel.ApiUrl, esModel.ApiUrl, fmt.Sprintf("Expected ApiUrl %s differs from actual ApiUrl %s ", testModel.esPersonConceptModel.ApiUrl, esModel.ApiUrl))
 		assert.Equal(testModel.esPersonConceptModel.DirectType, esModel.DirectType, fmt.Sprintf("Expected DirectType %s differs from actual DirectType %s ", testModel.esPersonConceptModel.DirectType, esModel.DirectType))

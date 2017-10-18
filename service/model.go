@@ -46,7 +46,7 @@ type EsConceptModel struct {
 }
 
 type EsPersonConceptModel struct {
-	EsConceptModel
+	*EsConceptModel
 	IsFTAuthor string `json:"isFTAuthor"`
 }
 

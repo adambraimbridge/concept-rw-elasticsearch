@@ -400,11 +400,11 @@ func TestProcessConceptModelWithoutTransactionID(t *testing.T) {
 	_, payload, err := h.processConceptModel(context.Background(), testUUID, "genres", testBody)
 	assert.NoError(t, err)
 	assert.NotNil(t, payload)
-	assert.NotEmpty(t, payload.(service.EsConceptModel).PublishReference)
+	assert.NotEmpty(t, payload.(*service.EsConceptModel).PublishReference)
 
 	assert.Equal(t, log.WarnLevel, hook.LastEntry().Level)
 	assert.Equal(t, "Transaction ID not found to process concept model. Generated new transaction ID", hook.LastEntry().Message)
-	assert.Equal(t, hook.LastEntry().Data[tid.TransactionIDKey], payload.(service.EsConceptModel).PublishReference)
+	assert.Equal(t, hook.LastEntry().Data[tid.TransactionIDKey], payload.(*service.EsConceptModel).PublishReference)
 }
 
 type dummyEsService struct {
