@@ -25,6 +25,7 @@ type AggregateConceptModel struct {
 	PrefLabel             string          `json:"prefLabel"`
 	Aliases               []string        `json:"aliases,omitempty"`
 	SourceRepresentations []SourceConcept `json:"sourceRepresentations"`
+	IsAuthor              bool            `json:"isAuthor"`
 }
 
 type SourceConcept struct {
@@ -45,7 +46,7 @@ type EsConceptModel struct {
 }
 
 type EsPersonConceptModel struct {
-	EsConceptModel
+	*EsConceptModel
 	IsFTAuthor string `json:"isFTAuthor"`
 }
 

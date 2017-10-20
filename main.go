@@ -90,26 +90,7 @@ func main() {
 		Desc:   "List which are currently supported by elasticsearch (already have mapping associated)",
 		EnvVar: "ELASTICSEARCH_WHITELISTED_CONCEPTS",
 	})
-	pubClusterReadURL := app.String(cli.StringOpt{
-		Name:   "publish-cluster-read-url",
-		Value:  "http://localhost:8080",
-		Desc:   "The URL of the publish cluster (used for retreiving author list)",
-		EnvVar: "PUBLISH_CLUSTER_URL",
-	})
 
-	pubClusterCredKey := app.String(cli.StringOpt{
-		Name:   "publish-cluster-credentials",
-		Value:  "dummyUser:dummyValue",
-		Desc:   "The ETCD key value that specifies the credentials for connection to the publish cluster in the form user:pass",
-		EnvVar: "PUBLISH_CLUSTER_CREDENTIALS",
-	})
-
-	authorRefreshInterval := app.Int(cli.IntOpt{
-		Name:   "author-refresh-interval",
-		Value:  60,
-		Desc:   "the time interval between author identefier list refreshes in minutes",
-		EnvVar: "AUTHOR_REFRESH_INTERVAL",
-	})
 
 	accessConfig := service.NewAccessConfig(*accessKey, *secretKey, *esEndpoint)
 
@@ -140,16 +121,11 @@ func main() {
 		esService := service.NewEsService(ecc, *indexName, &bulkProcessorConfig)
 
 		allowedConceptTypes := strings.Split(*elasticsearchWhitelistedConceptTypes, ",")
-		authorService, err := service.NewAuthorService(*pubClusterReadURL, *pubClusterCredKey, time.Duration(*authorRefreshInterval)*time.Minute, &http.Client{Timeout: time.Second * 30})
-		if err != nil {
-			log.Errorf("Could not retrieve author list, error=[%s]\n", err)
-		}
-		handler := resources.NewHandler(esService, authorService, allowedConceptTypes)
+		handler := resources.NewHandler(esService, allowedConceptTypes)
 		defer handler.Close()
-		authorService.RefreshAuthorIdentifiers()
 
 		//create health service
-		healthService := health.NewHealthService(esService, authorService)
+		healthService := health.NewHealthService(esService)
 		routeRequests(port, handler, healthService)
 	}
 

@@ -24,19 +24,17 @@ var (
 // Handler handles http calls
 type Handler struct {
 	elasticService      service.EsService
-	modelPopulator      service.ModelPopulator
 	allowedConceptTypes map[string]bool
 }
 
-func NewHandler(elasticService service.EsService, authorService service.AuthorService, allowedConceptTypes []string) *Handler {
+func NewHandler(elasticService service.EsService, allowedConceptTypes []string) *Handler {
 	allowedTypes := make(map[string]bool)
 	for _, v := range allowedConceptTypes {
 		allowedTypes[v] = true
 	}
 
-	esModelPopulator := service.NewEsModelPopulator(authorService)
 
-	return &Handler{elasticService: elasticService, modelPopulator: esModelPopulator, allowedConceptTypes: allowedTypes}
+	return &Handler{elasticService: elasticService, allowedConceptTypes: allowedTypes}
 }
 
 // LoadData processes a single ES concept entity
@@ -51,10 +49,6 @@ func (h *Handler) LoadData(w http.ResponseWriter, r *http.Request) {
 		switch err {
 		case errUnsupportedConceptType:
 			errStatus = http.StatusNotFound
-
-		case service.ErrNoAuthors:
-			errStatus = http.StatusServiceUnavailable
-
 		default:
 			errStatus = http.StatusBadRequest
 		}
@@ -155,7 +149,7 @@ func (h *Handler) processConceptModel(ctx context.Context, uuid string, conceptT
 		log.WithError(err).WithField(tid.TransactionIDKey, transactionID).Warn("Transaction ID not found to process concept model. Generated new transaction ID")
 	}
 
-	payload, err := h.modelPopulator.ConvertConceptToESConceptModel(concept, conceptType, transactionID)
+	payload, err := service.ConvertConceptToESConceptModel(concept, conceptType, transactionID)
 	return concept, payload, err
 }
 
@@ -182,8 +176,8 @@ func (h *Handler) processAggregateConceptModel(ctx context.Context, uuid string,
 		log.WithError(err).WithField(tid.TransactionIDKey, transactionID).Warn("Transaction ID not found to process aggregate concept model. Generated new transaction ID")
 	}
 
-	payload, err := h.modelPopulator.ConvertAggregateConceptToESConceptModel(concept, conceptType, transactionID)
-	return concept, &payload, err
+	payload, err := service.ConvertAggregateConceptToESConceptModel(concept, conceptType, transactionID)
+	return concept, payload, err
 }
 
 func (h *Handler) ReadData(writer http.ResponseWriter, request *http.Request) {

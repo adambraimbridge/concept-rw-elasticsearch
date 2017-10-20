@@ -1,11 +1,11 @@
 package service
 
 import (
-	"strconv"
 
 	"github.com/Financial-Times/neo-model-utils-go/mapper"
 	log "github.com/sirupsen/logrus"
 	"time"
+	"strconv"
 )
 
 const (
@@ -17,54 +17,38 @@ type ModelPopulator interface {
 	ConvertAggregateConceptToESConceptModel(concept AggregateConceptModel, conceptType string, publishRef string) (interface{}, error)
 }
 
-type EsModelPopulator struct {
-	authorService AuthorService
-}
-
-func NewEsModelPopulator(authorService AuthorService) ModelPopulator {
-	return &EsModelPopulator{authorService}
-}
-
-func (mp *EsModelPopulator) ConvertConceptToESConceptModel(concept ConceptModel, conceptType string, publishRef string) (interface{}, error) {
-	esModel := convertToESConceptModel(concept, conceptType, publishRef)
+func ConvertConceptToESConceptModel(concept ConceptModel, conceptType string, publishRef string) (interface{}, error) {
+	esModel := newESConceptModel(concept.UUID, conceptType, concept.DirectType, concept.Aliases, concept.GetAuthorities(), concept.PrefLabel, publishRef)
 
 	switch conceptType {
-	case PERSON:
-		person, err := mp.convertToESPersonConceptModel(esModel, concept.UUID, conceptType)
-		if err != nil {
-			return nil, err
+	case PERSON: // person type should not come through as the old model.
+		esPersonModel := &EsPersonConceptModel{
+			esModel,
+			"false",
 		}
-		return *person, nil
+		return esPersonModel, nil
 	default:
 		return esModel, nil
 	}
 }
 
-func (mp *EsModelPopulator) ConvertAggregateConceptToESConceptModel(concept AggregateConceptModel, conceptType string, publishRef string) (interface{}, error) {
-	esModel := convertAggregateConceptToESConceptModel(concept, conceptType, publishRef)
-
+func ConvertAggregateConceptToESConceptModel(concept AggregateConceptModel, conceptType string, publishRef string) (interface{}, error) {
+	esModel := newESConceptModel(concept.PrefUUID, conceptType, concept.DirectType, concept.Aliases, concept.GetAuthorities(), concept.PrefLabel, publishRef)
 	switch conceptType {
 	case PERSON:
-		person, err := mp.convertToESPersonConceptModel(esModel, concept.PrefUUID, conceptType)
-		if err != nil {
-			return nil, err
+		isFTAuthor := strconv.FormatBool(concept.IsAuthor)
+		esPersonModel := &EsPersonConceptModel{
+			esModel,
+			isFTAuthor,
 		}
-		return *person, nil
+		return esPersonModel, nil
 	default:
 		return esModel, nil
 	}
 }
 
-func convertAggregateConceptToESConceptModel(concept AggregateConceptModel, conceptType string, publishRef string) EsConceptModel {
-	return newESConceptModel(concept.PrefUUID, conceptType, concept.DirectType, concept.Aliases, concept.GetAuthorities(), concept.PrefLabel, publishRef)
-}
-
-func convertToESConceptModel(concept ConceptModel, conceptType string, publishRef string) EsConceptModel {
-	return newESConceptModel(concept.UUID, conceptType, concept.DirectType, concept.Aliases, concept.GetAuthorities(), concept.PrefLabel, publishRef)
-}
-
-func newESConceptModel(uuid string, conceptType string, directType string, aliases []string, authorities []string, prefLabel string, publishRef string) EsConceptModel {
-	esModel := EsConceptModel{}
+func newESConceptModel(uuid string, conceptType string, directType string, aliases []string, authorities []string, prefLabel string, publishRef string) *EsConceptModel {
+	esModel := &EsConceptModel{}
 	esModel.ApiUrl = mapper.APIURL(uuid, []string{directType}, "")
 	esModel.Id = mapper.IDURL(uuid)
 	esModel.Types = mapper.TypeURIs(getTypes(directType))
@@ -83,18 +67,6 @@ func newESConceptModel(uuid string, conceptType string, directType string, alias
 	return esModel
 }
 
-func (mp *EsModelPopulator) convertToESPersonConceptModel(esConceptModel EsConceptModel, uuid string, conceptType string) (*EsPersonConceptModel, error) {
-	isFTAuthor, err := mp.authorService.IsFTAuthor(uuid)
-	if err != nil {
-		return nil, err
-	}
-
-	esPersonModel := &EsPersonConceptModel{
-		esConceptModel,
-		strconv.FormatBool(isFTAuthor),
-	}
-	return esPersonModel, nil
-}
 
 func getTypes(conceptType string) []string {
 	conceptTypes := []string{conceptType}
