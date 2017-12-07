@@ -91,7 +91,6 @@ func main() {
 		EnvVar: "ELASTICSEARCH_WHITELISTED_CONCEPTS",
 	})
 
-
 	accessConfig := service.NewAccessConfig(*accessKey, *secretKey, *esEndpoint)
 
 	log.SetLevel(log.InfoLevel)
@@ -149,7 +148,7 @@ func routeRequests(port *string, handler *resources.Handler, healthService *heal
 
 	http.HandleFunc("/__health", healthService.HealthCheckHandler())
 	http.HandleFunc("/__health-details", healthService.HealthDetails)
-	http.HandleFunc(status.GTGPath, healthService.GoodToGo)
+	http.HandleFunc(status.GTGPath, status.NewGoodToGoHandler(healthService.GTG))
 	http.HandleFunc(status.BuildInfoPath, status.BuildInfoHandler)
 
 	http.Handle("/", monitoringRouter)

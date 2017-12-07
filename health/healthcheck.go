@@ -120,7 +120,7 @@ func (service *HealthService) readOnlyChecker() (string, error) {
 	return fmt.Sprintf("Elasticsearch index [%v] is writeable", indexName), nil
 }
 
-func (service *HealthService) GoodToGo() gtg.Status {
+func (service *HealthService) GTG() gtg.Status {
 	var statusChecker []gtg.StatusChecker
 	for _, c := range service.checks(false) {
 		checkFunc := func() gtg.Status {
