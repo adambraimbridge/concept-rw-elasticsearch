@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/Financial-Times/concept-rw-elasticsearch/service"
 	fthealth "github.com/Financial-Times/go-fthealth/v1_1"
+	"github.com/Financial-Times/service-status-go/gtg"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -21,11 +23,14 @@ func NewHealthService(esHealthService service.EsService) *HealthService {
 }
 
 func (service *HealthService) HealthCheckHandler() func(http.ResponseWriter, *http.Request) {
-	hc := &fthealth.HealthCheck{
-		SystemCode:  "up-crwes",
-		Name:        "Concept RW Elasticsearch",
-		Description: "Concept RW ElasticSearch is an application that writes concepts into Amazon Elasticsearch cluster in batches",
-		Checks:      service.checks(true),
+	hc := fthealth.TimedHealthCheck{
+		HealthCheck: fthealth.HealthCheck{
+			SystemCode:  "up-crwes",
+			Name:        "Concept RW Elasticsearch",
+			Description: "Concept RW ElasticSearch is an application that writes concepts into Amazon Elasticsearch cluster in batches",
+			Checks:      service.checks(true),
+		},
+		Timeout: 10 * time.Second,
 	}
 
 	return fthealth.Handler(hc)
@@ -115,15 +120,22 @@ func (service *HealthService) readOnlyChecker() (string, error) {
 	return fmt.Sprintf("Elasticsearch index [%v] is writeable", indexName), nil
 }
 
-//GoodToGo returns a 503 if the healthcheck fails - suitable for use from varnish to check availability of a node
-func (service *HealthService) GoodToGo(writer http.ResponseWriter, req *http.Request) {
+func (service *HealthService) GoodToGo() gtg.Status {
+	var statusChecker []gtg.StatusChecker
 	for _, c := range service.checks(false) {
-		if _, err := c.Checker(); err != nil {
-			writer.WriteHeader(http.StatusServiceUnavailable)
-			writer.Write([]byte(fmt.Sprintf("gtg failed for %v, reason: %v", c.ID, err.Error())))
-			return
+		checkFunc := func() gtg.Status {
+			return gtgCheck(c.Checker)
 		}
+		statusChecker = append(statusChecker, checkFunc)
 	}
+	return gtg.FailFastParallelCheck(statusChecker)()
+}
+
+func gtgCheck(handler func() (string, error)) gtg.Status {
+	if _, err := handler(); err != nil {
+		return gtg.Status{GoodToGo: false, Message: err.Error()}
+	}
+	return gtg.Status{GoodToGo: true}
 }
 
 //HealthDetails returns the response from elasticsearch service /__health endpoint - describing the cluster health
