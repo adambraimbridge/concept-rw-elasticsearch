@@ -10,6 +10,7 @@ import (
 
 	"github.com/Financial-Times/concept-rw-elasticsearch/service"
 	fthealth "github.com/Financial-Times/go-fthealth/v1_1"
+	status "github.com/Financial-Times/service-status-go/httphandlers"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -114,7 +115,7 @@ func TestGoodToGoUnhealthyESCluster(t *testing.T) {
 
 	//create a responseRecorder
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(healthService.GoodToGo)
+	handler := http.HandlerFunc(status.NewGoodToGoHandler(healthService.GTG))
 
 	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
 	// directly and pass in our Request and ResponseRecorder.
@@ -126,7 +127,7 @@ func TestGoodToGoUnhealthyESCluster(t *testing.T) {
 			status, http.StatusServiceUnavailable)
 	}
 
-	assert.Regexp(t, "gtg failed .+, reason: computer says no", rr.Body.String(), "GTG response body")
+	assert.Equal(t, "computer says no", rr.Body.String(), "GTG response body")
 
 	esService.AssertExpectations(t)
 }
@@ -144,7 +145,7 @@ func TestHappyGoodToGo(t *testing.T) {
 
 	//create a responseRecorder
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(healthService.GoodToGo)
+	handler := http.HandlerFunc(status.NewGoodToGoHandler(healthService.GTG))
 
 	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
 	// directly and pass in our Request and ResponseRecorder.
@@ -156,10 +157,7 @@ func TestHappyGoodToGo(t *testing.T) {
 			status, http.StatusOK)
 	}
 
-	if rr.Body.Bytes() != nil {
-		t.Error("Response body should be empty")
-	}
-
+	assert.Equal(t, "OK", rr.Body.String(), "GTG response body")
 	esService.AssertExpectations(t)
 }
 
@@ -247,7 +245,6 @@ func TestHealthCheckNoESClusterConnection(t *testing.T) {
 	esService.AssertExpectations(t)
 
 }
-
 
 func TestHealthCheckReadOnlyIndex(t *testing.T) {
 	req, err := http.NewRequest("GET", "/__health", nil)

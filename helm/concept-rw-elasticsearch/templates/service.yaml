@@ -15,14 +15,3 @@ spec:
       targetPort: 8080
   selector:
     app: {{ .Values.service.name }}
-  spec:
-    affinity:
-      podAntiAffinity:
-        requiredDuringSchedulingIgnoredDuringExecution:
-        - labelSelector:
-            matchExpressions:
-            - key: app
-              operator: In
-              values:
-              - {{ .Values.service.name }}
-          topologyKey: "kubernetes.io/hostname"
