@@ -17,6 +17,7 @@ type ConceptModel struct {
 	Authority              string                 `json:"authority,omitempty"`
 	Aliases                []string               `json:"aliases,omitempty"`
 	AlternativeIdentifiers map[string]interface{} `json:"alternativeIdentifiers,omitempty"`
+	IsDeprecated           bool                   `json:"isDeprecated,omitempty"`
 }
 
 type AggregateConceptModel struct {
@@ -26,6 +27,7 @@ type AggregateConceptModel struct {
 	Aliases               []string        `json:"aliases,omitempty"`
 	SourceRepresentations []SourceConcept `json:"sourceRepresentations"`
 	IsAuthor              bool            `json:"isAuthor"`
+	IsDeprecated          bool            `json:"isDeprecated,omitempty"`
 }
 
 type SourceConcept struct {
@@ -43,6 +45,7 @@ type EsConceptModel struct {
 	Aliases          []string `json:"aliases,omitempty"`
 	LastModified     string   `json:"lastModified"`
 	PublishReference string   `json:"publishReference"`
+	IsDeprecated     bool     `json:"isDeprecated,omitempty,string"` // store it as a string; stored only if this is true
 }
 
 type EsPersonConceptModel struct {
