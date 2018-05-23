@@ -441,7 +441,7 @@ func TestDeprecationFlagTrue(t *testing.T) {
 	err = json.Unmarshal(*readResp.Source, &obj)
 	assert.Equal(t, payload.ApiUrl, obj["apiUrl"], "apiUrl")
 	assert.Equal(t, payload.PrefLabel, obj["prefLabel"], "prefLabel")
-	assert.Equal(t, "true", obj["isDeprecated"], "deprecation flag")
+	assert.Equal(t, true, obj["isDeprecated"], "deprecation flag")
 }
 
 func TestDeprecationFlagFalse(t *testing.T) {
