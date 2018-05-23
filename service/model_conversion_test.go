@@ -492,7 +492,7 @@ func TestValidateEsConceptModelMarshalling(t *testing.T) {
 				Authorities:  []string{},
 				IsDeprecated: true,
 			},
-			expectedResultJSON: `{"id":"http://api.ft.com/things/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8","apiUrl":"http://api.ft.com/organisations/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8","prefLabel":"Apple, Inc.","types":[],"authorities":[],"directType":"http://www.ft.com/ontology/company/PublicCompany","lastModified":"","publishReference":"","isDeprecated":"true"}`,
+			expectedResultJSON: `{"id":"http://api.ft.com/things/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8","apiUrl":"http://api.ft.com/organisations/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8","prefLabel":"Apple, Inc.","types":[],"authorities":[],"directType":"http://www.ft.com/ontology/company/PublicCompany","lastModified":"","publishReference":"","isDeprecated":true}`,
 		},
 		{
 			testName: "Check false deprecation flag",

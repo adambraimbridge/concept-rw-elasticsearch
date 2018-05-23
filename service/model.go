@@ -45,7 +45,7 @@ type EsConceptModel struct {
 	Aliases          []string `json:"aliases,omitempty"`
 	LastModified     string   `json:"lastModified"`
 	PublishReference string   `json:"publishReference"`
-	IsDeprecated     bool     `json:"isDeprecated,omitempty,string"` // store it as a string; stored only if this is true
+	IsDeprecated     bool     `json:"isDeprecated,omitempty"` // stored only if this is true
 }
 
 type EsPersonConceptModel struct {
