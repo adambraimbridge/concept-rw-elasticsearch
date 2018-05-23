@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"testing"
 
+	"time"
+
 	tid "github.com/Financial-Times/transactionid-utils-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"time"
 )
 
 var testAggregateConceptModelJSON = `{"prefUUID":"56388858-38d6-4dfc-a001-506394259b51","prefLabel":"Smartlogics Brands PrefLabel","type":"Brand","strapline":"Some strapline","descriptionXML":"Some description","_imageUrl":"Some image url","sourceRepresentations":[{"uuid":"4ebbd9c4-3bb7-4d18-a14c-4c45aac5d966","prefLabel":"TMEs PrefLabel","type":"Brand","authority":"TME","authorityValue":"745212"},{"uuid":"56388858-38d6-4dfc-a001-506394259b51","prefLabel":"Smartlogics Brands PrefLabel","type":"Brand","authority":"Smartlogic","authorityValue":"123456789","lastModifiedEpoch":1498127042,"strapline":"Some strapline","descriptionXML":"Some description","_imageUrl":"Some image url"}]}`
@@ -16,7 +17,6 @@ var testAggregateConceptModelJSON = `{"prefUUID":"56388858-38d6-4dfc-a001-506394
 var testConceptModelJSON = `{"uuid":"2384fa7a-d514-3d6a-a0ea-3a711f66d0d8","type":"PublicCompany","properName":"Apple, Inc.","prefLabel":"Apple, Inc.","legalName":"Apple Inc.","shortName":"Apple","hiddenLabel":"APPLE INC","alternativeIdentifiers":{"TME":["TnN0ZWluX09OX0ZvcnR1bmVDb21wYW55X0FBUEw=-T04="],"uuids":["2384fa7a-d514-3d6a-a0ea-3a711f66d0d8","2abff0bd-544d-31c3-899b-fba2f60d53dd"],"factsetIdentifier":"000C7F-E","leiCode":"HWUPKR0MPOU8FGXBT394"},"formerNames":["Apple Computer, Inc."],"aliases":["Apple Inc","Apple Computers","Apple","Apple Canada","Apple Computer","Apple Computer, Inc.","APPLE INC","Apple Incorporated","Apple Computer Inc","Apple Inc.","Apple, Inc."],"industryClassification":"7a01c847-a9bd-33be-b991-c6fbd8871a46"}`
 
 var testIntermediateConceptModelJSON = `{"uuid":"7e3f1354-53ba-3c3e-b9bb-5fcb8941df8c","prefLabel":"ICOmedy","type":"AlphavilleSeries","authority":"TME","authorityValue":"NDQ1NjhiMzktMjJmNy00OWEzLWExNDctNDFiNDk4OGU2MTdj-QWxwaGF2aWxsZVNlcmllc0NsYXNzaWZpY2F0aW9u"}`
-
 
 func TestConvertToESConceptModel(t *testing.T) {
 
@@ -75,10 +75,11 @@ func TestConvertToESConceptModel(t *testing.T) {
 		},
 		{
 			ConceptModel{
-				UUID:       "2384fa7a-d514-3d6a-a0ea-3a711f66d0d8",
-				DirectType: "PublicCompany",
-				PrefLabel:  "Apple, Inc.",
-				Aliases:    []string{},
+				UUID:         "2384fa7a-d514-3d6a-a0ea-3a711f66d0d8",
+				DirectType:   "PublicCompany",
+				PrefLabel:    "Apple, Inc.",
+				Aliases:      []string{},
+				IsDeprecated: true,
 			},
 			EsConceptModel{
 				Id:        "http://api.ft.com/things/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8",
@@ -91,8 +92,9 @@ func TestConvertToESConceptModel(t *testing.T) {
 					"http://www.ft.com/ontology/company/Company",
 					"http://www.ft.com/ontology/company/PublicCompany",
 				},
-				DirectType: "http://www.ft.com/ontology/company/PublicCompany",
-				Aliases:    []string{},
+				DirectType:   "http://www.ft.com/ontology/company/PublicCompany",
+				Aliases:      []string{},
+				IsDeprecated: true,
 			},
 		},
 	}
@@ -110,6 +112,7 @@ func TestConvertToESConceptModel(t *testing.T) {
 		assert.Equal(t, testModel.esConceptModel.Aliases, esModel.Aliases, fmt.Sprintf("Expected Aliases %s differ from actual Aliases %s ", testModel.esConceptModel.Aliases, esModel.Aliases))
 		assert.Subset(t, testModel.esConceptModel.Authorities, esModel.Authorities, fmt.Sprintf("Expected Authorities %s differ from actual Authorities %s ", testModel.esConceptModel.Authorities, esModel.Authorities))
 		assert.Equal(t, testTID, esModel.PublishReference)
+		assert.Equal(t, testModel.esConceptModel.IsDeprecated, esModel.IsDeprecated, fmt.Sprintf("Expected IsDeprecated %t differ from actual IsDeprecated %t", testModel.esConceptModel.IsDeprecated, esModel.IsDeprecated))
 
 		actualLastModified, err := time.Parse(time.RFC3339, esModel.LastModified)
 		assert.NoError(t, err)
@@ -183,10 +186,11 @@ func TestConvertAggregateConceptToESConceptModel(t *testing.T) {
 		},
 		{
 			AggregateConceptModel{
-				PrefUUID:   "2384fa7a-d514-3d6a-a0ea-3a711f66d0d8",
-				DirectType: "PublicCompany",
-				PrefLabel:  "Apple, Inc.",
-				Aliases:    []string{},
+				PrefUUID:     "2384fa7a-d514-3d6a-a0ea-3a711f66d0d8",
+				DirectType:   "PublicCompany",
+				PrefLabel:    "Apple, Inc.",
+				Aliases:      []string{},
+				IsDeprecated: true,
 			},
 			EsConceptModel{
 				Id:        "http://api.ft.com/things/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8",
@@ -199,8 +203,9 @@ func TestConvertAggregateConceptToESConceptModel(t *testing.T) {
 					"http://www.ft.com/ontology/company/Company",
 					"http://www.ft.com/ontology/company/PublicCompany",
 				},
-				DirectType: "http://www.ft.com/ontology/company/PublicCompany",
-				Aliases:    []string{},
+				DirectType:   "http://www.ft.com/ontology/company/PublicCompany",
+				Aliases:      []string{},
+				IsDeprecated: true,
 			},
 		},
 	}
@@ -218,6 +223,7 @@ func TestConvertAggregateConceptToESConceptModel(t *testing.T) {
 		assert.Equal(t, testModel.esConceptModel.Aliases, esModel.Aliases, fmt.Sprintf("Expected Aliases %s differ from actual Aliases %s ", testModel.esConceptModel.Aliases, esModel.Aliases))
 		assert.Subset(t, testModel.esConceptModel.Authorities, esModel.Authorities, fmt.Sprintf("Expected Authorities %s differ from actual Authorities %s ", testModel.esConceptModel.Authorities, esModel.Authorities))
 		assert.Equal(t, testTID, esModel.PublishReference)
+		assert.Equal(t, testModel.esConceptModel.IsDeprecated, esModel.IsDeprecated, fmt.Sprintf("Expected IsDeprecated %t differ from actual IsDeprecated %t", testModel.esConceptModel.IsDeprecated, esModel.IsDeprecated))
 
 		actualLastModified, err := time.Parse(time.RFC3339, esModel.LastModified)
 		assert.NoError(t, err)
@@ -337,12 +343,12 @@ func TestConvertPersonToAggregateConceptModel(t *testing.T) {
 	assert := assert.New(t)
 
 	tests := []struct {
-		aggregateConceptModel    AggregateConceptModel
-		esPersonConceptModel     EsPersonConceptModel
+		aggregateConceptModel AggregateConceptModel
+		esPersonConceptModel  EsPersonConceptModel
 	}{
 		{
 			AggregateConceptModel{ // default to false
-				PrefUUID:       "0f07d468-fc37-3c44-bf19-a81f2aae9f36",
+				PrefUUID:   "0f07d468-fc37-3c44-bf19-a81f2aae9f36",
 				DirectType: "Person",
 				PrefLabel:  "Martin Wolf",
 				Aliases:    []string{},
@@ -365,11 +371,11 @@ func TestConvertPersonToAggregateConceptModel(t *testing.T) {
 		},
 		{
 			AggregateConceptModel{ // matches on true
-				PrefUUID:       "0f07d468-fc37-3c44-bf19-a81f2aae9f36",
+				PrefUUID:   "0f07d468-fc37-3c44-bf19-a81f2aae9f36",
 				DirectType: "Person",
 				PrefLabel:  "Martin Wolf",
 				Aliases:    []string{},
-				IsAuthor: true,
+				IsAuthor:   true,
 			},
 			EsPersonConceptModel{
 				EsConceptModel: &EsConceptModel{
@@ -389,11 +395,11 @@ func TestConvertPersonToAggregateConceptModel(t *testing.T) {
 		},
 		{
 			AggregateConceptModel{ // matches on false
-				PrefUUID:       "0f07d468-fc37-3c44-bf19-a81f2aae9f36",
+				PrefUUID:   "0f07d468-fc37-3c44-bf19-a81f2aae9f36",
 				DirectType: "Person",
 				PrefLabel:  "Martin Wolf",
 				Aliases:    []string{},
-				IsAuthor: false,
+				IsAuthor:   false,
 			},
 			EsPersonConceptModel{
 				EsConceptModel: &EsConceptModel{
@@ -433,7 +439,6 @@ func TestConvertPersonToAggregateConceptModel(t *testing.T) {
 	}
 }
 
-
 func TestReverse(t *testing.T) {
 	assert := assert.New(t)
 
@@ -466,5 +471,49 @@ func TestReverse(t *testing.T) {
 	for _, testCase := range tests {
 		actualResult := reverse(testCase.input)
 		assert.Equal(testCase.expectedResult, actualResult)
+	}
+}
+
+func TestValidateEsConceptModelMarshalling(t *testing.T) {
+	tests := []struct {
+		testName           string
+		inConcept          interface{}
+		expectedResultJSON string
+	}{
+		{
+			testName: "Check true deprecation flag",
+			inConcept: &EsConceptModel{
+				Id:           "http://api.ft.com/things/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8",
+				ApiUrl:       "http://api.ft.com/organisations/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8",
+				PrefLabel:    "Apple, Inc.",
+				DirectType:   "http://www.ft.com/ontology/company/PublicCompany",
+				Aliases:      []string{},
+				Types:        []string{},
+				Authorities:  []string{},
+				IsDeprecated: true,
+			},
+			expectedResultJSON: `{"id":"http://api.ft.com/things/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8","apiUrl":"http://api.ft.com/organisations/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8","prefLabel":"Apple, Inc.","types":[],"authorities":[],"directType":"http://www.ft.com/ontology/company/PublicCompany","lastModified":"","publishReference":"","isDeprecated":"true"}`,
+		},
+		{
+			testName: "Check false deprecation flag",
+			inConcept: &EsConceptModel{
+				Id:           "http://api.ft.com/things/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8",
+				ApiUrl:       "http://api.ft.com/organisations/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8",
+				PrefLabel:    "Apple, Inc.",
+				DirectType:   "http://www.ft.com/ontology/company/PublicCompany",
+				Aliases:      []string{},
+				Types:        []string{},
+				Authorities:  []string{},
+				IsDeprecated: false,
+			},
+			expectedResultJSON: `{"id":"http://api.ft.com/things/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8","apiUrl":"http://api.ft.com/organisations/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8","prefLabel":"Apple, Inc.","types":[],"authorities":[],"directType":"http://www.ft.com/ontology/company/PublicCompany","lastModified":"","publishReference":""}`,
+		},
+	}
+
+	for _, testCase := range tests {
+		inConceptByteArr, err := json.Marshal(testCase.inConcept)
+		assert.NoError(t, err, fmt.Sprintf("%s -> error during marshalling", testCase.testName))
+
+		assert.Equal(t, string(inConceptByteArr), testCase.expectedResultJSON, fmt.Sprintf("%s -> expected json string not equals with actual", testCase.testName))
 	}
 }

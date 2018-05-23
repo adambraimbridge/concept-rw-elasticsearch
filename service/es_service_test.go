@@ -408,6 +408,78 @@ func TestCleanupErrorLogging(t *testing.T) {
 	assert.Equal(t, testTID, hook.LastEntry().Data[tid.TransactionIDKey])
 }
 
+func TestDeprecationFlagTrue(t *testing.T) {
+	esURL := getElasticSearchTestURL(t)
+	ec := getElasticClient(t, esURL)
+	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
+
+	testUUID := uuid.NewV4().String()
+	payload := EsConceptModel{
+		Id:           testUUID,
+		ApiUrl:       fmt.Sprintf("%s/%ss/%s", apiBaseUrl, conceptType, testUUID),
+		PrefLabel:    fmt.Sprintf("Test concept %s %s", conceptType, testUUID),
+		Types:        []string{},
+		DirectType:   "",
+		Aliases:      []string{},
+		IsDeprecated: true,
+	}
+
+	resp, err := service.LoadData(newTestContext(), conceptType, testUUID, payload)
+	assert.NoError(t, err, "expected successful write")
+
+	assert.Equal(t, true, resp.Created, "document should have been created")
+	assert.Equal(t, indexName, resp.Index, "index name")
+	assert.Equal(t, conceptType, resp.Type, "concept type")
+	assert.Equal(t, testUUID, resp.Id, "document id")
+
+	readResp, err := service.ReadData(conceptType, testUUID)
+
+	assert.NoError(t, err, "expected no error for ES read")
+	assert.True(t, readResp.Found, "should find a result")
+
+	obj := make(map[string]interface{})
+	err = json.Unmarshal(*readResp.Source, &obj)
+	assert.Equal(t, payload.ApiUrl, obj["apiUrl"], "apiUrl")
+	assert.Equal(t, payload.PrefLabel, obj["prefLabel"], "prefLabel")
+	assert.Equal(t, "true", obj["isDeprecated"], "deprecation flag")
+}
+
+func TestDeprecationFlagFalse(t *testing.T) {
+	esURL := getElasticSearchTestURL(t)
+	ec := getElasticClient(t, esURL)
+	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
+
+	testUUID := uuid.NewV4().String()
+	payload := EsConceptModel{
+		Id:         testUUID,
+		ApiUrl:     fmt.Sprintf("%s/%ss/%s", apiBaseUrl, conceptType, testUUID),
+		PrefLabel:  fmt.Sprintf("Test concept %s %s", conceptType, testUUID),
+		Types:      []string{},
+		DirectType: "",
+		Aliases:    []string{},
+	}
+
+	resp, err := service.LoadData(newTestContext(), conceptType, testUUID, payload)
+	assert.NoError(t, err, "expected successful write")
+
+	assert.Equal(t, true, resp.Created, "document should have been created")
+	assert.Equal(t, indexName, resp.Index, "index name")
+	assert.Equal(t, conceptType, resp.Type, "concept type")
+	assert.Equal(t, testUUID, resp.Id, "document id")
+
+	readResp, err := service.ReadData(conceptType, testUUID)
+
+	assert.NoError(t, err, "expected no error for ES read")
+	assert.True(t, readResp.Found, "should find a result")
+
+	obj := make(map[string]interface{})
+	err = json.Unmarshal(*readResp.Source, &obj)
+	assert.Equal(t, payload.ApiUrl, obj["apiUrl"], "apiUrl")
+	assert.Equal(t, payload.PrefLabel, obj["prefLabel"], "prefLabel")
+	_, deprecatedFlagExists := obj["isDeprecated"]
+	assert.False(t, deprecatedFlagExists, "deprecation flag")
+}
+
 func waitForClientInjection(service EsService) {
 	for i := 0; i < 10; i++ {
 		_, err := service.GetClusterHealth()
