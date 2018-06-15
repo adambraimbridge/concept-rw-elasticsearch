@@ -3,7 +3,7 @@ jobs:
   build:
     working_directory: /go/src/github.com/Financial-Times/concept-rw-elasticsearch
     docker:
-      - image: golang:1.7.3
+      - image: golang:1.10.1
         environment:
           GOPATH: /go
           ELASTICSEARCH_TEST_URL: http://localhost:9200
