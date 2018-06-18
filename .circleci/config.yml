@@ -8,6 +8,9 @@ jobs:
           GOPATH: /go
           ELASTICSEARCH_TEST_URL: http://localhost:9200
       - image:  elasticsearch:5.1
+    environment:
+      CIRCLE_TEST_REPORTS: /tmp/test-reports
+      CIRCLE_COVERAGE_REPORT: /tmp/coverage-results
     steps:
       - checkout
       - run:
@@ -15,35 +18,25 @@ jobs:
           command: |
             go get github.com/mattn/goveralls
             go get -u github.com/jstemmer/go-junit-report
-            go get -u github.com/kardianos/govendor
+            curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
       - run:
           name: Test Results
           command: |
-            mkdir -p /tmp/test-results
-            mkdir -p /tmp/coverage-results
+            mkdir -p ${CIRCLE_TEST_REPORTS}
+            mkdir -p ${CIRCLE_COVERAGE_REPORT}
       - run:
-          name: Govendor Sync
-          command: govendor sync -v
+          name: Dep ensure
+          command: dep ensure -v -vendor-only
       - run:
           name: Go Build
           command: go build -v
       - run:
           name: Run Tests
           command: |
-            go test -v -cover -race -coverprofile=/tmp/coverage-results/coverage.out .
-            go list ./... | grep -v vendor | awk -F/ '{print $4}' | xargs -I {} go test -v -cover -race -coverprofile=/tmp/coverage-results/coverage_{}.out ./{}
-            mkdir -p /tmp/test-results/
-            go test -v -race . | /go/bin/go-junit-report > /tmp/test-results/main.xml
-            go list ./... | grep -v vendor | awk -F/ '{print $4}' | xargs -I {} go test -v -race ./{} | /go/bin/go-junit-report > /tmp/test-results/{}.xml
-      - run:
-          name: Combine Coverage Results
-          command: |
-            sed -i '1d' /tmp/coverage-results/*.out
-            echo "mode: atomic" > /tmp/coverage-results/overall-coverage.result
-            cat /tmp/coverage-results/*.out >> /tmp/coverage-results/overall-coverage.result
+            go test ./... -v -race -cover -coverprofile=$CIRCLE_COVERAGE_REPORT/coverage.out | go-junit-report > $CIRCLE_TEST_REPORTS/junit.xml
       - run:
           name: Upload Coverage
-          command: /go/bin/goveralls -coverprofile=/tmp/coverage-results/overall-coverage.result -service=circle-ci -repotoken=$COVERALLS_TOKEN
+          command: goveralls -coverprofile=$CIRCLE_COVERAGE_REPORT/coverage.out -service=circle-ci -repotoken=$COVERALLS_TOKEN
       - store_test_results:
           path: /tmp/test-results
   dockerfile:
