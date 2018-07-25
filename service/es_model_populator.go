@@ -18,7 +18,7 @@ type ModelPopulator interface {
 }
 
 func ConvertConceptToESConceptModel(concept ConceptModel, conceptType string, publishRef string) (interface{}, error) {
-	esModel := newESConceptModel(concept.UUID, conceptType, concept.DirectType, concept.Aliases, concept.GetAuthorities(), concept.PrefLabel, publishRef, concept.IsDeprecated)
+	esModel := newESConceptModel(concept.UUID, conceptType, concept.DirectType, concept.Aliases, concept.GetAuthorities(), concept.PrefLabel, publishRef, concept.IsDeprecated, concept.ScopeNote)
 
 	switch conceptType {
 	case PERSON: // person type should not come through as the old model.
@@ -33,7 +33,7 @@ func ConvertConceptToESConceptModel(concept ConceptModel, conceptType string, pu
 }
 
 func ConvertAggregateConceptToESConceptModel(concept AggregateConceptModel, conceptType string, publishRef string) (interface{}, error) {
-	esModel := newESConceptModel(concept.PrefUUID, conceptType, concept.DirectType, concept.Aliases, concept.GetAuthorities(), concept.PrefLabel, publishRef, concept.IsDeprecated)
+	esModel := newESConceptModel(concept.PrefUUID, conceptType, concept.DirectType, concept.Aliases, concept.GetAuthorities(), concept.PrefLabel, publishRef, concept.IsDeprecated, concept.ScopeNote)
 	switch conceptType {
 	case PERSON:
 		isFTAuthor := strconv.FormatBool(concept.IsAuthor)
@@ -47,7 +47,7 @@ func ConvertAggregateConceptToESConceptModel(concept AggregateConceptModel, conc
 	}
 }
 
-func newESConceptModel(uuid string, conceptType string, directType string, aliases []string, authorities []string, prefLabel string, publishRef string, isDeprecated bool) *EsConceptModel {
+func newESConceptModel(uuid string, conceptType string, directType string, aliases []string, authorities []string, prefLabel string, publishRef string, isDeprecated bool, scopeNote string) *EsConceptModel {
 	esModel := &EsConceptModel{}
 	esModel.ApiUrl = mapper.APIURL(uuid, []string{directType}, "")
 	esModel.Id = mapper.IDURL(uuid)
@@ -65,6 +65,7 @@ func newESConceptModel(uuid string, conceptType string, directType string, alias
 	esModel.LastModified = time.Now().Format(time.RFC3339)
 	esModel.PublishReference = publishRef
 	esModel.IsDeprecated = isDeprecated
+	esModel.ScopeNote = scopeNote
 
 	return esModel
 }

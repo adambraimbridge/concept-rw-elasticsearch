@@ -97,6 +97,32 @@ func TestConvertToESConceptModel(t *testing.T) {
 				IsDeprecated: true,
 			},
 		},
+		{
+			ConceptModel{
+				UUID:         "2384fa7a-d514-3d6a-a0ea-3a711f66d0d9",
+				DirectType:   "PublicCompany",
+				PrefLabel:    "Apple, Inc.",
+				Aliases:      []string{},
+				IsDeprecated: true,
+				ScopeNote:    "The Apple company used as a PublicCompany concept",
+			},
+			EsConceptModel{
+				Id:        "http://api.ft.com/things/2384fa7a-d514-3d6a-a0ea-3a711f66d0d9",
+				ApiUrl:    "http://api.ft.com/organisations/2384fa7a-d514-3d6a-a0ea-3a711f66d0d9",
+				PrefLabel: "Apple, Inc.",
+				Types: []string{
+					"http://www.ft.com/ontology/core/Thing",
+					"http://www.ft.com/ontology/concept/Concept",
+					"http://www.ft.com/ontology/organisation/Organisation",
+					"http://www.ft.com/ontology/company/Company",
+					"http://www.ft.com/ontology/company/PublicCompany",
+				},
+				DirectType:   "http://www.ft.com/ontology/company/PublicCompany",
+				Aliases:      []string{},
+				IsDeprecated: true,
+				ScopeNote:    "The Apple company used as a PublicCompany concept",
+			},
+		},
 	}
 
 	for _, testModel := range tests {
@@ -113,6 +139,7 @@ func TestConvertToESConceptModel(t *testing.T) {
 		assert.Subset(t, testModel.esConceptModel.Authorities, esModel.Authorities, fmt.Sprintf("Expected Authorities %s differ from actual Authorities %s ", testModel.esConceptModel.Authorities, esModel.Authorities))
 		assert.Equal(t, testTID, esModel.PublishReference)
 		assert.Equal(t, testModel.esConceptModel.IsDeprecated, esModel.IsDeprecated, fmt.Sprintf("Expected IsDeprecated %t differ from actual IsDeprecated %t", testModel.esConceptModel.IsDeprecated, esModel.IsDeprecated))
+		assert.Equal(t, testModel.esConceptModel.ScopeNote, esModel.ScopeNote, fmt.Sprintf("Expected ScopeNote %s differ from actual ScopeNote %s", testModel.esConceptModel.ScopeNote, esModel.ScopeNote))
 
 		actualLastModified, err := time.Parse(time.RFC3339, esModel.LastModified)
 		assert.NoError(t, err)
@@ -208,6 +235,32 @@ func TestConvertAggregateConceptToESConceptModel(t *testing.T) {
 				IsDeprecated: true,
 			},
 		},
+		{
+			AggregateConceptModel{
+				PrefUUID:     "2384fa7a-d514-3d6a-a0ea-3a711f66d0d9",
+				DirectType:   "PublicCompany",
+				PrefLabel:    "Apple, Inc.",
+				Aliases:      []string{},
+				IsDeprecated: true,
+				ScopeNote:    "The Apple company used as a PublicCompany concept",
+			},
+			EsConceptModel{
+				Id:        "http://api.ft.com/things/2384fa7a-d514-3d6a-a0ea-3a711f66d0d9",
+				ApiUrl:    "http://api.ft.com/organisations/2384fa7a-d514-3d6a-a0ea-3a711f66d0d9",
+				PrefLabel: "Apple, Inc.",
+				Types: []string{
+					"http://www.ft.com/ontology/core/Thing",
+					"http://www.ft.com/ontology/concept/Concept",
+					"http://www.ft.com/ontology/organisation/Organisation",
+					"http://www.ft.com/ontology/company/Company",
+					"http://www.ft.com/ontology/company/PublicCompany",
+				},
+				DirectType:   "http://www.ft.com/ontology/company/PublicCompany",
+				Aliases:      []string{},
+				IsDeprecated: true,
+				ScopeNote:    "The Apple company used as a PublicCompany concept",
+			},
+		},
 	}
 
 	for _, testModel := range tests {
@@ -224,6 +277,7 @@ func TestConvertAggregateConceptToESConceptModel(t *testing.T) {
 		assert.Subset(t, testModel.esConceptModel.Authorities, esModel.Authorities, fmt.Sprintf("Expected Authorities %s differ from actual Authorities %s ", testModel.esConceptModel.Authorities, esModel.Authorities))
 		assert.Equal(t, testTID, esModel.PublishReference)
 		assert.Equal(t, testModel.esConceptModel.IsDeprecated, esModel.IsDeprecated, fmt.Sprintf("Expected IsDeprecated %t differ from actual IsDeprecated %t", testModel.esConceptModel.IsDeprecated, esModel.IsDeprecated))
+		assert.Equal(t, testModel.esConceptModel.ScopeNote, esModel.ScopeNote, fmt.Sprintf("Expected ScopeNote %s differ from actual ScopeNote %s", testModel.esConceptModel.ScopeNote, esModel.ScopeNote))
 
 		actualLastModified, err := time.Parse(time.RFC3339, esModel.LastModified)
 		assert.NoError(t, err)
@@ -505,6 +559,34 @@ func TestValidateEsConceptModelMarshalling(t *testing.T) {
 				Types:        []string{},
 				Authorities:  []string{},
 				IsDeprecated: false,
+			},
+			expectedResultJSON: `{"id":"http://api.ft.com/things/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8","apiUrl":"http://api.ft.com/organisations/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8","prefLabel":"Apple, Inc.","types":[],"authorities":[],"directType":"http://www.ft.com/ontology/company/PublicCompany","lastModified":"","publishReference":""}`,
+		},
+		{
+			testName: "Check scopeNote with value",
+			inConcept: &EsConceptModel{
+				Id:          "http://api.ft.com/things/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8",
+				ApiUrl:      "http://api.ft.com/organisations/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8",
+				PrefLabel:   "Apple, Inc.",
+				DirectType:  "http://www.ft.com/ontology/company/PublicCompany",
+				Aliases:     []string{},
+				Types:       []string{},
+				Authorities: []string{},
+				ScopeNote:   "scope note dummy value",
+			},
+			expectedResultJSON: `{"id":"http://api.ft.com/things/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8","apiUrl":"http://api.ft.com/organisations/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8","prefLabel":"Apple, Inc.","types":[],"authorities":[],"directType":"http://www.ft.com/ontology/company/PublicCompany","lastModified":"","publishReference":"","scopeNote":"scope note dummy value"}`,
+		},
+		{
+			testName: "Check scopeNote with no value",
+			inConcept: &EsConceptModel{
+				Id:          "http://api.ft.com/things/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8",
+				ApiUrl:      "http://api.ft.com/organisations/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8",
+				PrefLabel:   "Apple, Inc.",
+				DirectType:  "http://www.ft.com/ontology/company/PublicCompany",
+				Aliases:     []string{},
+				Types:       []string{},
+				Authorities: []string{},
+				ScopeNote:   "",
 			},
 			expectedResultJSON: `{"id":"http://api.ft.com/things/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8","apiUrl":"http://api.ft.com/organisations/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8","prefLabel":"Apple, Inc.","types":[],"authorities":[],"directType":"http://www.ft.com/ontology/company/PublicCompany","lastModified":"","publishReference":""}`,
 		},
