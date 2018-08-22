@@ -28,6 +28,8 @@ const (
 	organisationsType = "organisations"
 	peopleType        = "people"
 	testTID           = "tid_test"
+
+	esStatusCreated = "created"
 )
 
 func TestNoElasticClient(t *testing.T) {
@@ -96,7 +98,7 @@ func TestWrite(t *testing.T) {
 	_, resp, err := writeDocument(service, organisationsType, testUuid)
 	assert.NoError(t, err, "expected successful write")
 
-	assert.Equal(t, true, resp.Created, "document should have been created")
+	assert.Equal(t, esStatusCreated, resp.Result, "document should have been created")
 	assert.Equal(t, indexName, resp.Index, "index name")
 	assert.Equal(t, organisationsType, resp.Type, "concept type")
 	assert.Equal(t, testUuid, resp.Id, "document id")
@@ -278,7 +280,7 @@ func TestDelete(t *testing.T) {
 	_, resp, err := writeDocument(service, organisationsType, testUUID)
 	require.NoError(t, err, "expected successful write")
 
-	assert.True(t, resp.Created, "document should have been created")
+	assert.Equal(t, esStatusCreated, resp.Result, "document should have been created")
 	assert.Equal(t, indexName, resp.Index, "index name")
 	assert.Equal(t, organisationsType, resp.Type, "concept type")
 	assert.Equal(t, testUUID, resp.Id, "document id")
@@ -346,17 +348,17 @@ func TestCleanup(t *testing.T) {
 	testUUID1 := uuid.NewV4().String()
 	_, resp, err := writeDocument(service, organisationsType, testUUID1)
 	require.NoError(t, err, "expected successful write")
-	require.True(t, resp.Created, "document should have been created")
+	require.Equal(t, esStatusCreated, resp.Result, "document should have been created")
 
 	testUUID2 := uuid.NewV4().String()
 	_, resp, err = writeDocument(service, peopleType, testUUID2)
 	require.NoError(t, err, "expected successful write")
-	require.True(t, resp.Created, "document should have been created")
+	require.Equal(t, esStatusCreated, resp.Result, "document should have been created")
 
 	testUUID3 := uuid.NewV4().String()
 	_, resp, err = writeDocument(service, organisationsType, testUUID3)
 	require.NoError(t, err, "expected successful write")
-	require.True(t, resp.Created, "document should have been created")
+	require.Equal(t, esStatusCreated, resp.Result, "document should have been created")
 
 	concept := AggregateConceptModel{PrefUUID: testUUID1, SourceRepresentations: []SourceConcept{
 		{
@@ -439,7 +441,7 @@ func TestDeprecationFlagTrue(t *testing.T) {
 	resp, err := service.LoadData(newTestContext(), organisationsType, testUUID, payload)
 	assert.NoError(t, err, "expected successful write")
 
-	assert.Equal(t, true, resp.Created, "document should have been created")
+	assert.Equal(t, esStatusCreated, resp.Result, "document should have been created")
 	assert.Equal(t, indexName, resp.Index, "index name")
 	assert.Equal(t, organisationsType, resp.Type, "concept type")
 	assert.Equal(t, testUUID, resp.Id, "document id")
@@ -474,7 +476,7 @@ func TestDeprecationFlagFalse(t *testing.T) {
 	resp, err := service.LoadData(newTestContext(), organisationsType, testUUID, payload)
 	assert.NoError(t, err, "expected successful write")
 
-	assert.Equal(t, true, resp.Created, "document should have been created")
+	assert.Equal(t, esStatusCreated, resp.Result, "document should have been created")
 	assert.Equal(t, indexName, resp.Index, "index name")
 	assert.Equal(t, organisationsType, resp.Type, "concept type")
 	assert.Equal(t, testUUID, resp.Id, "document id")
