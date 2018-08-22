@@ -13,11 +13,12 @@ import (
 )
 
 var (
-	ErrNoElasticClient error = errors.New("No ElasticSearch client available")
+	ErrNoElasticClient = errors.New("no ElasticSearch client available")
 )
 
 const conceptTypeField = "conceptType"
 const uuidField = "uuid"
+const concordedUUIDField = "concordedUUID"
 const prefUUIDField = "prefUUID"
 const statusField = "status"
 const operationField = "operation"
@@ -40,7 +41,7 @@ type EsService interface {
 	ReadData(conceptType string, uuid string) (*elastic.GetResult, error)
 	DeleteData(ctx context.Context, conceptType string, uuid string) (*elastic.DeleteResponse, error)
 	LoadBulkData(conceptType string, uuid string, payload interface{})
-	CleanupData(ctx context.Context, conceptType string, concept Concept)
+	CleanupData(ctx context.Context, concept Concept)
 	CloseBulkProcessor() error
 	GetClusterHealth() (*elastic.ClusterHealthResponse, error)
 	IsIndexReadOnly() (bool, string, error)
@@ -106,7 +107,7 @@ func (es *esService) IsIndexReadOnly() (bool, string, error) {
 		}
 	}
 
-	return false, "", errors.New("No index settings found")
+	return false, "", errors.New("no index settings found")
 }
 
 func (es *esService) isIndexReadOnly(settings map[string]interface{}) (bool, error) {
@@ -188,21 +189,50 @@ func (es *esService) ReadData(conceptType string, uuid string) (*elastic.GetResu
 	}
 }
 
-func (es *esService) CleanupData(ctx context.Context, conceptType string, concept Concept) {
-	cleanupDataLog := log.WithField(prefUUIDField, concept.PreferredUUID()).WithField(conceptTypeField, conceptType)
+func (es *esService) CleanupData(ctx context.Context, concept Concept) {
+	cleanupDataLog := log.WithField(prefUUIDField, concept.PreferredUUID())
 	transactionID, err := tid.GetTransactionIDFromContext(ctx)
 	if err != nil {
 		transactionID = tidNotFound
 	}
 	cleanupDataLog = cleanupDataLog.WithField(tid.TransactionIDKey, transactionID)
 
-	for _, uuid := range concept.ConcordedUUIDs() {
-		cleanupDataLog.WithField(uuidField, uuid).Info("Cleaning up concorded uuids")
-		_, err := es.DeleteData(ctx, conceptType, uuid)
+	conceptTypeMap, err := es.findConceptTypes(ctx, concept.ConcordedUUIDs())
+	if err != nil {
+		cleanupDataLog.WithError(err).Error("Impossible to find concorded concepts in elasticsearch")
+		return
+	}
+
+	for concordedUUID, conceptType := range conceptTypeMap {
+		cleanupDataLog.WithField(concordedUUIDField, concordedUUID).
+			WithField(conceptTypeField, conceptType).
+			Info("Cleaning up concorded uuids")
+		_, err := es.DeleteData(ctx, conceptType, concordedUUID)
 		if err != nil {
-			cleanupDataLog.WithError(err).WithField(uuidField, uuid).Error("Failed to delete concorded uuid.")
+			cleanupDataLog.WithError(err).WithField(concordedUUIDField, concordedUUID).
+				WithField(conceptTypeField, conceptType).
+				Error("Failed to delete concorded uuid.")
 		}
 	}
+}
+
+func (es *esService) findConceptTypes(ctx context.Context, uuids []string) (map[string]string, error) {
+	if err := es.checkElasticClient(); err != nil {
+		return nil, err
+	}
+
+	query := elastic.NewIdsQuery().Ids(uuids...)
+	result, err := es.elasticClient.Search(es.indexName).Query(query).Do(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	conceptTypeMap := make(map[string]string)
+	for _, hit := range result.Hits.Hits {
+		conceptTypeMap[hit.Id] = hit.Type
+	}
+
+	return conceptTypeMap, nil
 }
 
 func (es *esService) DeleteData(ctx context.Context, conceptType string, uuid string) (*elastic.DeleteResponse, error) {

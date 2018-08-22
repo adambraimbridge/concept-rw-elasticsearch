@@ -33,7 +33,6 @@ func NewHandler(elasticService service.EsService, allowedConceptTypes []string) 
 		allowedTypes[v] = true
 	}
 
-
 	return &Handler{elasticService: elasticService, allowedConceptTypes: allowedTypes}
 }
 
@@ -68,7 +67,7 @@ func (h *Handler) LoadData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.elasticService.CleanupData(ctx, conceptType, concept)
+	h.elasticService.CleanupData(ctx, concept)
 
 	writeMessage(w, "Concept written successfully", http.StatusOK)
 }
@@ -90,7 +89,7 @@ func (h *Handler) LoadBulkData(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.elasticService.LoadBulkData(conceptType, concept.PreferredUUID(), payload)
-	h.elasticService.CleanupData(ctx, conceptType, concept)
+	h.elasticService.CleanupData(ctx, concept)
 	writeMessage(w, "Concept written successfully", http.StatusOK)
 }
 

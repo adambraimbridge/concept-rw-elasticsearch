@@ -300,8 +300,8 @@ func (m *EsServiceMock) LoadBulkData(conceptType string, uuid string, payload in
 	m.Called(conceptType, uuid, payload)
 }
 
-func (m *EsServiceMock) CleanupData(ctx context.Context, conceptType string, concept service.Concept) {
-	m.Called(ctx, conceptType, concept)
+func (m *EsServiceMock) CleanupData(ctx context.Context, concept service.Concept) {
+	m.Called(ctx, concept)
 }
 
 func (m *EsServiceMock) CloseBulkProcessor() error {

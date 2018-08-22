@@ -23,10 +23,13 @@ import (
 )
 
 const (
-	apiBaseUrl  = "http://test.api.ft.com"
-	indexName   = "concept"
-	conceptType = "organisations"
-	testTID     = "tid_test"
+	apiBaseUrl        = "http://test.api.ft.com"
+	indexName         = "concept"
+	organisationsType = "organisations"
+	peopleType        = "people"
+	testTID           = "tid_test"
+
+	esStatusCreated = "created"
 )
 
 func TestNoElasticClient(t *testing.T) {
@@ -92,12 +95,12 @@ func TestWrite(t *testing.T) {
 	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
 
 	testUuid := uuid.NewV4().String()
-	_, resp, err := writeDocument(service, conceptType, testUuid)
+	_, resp, err := writeDocument(service, organisationsType, testUuid)
 	assert.NoError(t, err, "expected successful write")
 
-	assert.Equal(t, true, resp.Created, "document should have been created")
+	assert.Equal(t, esStatusCreated, resp.Result, "document should have been created")
 	assert.Equal(t, indexName, resp.Index, "index name")
-	assert.Equal(t, conceptType, resp.Type, "concept type")
+	assert.Equal(t, organisationsType, resp.Type, "concept type")
 	assert.Equal(t, testUuid, resp.Id, "document id")
 }
 
@@ -113,13 +116,13 @@ func TestWriteWithGenericError(t *testing.T) {
 	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
 
 	testUuid := uuid.NewV4().String()
-	_, _, err = writeDocument(service, conceptType, testUuid)
+	_, _, err = writeDocument(service, organisationsType, testUuid)
 	assert.EqualError(t, err, "unexpected end of JSON input")
 	require.NotNil(t, hook.LastEntry())
 
 	assert.Equal(t, log.ErrorLevel, hook.LastEntry().Level)
 	assert.Equal(t, "Failed operation to Elasticsearch", hook.LastEntry().Message)
-	assert.Equal(t, conceptType, hook.LastEntry().Data[conceptTypeField])
+	assert.Equal(t, organisationsType, hook.LastEntry().Data[conceptTypeField])
 	assert.Equal(t, testUuid, hook.LastEntry().Data[uuidField])
 	assert.EqualError(t, hook.LastEntry().Data["error"].(error), "unexpected end of JSON input")
 	assert.Equal(t, "unknown", hook.LastEntry().Data[statusField])
@@ -140,11 +143,11 @@ func TestWriteWithESError(t *testing.T) {
 	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
 
 	testUuid := uuid.NewV4().String()
-	_, _, err = writeDocument(service, conceptType, testUuid)
+	_, _, err = writeDocument(service, organisationsType, testUuid)
 	assert.EqualError(t, err, "elastic: Error 500 (Internal Server Error)")
 	assert.Equal(t, log.ErrorLevel, hook.LastEntry().Level)
 	assert.Equal(t, "Failed operation to Elasticsearch", hook.LastEntry().Message)
-	assert.Equal(t, conceptType, hook.LastEntry().Data[conceptTypeField])
+	assert.Equal(t, organisationsType, hook.LastEntry().Data[conceptTypeField])
 	assert.Equal(t, testUuid, hook.LastEntry().Data[uuidField])
 	assert.EqualError(t, hook.LastEntry().Data["error"].(error), "elastic: Error 500 (Internal Server Error)")
 	assert.Equal(t, "500", hook.LastEntry().Data[statusField])
@@ -196,10 +199,10 @@ func TestRead(t *testing.T) {
 	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
 
 	testUuid := uuid.NewV4().String()
-	payload, _, err := writeDocument(service, conceptType, testUuid)
+	payload, _, err := writeDocument(service, organisationsType, testUuid)
 	assert.NoError(t, err, "expected successful write")
 
-	resp, err := service.ReadData(conceptType, testUuid)
+	resp, err := service.ReadData(organisationsType, testUuid)
 
 	assert.NoError(t, err, "expected no error for ES read")
 	assert.True(t, resp.Found, "should find a result")
@@ -223,12 +226,12 @@ func TestDeleteWithESError(t *testing.T) {
 	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
 
 	testUuid := uuid.NewV4().String()
-	_, err = service.DeleteData(newTestContext(), conceptType+"s", testUuid)
+	_, err = service.DeleteData(newTestContext(), organisationsType+"s", testUuid)
 
 	assert.EqualError(t, err, "elastic: Error 500 (Internal Server Error)")
 	assert.Equal(t, log.ErrorLevel, hook.LastEntry().Level)
 	assert.Equal(t, "Failed operation to Elasticsearch", hook.LastEntry().Message)
-	assert.Equal(t, conceptType+"s", hook.LastEntry().Data[conceptTypeField])
+	assert.Equal(t, organisationsType+"s", hook.LastEntry().Data[conceptTypeField])
 	assert.Equal(t, testUuid, hook.LastEntry().Data[uuidField])
 	assert.EqualError(t, hook.LastEntry().Data["error"].(error), "elastic: Error 500 (Internal Server Error)")
 	assert.Equal(t, "500", hook.LastEntry().Data[statusField])
@@ -251,10 +254,10 @@ func TestPassClientThroughChannel(t *testing.T) {
 	waitForClientInjection(service)
 
 	testUuid := uuid.NewV4().String()
-	payload, _, err := writeDocument(service, conceptType, testUuid)
+	payload, _, err := writeDocument(service, organisationsType, testUuid)
 	assert.NoError(t, err, "expected successful write")
 
-	resp, err := service.ReadData(conceptType, testUuid)
+	resp, err := service.ReadData(organisationsType, testUuid)
 
 	assert.NoError(t, err, "expected no error for ES read")
 	assert.True(t, resp.Found, "should find a result")
@@ -262,7 +265,7 @@ func TestPassClientThroughChannel(t *testing.T) {
 	obj := make(map[string]interface{})
 	err = json.Unmarshal(*resp.Source, &obj)
 
-	assert.Equal(t, fmt.Sprintf("%s/%ss/%s", apiBaseUrl, conceptType, testUuid), obj["apiUrl"], "apiUrl")
+	assert.Equal(t, fmt.Sprintf("%s/%ss/%s", apiBaseUrl, organisationsType, testUuid), obj["apiUrl"], "apiUrl")
 	assert.Equal(t, payload.ApiUrl, obj["apiUrl"], "apiUrl")
 	assert.Equal(t, payload.PrefLabel, obj["prefLabel"], "prefLabel")
 }
@@ -274,19 +277,19 @@ func TestDelete(t *testing.T) {
 	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
 
 	testUUID := uuid.NewV4().String()
-	_, resp, err := writeDocument(service, conceptType, testUUID)
+	_, resp, err := writeDocument(service, organisationsType, testUUID)
 	require.NoError(t, err, "expected successful write")
 
-	assert.True(t, resp.Created, "document should have been created")
+	assert.Equal(t, esStatusCreated, resp.Result, "document should have been created")
 	assert.Equal(t, indexName, resp.Index, "index name")
-	assert.Equal(t, conceptType, resp.Type, "concept type")
+	assert.Equal(t, organisationsType, resp.Type, "concept type")
 	assert.Equal(t, testUUID, resp.Id, "document id")
 
-	deleteResp, err := service.DeleteData(newTestContext(), conceptType, testUUID)
+	deleteResp, err := service.DeleteData(newTestContext(), organisationsType, testUUID)
 	require.NoError(t, err)
 	assert.True(t, deleteResp.Found)
 
-	getResp, err := service.ReadData(conceptType, testUUID)
+	getResp, err := service.ReadData(organisationsType, testUUID)
 	assert.NoError(t, err)
 	assert.False(t, getResp.Found)
 }
@@ -304,7 +307,7 @@ func TestDeleteNotFoundConcept(t *testing.T) {
 	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
 
 	testUuid := uuid.NewV4().String()
-	resp, err := service.DeleteData(newTestContext(), conceptType+"s", testUuid)
+	resp, err := service.DeleteData(newTestContext(), organisationsType+"s", testUuid)
 
 	assert.False(t, resp.Found, "document is not found")
 
@@ -324,12 +327,12 @@ func TestDeleteWithGenericError(t *testing.T) {
 
 	testUuid := uuid.NewV4().String()
 
-	_, err = service.DeleteData(newTestContext(), conceptType+"s", testUuid)
+	_, err = service.DeleteData(newTestContext(), organisationsType+"s", testUuid)
 
 	assert.EqualError(t, err, "unexpected end of JSON input")
 	assert.Equal(t, log.ErrorLevel, hook.LastEntry().Level)
 	assert.Equal(t, "Failed operation to Elasticsearch", hook.LastEntry().Message)
-	assert.Equal(t, conceptType+"s", hook.LastEntry().Data[conceptTypeField])
+	assert.Equal(t, organisationsType+"s", hook.LastEntry().Data[conceptTypeField])
 	assert.Equal(t, testUuid, hook.LastEntry().Data[uuidField])
 	assert.EqualError(t, hook.LastEntry().Data["error"].(error), "unexpected end of JSON input")
 	assert.Equal(t, "unknown", hook.LastEntry().Data[statusField])
@@ -343,32 +346,47 @@ func TestCleanup(t *testing.T) {
 	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
 
 	testUUID1 := uuid.NewV4().String()
-	_, resp, err := writeDocument(service, conceptType, testUUID1)
+	_, resp, err := writeDocument(service, organisationsType, testUUID1)
 	require.NoError(t, err, "expected successful write")
-	require.True(t, resp.Created, "document should have been created")
+	require.Equal(t, esStatusCreated, resp.Result, "document should have been created")
 
 	testUUID2 := uuid.NewV4().String()
-	_, resp, err = writeDocument(service, conceptType, testUUID2)
+	_, resp, err = writeDocument(service, peopleType, testUUID2)
 	require.NoError(t, err, "expected successful write")
-	require.True(t, resp.Created, "document should have been created")
+	require.Equal(t, esStatusCreated, resp.Result, "document should have been created")
 
-	concept := AggregateConceptModel{PrefUUID: testUUID2, SourceRepresentations: []SourceConcept{
+	testUUID3 := uuid.NewV4().String()
+	_, resp, err = writeDocument(service, organisationsType, testUUID3)
+	require.NoError(t, err, "expected successful write")
+	require.Equal(t, esStatusCreated, resp.Result, "document should have been created")
+
+	concept := AggregateConceptModel{PrefUUID: testUUID1, SourceRepresentations: []SourceConcept{
 		{
 			UUID: testUUID1,
 		},
 		{
 			UUID: testUUID2,
 		},
+		{
+			UUID: testUUID3,
+		},
 	}}
 
-	ct := conceptType
-	service.CleanupData(newTestContext(), ct, concept)
+	// ensure test data is immediately available from the index
+	_, err = ec.Refresh(indexName).Do(context.Background())
+	require.NoError(t, err)
 
-	getResp, err := service.ReadData(ct, testUUID1)
+	service.CleanupData(newTestContext(), concept)
+
+	getResp, err := service.ReadData(peopleType, testUUID2)
 	assert.NoError(t, err)
 	assert.False(t, getResp.Found)
 
-	getResp, err = service.ReadData(ct, testUUID2)
+	getResp, err = service.ReadData(organisationsType, testUUID3)
+	assert.NoError(t, err)
+	assert.False(t, getResp.Found)
+
+	getResp, err = service.ReadData(organisationsType, testUUID1)
 	assert.NoError(t, err)
 	assert.True(t, getResp.Found)
 }
@@ -397,12 +415,10 @@ func TestCleanupErrorLogging(t *testing.T) {
 		},
 	}}
 
-	service.CleanupData(newTestContext(), conceptType, concept)
+	service.CleanupData(newTestContext(), concept)
 
 	assert.Equal(t, log.ErrorLevel, hook.LastEntry().Level)
-	assert.Equal(t, "Failed to delete concorded uuid.", hook.LastEntry().Message)
-	assert.Equal(t, conceptType, hook.LastEntry().Data[conceptTypeField])
-	assert.Equal(t, testUUID1, hook.LastEntry().Data[uuidField])
+	assert.Equal(t, "Impossible to find concorded concepts in elasticsearch", hook.LastEntry().Message)
 	assert.Equal(t, testUUID2, hook.LastEntry().Data[prefUUIDField])
 	assert.EqualError(t, hook.LastEntry().Data["error"].(error), "unexpected end of JSON input")
 	assert.Equal(t, testTID, hook.LastEntry().Data[tid.TransactionIDKey])
@@ -416,23 +432,23 @@ func TestDeprecationFlagTrue(t *testing.T) {
 	testUUID := uuid.NewV4().String()
 	payload := EsConceptModel{
 		Id:           testUUID,
-		ApiUrl:       fmt.Sprintf("%s/%ss/%s", apiBaseUrl, conceptType, testUUID),
-		PrefLabel:    fmt.Sprintf("Test concept %s %s", conceptType, testUUID),
+		ApiUrl:       fmt.Sprintf("%s/%ss/%s", apiBaseUrl, organisationsType, testUUID),
+		PrefLabel:    fmt.Sprintf("Test concept %s %s", organisationsType, testUUID),
 		Types:        []string{},
 		DirectType:   "",
 		Aliases:      []string{},
 		IsDeprecated: true,
 	}
 
-	resp, err := service.LoadData(newTestContext(), conceptType, testUUID, payload)
+	resp, err := service.LoadData(newTestContext(), organisationsType, testUUID, payload)
 	assert.NoError(t, err, "expected successful write")
 
-	assert.Equal(t, true, resp.Created, "document should have been created")
+	assert.Equal(t, esStatusCreated, resp.Result, "document should have been created")
 	assert.Equal(t, indexName, resp.Index, "index name")
-	assert.Equal(t, conceptType, resp.Type, "concept type")
+	assert.Equal(t, organisationsType, resp.Type, "concept type")
 	assert.Equal(t, testUUID, resp.Id, "document id")
 
-	readResp, err := service.ReadData(conceptType, testUUID)
+	readResp, err := service.ReadData(organisationsType, testUUID)
 
 	assert.NoError(t, err, "expected no error for ES read")
 	assert.True(t, readResp.Found, "should find a result")
@@ -452,22 +468,22 @@ func TestDeprecationFlagFalse(t *testing.T) {
 	testUUID := uuid.NewV4().String()
 	payload := EsConceptModel{
 		Id:         testUUID,
-		ApiUrl:     fmt.Sprintf("%s/%ss/%s", apiBaseUrl, conceptType, testUUID),
-		PrefLabel:  fmt.Sprintf("Test concept %s %s", conceptType, testUUID),
+		ApiUrl:     fmt.Sprintf("%s/%ss/%s", apiBaseUrl, organisationsType, testUUID),
+		PrefLabel:  fmt.Sprintf("Test concept %s %s", organisationsType, testUUID),
 		Types:      []string{},
 		DirectType: "",
 		Aliases:    []string{},
 	}
 
-	resp, err := service.LoadData(newTestContext(), conceptType, testUUID, payload)
+	resp, err := service.LoadData(newTestContext(), organisationsType, testUUID, payload)
 	assert.NoError(t, err, "expected successful write")
 
-	assert.Equal(t, true, resp.Created, "document should have been created")
+	assert.Equal(t, esStatusCreated, resp.Result, "document should have been created")
 	assert.Equal(t, indexName, resp.Index, "index name")
-	assert.Equal(t, conceptType, resp.Type, "concept type")
+	assert.Equal(t, organisationsType, resp.Type, "concept type")
 	assert.Equal(t, testUUID, resp.Id, "document id")
 
-	readResp, err := service.ReadData(conceptType, testUUID)
+	readResp, err := service.ReadData(organisationsType, testUUID)
 
 	assert.NoError(t, err, "expected no error for ES read")
 	assert.True(t, readResp.Found, "should find a result")

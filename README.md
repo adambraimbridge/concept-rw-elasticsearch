@@ -17,11 +17,12 @@ If you need to set-up your elasticsearch first, please see some instructions [he
 ## How to build
 
 ```
-go get -u github.com/kardianos/govendor
-go get github.com/Financial-Times/concept-rw-elasticsearch
-cd $GOPATH/src/github.com/Financial-Times/concept-rw-elasticsearch
-govendor sync
-go build
+curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+mkdir $GOPATH/src/github.com/Financial-Times/concept-rw-elasticsearch
+cd $GOPATH/src/github.com/concept-rw-elasticsearch
+git clone https://github.com/Financial-Times/concept-rw-elasticsearch.git
+cd concept-rw-elasticsearch && dep ensure -vendor-only
+go build .
 ```
 ## How to test
 

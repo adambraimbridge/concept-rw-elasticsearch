@@ -170,7 +170,6 @@ func TestLoadData(t *testing.T) {
 	}
 }
 
-
 func TestLoadDataEsClientServerErrors(t *testing.T) {
 	testCases := []struct {
 		err    error
@@ -420,7 +419,7 @@ func (service *dummyEsService) LoadData(ctx context.Context, conceptType string,
 	return &elastic.IndexResponse{}, nil
 }
 
-func (service *dummyEsService) CleanupData(ctx context.Context, conceptType string, concept service.Concept) {
+func (service *dummyEsService) CleanupData(ctx context.Context, concept service.Concept) {
 }
 
 func (service *dummyEsService) ReadData(conceptType string, uuid string) (*elastic.GetResult, error) {
