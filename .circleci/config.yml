@@ -3,29 +3,27 @@ jobs:
   build:
     working_directory: /go/src/github.com/Financial-Times/concept-rw-elasticsearch
     docker:
-      - image: golang:1.10.1
+      - image: circleci/golang:1.10
         environment:
-          GOPATH: /go
           ELASTICSEARCH_TEST_URL: http://localhost:9200
+          CIRCLE_TEST_REPORT: /tmp/test-results
+          CIRCLE_COVERAGE_REPORT: /tmp/coverage-results
       - image:  elasticsearch:5.1
-    environment:
-      CIRCLE_TEST_REPORTS: /tmp/test-reports
-      CIRCLE_COVERAGE_REPORT: /tmp/coverage-results
     steps:
       - checkout
       - run:
           name: External Dependencies
           command: |
-            go get github.com/mattn/goveralls
+            go get -u github.com/mattn/goveralls
             go get -u github.com/jstemmer/go-junit-report
             curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
       - run:
-          name: Test Results
+          name: Make result folders
           command: |
-            mkdir -p ${CIRCLE_TEST_REPORTS}
+            mkdir -p ${CIRCLE_TEST_REPORT}
             mkdir -p ${CIRCLE_COVERAGE_REPORT}
       - run:
-          name: Dep ensure
+          name: Download vendored dependencies
           command: dep ensure -v -vendor-only
       - run:
           name: Go Build
@@ -33,7 +31,7 @@ jobs:
       - run:
           name: Run Tests
           command: |
-            go test ./... -v -race -cover -coverprofile=$CIRCLE_COVERAGE_REPORT/coverage.out | go-junit-report > $CIRCLE_TEST_REPORTS/junit.xml
+            go test -v -race -cover -coverprofile=${CIRCLE_COVERAGE_REPORT}/coverage.out ./... | go-junit-report > ${CIRCLE_TEST_REPORT}/junit.xml
       - run:
           name: Upload Coverage
           command: goveralls -coverprofile=$CIRCLE_COVERAGE_REPORT/coverage.out -service=circle-ci -repotoken=$COVERALLS_TOKEN
@@ -42,7 +40,7 @@ jobs:
   dockerfile:
     working_directory: /concept-rw-elasticsearch
     docker:
-      - image: docker:1.12.6-git
+      - image: docker:18.03
     steps:
       - checkout
       - setup_docker_engine
