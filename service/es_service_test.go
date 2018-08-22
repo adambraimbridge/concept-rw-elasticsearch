@@ -372,7 +372,9 @@ func TestCleanup(t *testing.T) {
 		},
 	}}
 
-	time.Sleep(1000 * time.Millisecond) // waiting for elasticsearch write propagation
+	// ensure test data is immediately available from the index
+	_, err = ec.Refresh(indexName).Do(context.Background())
+	require.NoError(t, err)
 
 	service.CleanupData(newTestContext(), concept)
 
