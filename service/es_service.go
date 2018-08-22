@@ -197,26 +197,26 @@ func (es *esService) CleanupData(ctx context.Context, concept Concept) {
 	}
 	cleanupDataLog = cleanupDataLog.WithField(tid.TransactionIDKey, transactionID)
 
-	uuidTypeMap, err := es.searchConcepts(ctx, concept.ConcordedUUIDs())
+	conceptTypeMap, err := es.findConceptTypes(ctx, concept.ConcordedUUIDs())
 	if err != nil {
 		cleanupDataLog.WithError(err).Error("Impossible to find concorded concepts in elasticsearch")
 		return
 	}
 
-	for uuid, conceptType := range uuidTypeMap {
-		cleanupDataLog.WithField(concordedUUIDField, uuid).
+	for concordedUUID, conceptType := range conceptTypeMap {
+		cleanupDataLog.WithField(concordedUUIDField, concordedUUID).
 			WithField(conceptTypeField, conceptType).
 			Info("Cleaning up concorded uuids")
-		_, err := es.DeleteData(ctx, conceptType, uuid)
+		_, err := es.DeleteData(ctx, conceptType, concordedUUID)
 		if err != nil {
-			cleanupDataLog.WithError(err).WithField(concordedUUIDField, uuid).
+			cleanupDataLog.WithError(err).WithField(concordedUUIDField, concordedUUID).
 				WithField(conceptTypeField, conceptType).
 				Error("Failed to delete concorded uuid.")
 		}
 	}
 }
 
-func (es *esService) searchConcepts(ctx context.Context, uuids []string) (map[string]string, error) {
+func (es *esService) findConceptTypes(ctx context.Context, uuids []string) (map[string]string, error) {
 	if err := es.checkElasticClient(); err != nil {
 		return nil, err
 	}
