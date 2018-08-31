@@ -93,6 +93,39 @@ func (h *Handler) LoadBulkData(w http.ResponseWriter, r *http.Request) {
 	writeMessage(w, "Concept written successfully", http.StatusOK)
 }
 
+// LoadMetrics updates a concept with new metric data
+func (h *Handler) LoadMetrics(w http.ResponseWriter, r *http.Request) {
+	transactionID := tid.GetTransactionIDFromRequest(r)
+	ctx := tid.TransactionAwareContext(context.Background(), transactionID)
+
+	vars := mux.Vars(r)
+	uuid := vars["id"]
+	conceptType := vars["concept-type"]
+
+	if !h.allowedConceptTypes[conceptType] {
+		writeMessage(w, errUnsupportedConceptType.Error(), http.StatusNotFound)
+		return
+	}
+
+	dec := json.NewDecoder(r.Body)
+
+	metrics := service.MetricsPayload{}
+	err := dec.Decode(&metrics)
+
+	if err != nil {
+		writeMessage(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if metrics.Metrics == nil {
+		writeMessage(w, "Please supply metrics as a JSON object with a single property 'metrics'", http.StatusBadRequest)
+		return
+	}
+
+	h.elasticService.PatchUpdateDataWithMetrics(ctx, uuid, &metrics)
+	writeMessage(w, "Concept updated successfully", http.StatusOK)
+}
+
 func (h *Handler) processPayload(ctx context.Context, r *http.Request) (string, service.Concept, interface{}, error) {
 	vars := mux.Vars(r)
 	uuid := vars["id"]

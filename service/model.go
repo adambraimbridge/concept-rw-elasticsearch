@@ -51,6 +51,14 @@ type EsConceptModel struct {
 	ScopeNote        string   `json:"scopeNote,omitempty"`
 }
 
+type MetricsPayload struct {
+	Metrics *ConceptMetrics `json:"metrics"`
+}
+
+type ConceptMetrics struct {
+	AnnotationsCount int `json:"annotationsCount"`
+}
+
 type EsPersonConceptModel struct {
 	*EsConceptModel
 	IsFTAuthor string `json:"isFTAuthor"`
