@@ -42,7 +42,7 @@ type EsService interface {
 	DeleteData(ctx context.Context, conceptType string, uuid string) (*elastic.DeleteResponse, error)
 	LoadBulkData(conceptType string, uuid string, payload interface{})
 	CleanupData(ctx context.Context, concept Concept)
-	PatchUpdateDataWithMetrics(ctx context.Context, uuid string, payload *MetricsPayload)
+	PatchUpdateDataWithMetrics(ctx context.Context, conceptType string, uuid string, payload *MetricsPayload)
 	CloseBulkProcessor() error
 	GetClusterHealth() (*elastic.ClusterHealthResponse, error)
 	IsIndexReadOnly() (bool, string, error)
@@ -285,8 +285,8 @@ func (es *esService) LoadBulkData(conceptType string, uuid string, payload inter
 	es.bulkProcessor.Add(r)
 }
 
-func (es *esService) PatchUpdateDataWithMetrics(ctx context.Context, uuid string, payload *MetricsPayload) {
-	r := elastic.NewBulkUpdateRequest().Index(es.indexName).Id(uuid).Doc(payload)
+func (es *esService) PatchUpdateDataWithMetrics(ctx context.Context, conceptType string, uuid string, payload *MetricsPayload) {
+	r := elastic.NewBulkUpdateRequest().Index(es.indexName).Id(uuid).Type(conceptType).Doc(payload)
 	es.bulkProcessor.Add(r)
 }
 

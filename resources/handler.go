@@ -122,7 +122,7 @@ func (h *Handler) LoadMetrics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.elasticService.PatchUpdateDataWithMetrics(ctx, uuid, &metrics)
+	h.elasticService.PatchUpdateDataWithMetrics(ctx, conceptType, uuid, &metrics)
 	writeMessage(w, "Concept updated successfully", http.StatusOK)
 }
 

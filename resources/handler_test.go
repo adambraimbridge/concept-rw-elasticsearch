@@ -462,7 +462,7 @@ func (service *dummyEsService) LoadBulkData(conceptType string, uuid string, pay
 
 }
 
-func (service *dummyEsService) PatchUpdateDataWithMetrics(ctx context.Context, uuid string, payload *service.MetricsPayload) {
+func (service *dummyEsService) PatchUpdateDataWithMetrics(ctx context.Context, conceptType string, uuid string, payload *service.MetricsPayload) {
 
 }
 
