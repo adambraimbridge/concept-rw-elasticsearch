@@ -134,7 +134,10 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 	}
 	loadDataLog = loadDataLog.WithField(tid.TransactionIDKey, transactionID)
 
-	if err := es.checkElasticClient(); err != nil {
+	es.RLock()
+	defer es.RUnlock()
+
+	if err = es.checkElasticClient(); err != nil {
 		loadDataLog.WithError(err).WithField(statusField, unknownStatus).Error("Failed operation to Elasticsearch")
 		return nil, err
 	}
