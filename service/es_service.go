@@ -285,11 +285,19 @@ func (es *esService) DeleteData(ctx context.Context, conceptType string, uuid st
 
 func (es *esService) LoadBulkData(conceptType string, uuid string, payload interface{}) {
 	r := elastic.NewBulkIndexRequest().Index(es.indexName).Type(conceptType).Id(uuid).Doc(payload)
+
+	es.RLock()
+	defer es.RUnlock()
+
 	es.bulkProcessor.Add(r)
 }
 
 func (es *esService) PatchUpdateDataWithMetrics(ctx context.Context, conceptType string, uuid string, payload *MetricsPayload) {
 	r := elastic.NewBulkUpdateRequest().Index(es.indexName).Id(uuid).Type(conceptType).Doc(payload)
+
+	es.RLock()
+	defer es.RUnlock()
+
 	es.bulkProcessor.Add(r)
 }
 
