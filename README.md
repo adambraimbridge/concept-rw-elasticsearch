@@ -83,7 +83,7 @@ Old concept model
 
 The only fields which will be saved at this point are: uuid (transformed into id), prefLabel, aliases, type and types(generated from type), the others are ignored.
 
-New concept model example 
+New concept model example
 
 
 `curl -XPUT -H "Content-Type: application/json" -H "X-Request-Id: 123" localhost:8080/people/08147da5-8110-407c-a51c-a91855e6b071 --data '{
@@ -148,6 +148,14 @@ Will return 204 if successful, 404 if not found.
 
 `curl -XDELETE -H "X-Request-Id: 123" localhost:8080/organisations/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8`
 
+### -XPUT localhost:8080/metrics/{type}/{uuid}
+
+Given a request body containing concept metrics in JSON, i.e. `{"metrics":{"annotationsCount":1234}}`, this endpoint will patch update the concept with that data. This will overwrite the previous metrics data, but will not change the rest of the document.
+
+```
+curl -XPUT -H'X-Request-Id: tid_example' http://localhost:8080/metrics/organisations/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8 --data '{"metrics":{"annotationsCount":1234}}'
+```
+
 ## Available HEALTH endpoints:
 
 ### localhost:8080/__health
@@ -156,12 +164,10 @@ Provides the standard FT output indicating the connectivity and the cluster's he
 
 ### localhost:8080/__health-details
 
-Provides a detailed health status of the ES cluster. 
+Provides a detailed health status of the ES cluster.
 It matches the response from [elasticsearch-endpoint/_cluster/health](https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-health.html)
 It returns 503 is the service is currently unavailable, and cannot connect to elasticsearch.
 
 ### localhost:8080/__gtg
 
-Return 200 if the application is healthy, 503 Service Unavailable if the app is unhealthy. 
-
-
+Return 200 if the application is healthy, 503 Service Unavailable if the app is unhealthy.
