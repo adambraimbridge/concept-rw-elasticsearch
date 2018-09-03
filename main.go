@@ -138,7 +138,7 @@ func main() {
 func routeRequests(port *string, handler *resources.Handler, healthService *health.HealthService) {
 	servicesRouter := mux.NewRouter()
 	servicesRouter.HandleFunc("/bulk/{concept-type}/{id}", handler.LoadBulkData).Methods("PUT")
-	servicesRouter.HandleFunc("/metrics/{concept-type}/{id}", handler.LoadMetrics).Methods("PUT")
+	servicesRouter.HandleFunc("/{concept-type}/{id}/metrics", handler.LoadMetrics).Methods("PUT")
 	servicesRouter.HandleFunc("/{concept-type}/{id}", handler.LoadData).Methods("PUT")
 	servicesRouter.HandleFunc("/{concept-type}/{id}", handler.ReadData).Methods("GET")
 	servicesRouter.HandleFunc("/{concept-type}/{id}", handler.DeleteData).Methods("DELETE")
