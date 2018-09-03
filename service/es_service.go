@@ -292,6 +292,7 @@ func (es *esService) LoadBulkData(conceptType string, uuid string, payload inter
 	es.bulkProcessor.Add(r)
 }
 
+// PatchUpdateDataWithMetrics updates a concept document with metrics. See https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-update.html#_updates_with_a_partial_document
 func (es *esService) PatchUpdateDataWithMetrics(ctx context.Context, conceptType string, uuid string, payload *MetricsPayload) {
 	r := elastic.NewBulkUpdateRequest().Index(es.indexName).Id(uuid).Type(conceptType).Doc(payload)
 
