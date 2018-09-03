@@ -153,7 +153,7 @@ func TestLoadData(t *testing.T) {
 			name:    "Metrics are written successfully",
 			payload: `{"metrics":{"annotationsCount":796}}`,
 			status:  http.StatusOK,
-			msg:     `{"message":"Concept updated successfully"}`,
+			msg:     `{"message":"Concept updated with metrics successfully"}`,
 			path:    "/metrics/valid-type/8ff7dfef-0330-3de0-b37a-2d6aa9c98580",
 		},
 		{

@@ -496,6 +496,56 @@ func TestDeprecationFlagFalse(t *testing.T) {
 	assert.False(t, deprecatedFlagExists, "deprecation flag")
 }
 
+func TestMetricsUpdated(t *testing.T) {
+	esURL := getElasticSearchTestURL(t)
+	ec := getElasticClient(t, esURL)
+
+	bulkProcessorConfig := NewBulkProcessorConfig(1, 1, 1, time.Second)
+	ch := make(chan *elastic.Client)
+
+	service := NewEsService(ch, indexName, &bulkProcessorConfig)
+
+	ch <- ec // will block until es service has received it
+
+	testUUID := uuid.NewV4().String()
+	payload := EsConceptModel{
+		Id:         testUUID,
+		ApiUrl:     fmt.Sprintf("%s/%ss/%s", apiBaseUrl, organisationsType, testUUID),
+		PrefLabel:  fmt.Sprintf("Test concept %s %s", organisationsType, testUUID),
+		Types:      []string{},
+		DirectType: "",
+		Aliases:    []string{},
+	}
+
+	resp, err := service.LoadData(newTestContext(), organisationsType, testUUID, payload)
+	assert.NoError(t, err, "expected successful write")
+
+	assert.Equal(t, esStatusCreated, resp.Result, "document should have been created")
+	assert.Equal(t, indexName, resp.Index, "index name")
+	assert.Equal(t, organisationsType, resp.Type, "concept type")
+	assert.Equal(t, testUUID, resp.Id, "document id")
+
+	testMetrics := &MetricsPayload{Metrics: &ConceptMetrics{AnnotationsCount: 150000}}
+	service.PatchUpdateDataWithMetrics(newTestContext(), organisationsType, testUUID, testMetrics)
+
+	service.(*esService).bulkProcessor.Flush() // wait for the bulk processor to write the data
+
+	readResp, err := service.ReadData(organisationsType, testUUID)
+
+	assert.NoError(t, err, "expected no error for ES read")
+	assert.True(t, readResp.Found, "should find a result")
+
+	actualModel := EsConceptModel{}
+	err = json.Unmarshal(*readResp.Source, &actualModel)
+
+	assert.NoError(t, err)
+
+	assert.Equal(t, payload.ApiUrl, actualModel.ApiUrl, "Expect the original fields to still be intact")
+	assert.Equal(t, payload.PrefLabel, actualModel.PrefLabel, "Expect the original fields to still be intact")
+
+	assert.Equal(t, testMetrics.Metrics.AnnotationsCount, actualModel.Metrics.AnnotationsCount, "Count should be set")
+}
+
 func waitForClientInjection(service EsService) {
 	for i := 0; i < 10; i++ {
 		_, err := service.GetClusterHealth()
