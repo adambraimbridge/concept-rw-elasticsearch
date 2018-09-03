@@ -148,12 +148,12 @@ Will return 204 if successful, 404 if not found.
 
 `curl -XDELETE -H "X-Request-Id: 123" localhost:8080/organisations/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8`
 
-### -XPUT localhost:8080/metrics/{type}/{uuid}
+### -XPUT localhost:8080/{type}/{uuid}/metrics
 
 Given a request body containing concept metrics in JSON, i.e. `{"metrics":{"annotationsCount":1234}}`, this endpoint will patch update the concept with that data. This will overwrite the previous metrics data, but will not change the rest of the document.
 
 ```
-curl -XPUT -H'X-Request-Id: tid_example' http://localhost:8080/metrics/organisations/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8 --data '{"metrics":{"annotationsCount":1234}}'
+curl -XPUT -H'X-Request-Id: tid_example' http://localhost:8080/organisations/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8/metrics --data '{"metrics":{"annotationsCount":1234}}'
 ```
 
 ## Available HEALTH endpoints:
