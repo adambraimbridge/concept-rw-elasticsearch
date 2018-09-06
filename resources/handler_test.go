@@ -149,6 +149,27 @@ func TestLoadData(t *testing.T) {
 			msg:     `{"message":"Provided path UUID does not match request body"}`,
 			path:    "/bulk/valid-type/8ff7dfef-0330-3de0-b37a-2d6aa9c98580",
 		},
+		{
+			name:    "Metrics are written successfully",
+			payload: `{"metrics":{"annotationsCount":796}}`,
+			status:  http.StatusOK,
+			msg:     `{"message":"Concept updated with metrics successfully"}`,
+			path:    "/metrics/valid-type/8ff7dfef-0330-3de0-b37a-2d6aa9c98580",
+		},
+		{
+			name:    "Metrics are not written for invalid type",
+			payload: `{"metrics":{"annotationsCount":796}}`,
+			status:  http.StatusNotFound,
+			msg:     `{"message":"Unsupported or invalid concept type"}`,
+			path:    "/metrics/invalid-type/8ff7dfef-0330-3de0-b37a-2d6aa9c98580",
+		},
+		{
+			name:    "Metrics are only written if they are supplied correctly",
+			payload: `{"somethingDodgy":{"annotationsCount":796}}`,
+			status:  http.StatusBadRequest,
+			msg:     `{"message":"Please supply metrics as a JSON object with a single property 'metrics'"}`,
+			path:    "/metrics/valid-type/8ff7dfef-0330-3de0-b37a-2d6aa9c98580",
+		},
 	}
 
 	for _, tc := range testCases {
@@ -163,6 +184,7 @@ func TestLoadData(t *testing.T) {
 		servicesRouter := mux.NewRouter()
 		servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.LoadData).Methods("PUT")
 		servicesRouter.HandleFunc("/bulk/{concept-type}/{id}", writerService.LoadBulkData).Methods("PUT")
+		servicesRouter.HandleFunc("/metrics/{concept-type}/{id}", writerService.LoadMetrics).Methods("PUT")
 		servicesRouter.ServeHTTP(rr, req)
 
 		assert.Equal(t, tc.status, rr.Code, `Current test "%v"`, tc.name)
@@ -437,6 +459,10 @@ func (service *dummyEsService) DeleteData(ctx context.Context, conceptType strin
 }
 
 func (service *dummyEsService) LoadBulkData(conceptType string, uuid string, payload interface{}) {
+
+}
+
+func (service *dummyEsService) PatchUpdateDataWithMetrics(ctx context.Context, conceptType string, uuid string, payload *service.MetricsPayload) {
 
 }
 

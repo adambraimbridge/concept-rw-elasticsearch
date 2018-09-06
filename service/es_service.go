@@ -42,6 +42,7 @@ type EsService interface {
 	DeleteData(ctx context.Context, conceptType string, uuid string) (*elastic.DeleteResponse, error)
 	LoadBulkData(conceptType string, uuid string, payload interface{})
 	CleanupData(ctx context.Context, concept Concept)
+	PatchUpdateDataWithMetrics(ctx context.Context, conceptType string, uuid string, payload *MetricsPayload)
 	CloseBulkProcessor() error
 	GetClusterHealth() (*elastic.ClusterHealthResponse, error)
 	IsIndexReadOnly() (bool, string, error)
@@ -133,7 +134,10 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 	}
 	loadDataLog = loadDataLog.WithField(tid.TransactionIDKey, transactionID)
 
-	if err := es.checkElasticClient(); err != nil {
+	es.RLock()
+	defer es.RUnlock()
+
+	if err = es.checkElasticClient(); err != nil {
 		loadDataLog.WithError(err).WithField(statusField, unknownStatus).Error("Failed operation to Elasticsearch")
 		return nil, err
 	}
@@ -281,6 +285,20 @@ func (es *esService) DeleteData(ctx context.Context, conceptType string, uuid st
 
 func (es *esService) LoadBulkData(conceptType string, uuid string, payload interface{}) {
 	r := elastic.NewBulkIndexRequest().Index(es.indexName).Type(conceptType).Id(uuid).Doc(payload)
+
+	es.RLock()
+	defer es.RUnlock()
+
+	es.bulkProcessor.Add(r)
+}
+
+// PatchUpdateDataWithMetrics updates a concept document with metrics. See https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-update.html#_updates_with_a_partial_document
+func (es *esService) PatchUpdateDataWithMetrics(ctx context.Context, conceptType string, uuid string, payload *MetricsPayload) {
+	r := elastic.NewBulkUpdateRequest().Index(es.indexName).Id(uuid).Type(conceptType).Doc(payload)
+
+	es.RLock()
+	defer es.RUnlock()
+
 	es.bulkProcessor.Add(r)
 }
 
