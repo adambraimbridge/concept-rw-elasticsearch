@@ -331,3 +331,8 @@ func parseHealthcheck(healthcheckJSON string) ([]fthealth.CheckResult, error) {
 	err := json.Unmarshal([]byte(healthcheckJSON), result)
 	return result.Checks, err
 }
+
+func (m *EsServiceMock) GetAllIds(ctx context.Context) chan string {
+	args := m.Called()
+	return args.Get(0).(chan string)
+}

@@ -1,12 +1,12 @@
 package resources
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
-
-	"context"
 
 	"github.com/Financial-Times/concept-rw-elasticsearch/service"
 	tid "github.com/Financial-Times/transactionid-utils-go"
@@ -262,6 +262,21 @@ func (h *Handler) DeleteData(writer http.ResponseWriter, request *http.Request) 
 	}
 
 	writer.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) GetAllIds(writer http.ResponseWriter, request *http.Request) {
+	transactionID := tid.GetTransactionIDFromRequest(request)
+	ctx := tid.TransactionAwareContext(context.Background(), transactionID)
+
+	writer.Header().Set("Content-Type", "text/plain")
+	writer.WriteHeader(http.StatusOK)
+	ids := h.elasticService.GetAllIds(ctx)
+	i := 0
+	for id := range ids {
+		fmt.Fprintf(writer, "{\"uuid\":\"%s\"}\n", id)
+		i++
+	}
+	log.Infof("wrote %v uuids", i)
 }
 
 // Close terminates the underlying ES bulk processor

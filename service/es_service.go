@@ -10,6 +10,7 @@ import (
 	tid "github.com/Financial-Times/transactionid-utils-go"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/olivere/elastic.v5"
+	"io"
 )
 
 var (
@@ -46,6 +47,7 @@ type EsService interface {
 	CloseBulkProcessor() error
 	GetClusterHealth() (*elastic.ClusterHealthResponse, error)
 	IsIndexReadOnly() (bool, string, error)
+	GetAllIds(ctx context.Context) chan string
 }
 
 func NewEsService(ch chan *elastic.Client, indexName string, bulkProcessorConfig *BulkProcessorConfig) EsService {
@@ -304,4 +306,49 @@ func (es *esService) PatchUpdateDataWithMetrics(ctx context.Context, conceptType
 
 func (es *esService) CloseBulkProcessor() error {
 	return es.bulkProcessor.Close()
+}
+
+func (es *esService) GetAllIds(ctx context.Context) chan string {
+	ids := make(chan string)
+
+	go func() {
+		defer close(ids)
+
+		r := elastic.NewScrollService(es.elasticClient).
+			Index(es.indexName).
+			Query(elastic.NewMatchAllQuery()).
+			Sort("_doc", true).
+			Size(1000).
+			FetchSource(false)
+
+		es.RLock()
+		defer es.RUnlock()
+
+		var err error
+		for {
+			r, err = es.processScrollPage(ctx, r, ids)
+			if r == nil || err != nil {
+				return
+			}
+		}
+	}()
+
+	return ids
+}
+
+func (es *esService) processScrollPage(ctx context.Context, r *elastic.ScrollService, ch chan string) (*elastic.ScrollService, error) {
+	res, err := r.Do(ctx)
+	if err == io.EOF {
+		return nil, nil
+	} else if err != nil {
+		log.Error("error while fetching ids", err)
+		return nil, err
+	}
+
+	scrollId := res.ScrollId
+	for _, c := range res.Hits.Hits {
+		ch <- c.Id
+	}
+
+	return elastic.NewScrollService(es.elasticClient).ScrollId(scrollId), nil
 }

@@ -555,3 +555,35 @@ func waitForClientInjection(service EsService) {
 		time.Sleep(100 * time.Millisecond)
 	}
 }
+
+func TestGetAllIds(t *testing.T) {
+	esURL := getElasticSearchTestURL(t)
+	ec := getElasticClient(t, esURL)
+	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
+
+	expected := make([]string, 0)
+	for i := 0; i < 1001; i++ {
+		testUuid := uuid.NewV4().String()
+		_, _, err := writeDocument(service, organisationsType, testUuid)
+		require.NoError(t, err, "expected successful write")
+		expected = append(expected, testUuid)
+	}
+	_, err := ec.Refresh(testIndexName).Do(context.Background())
+	require.NoError(t, err, "expected successful flush")
+
+	ch := service.GetAllIds(context.Background())
+	actual := make(map[string]struct{})
+	for id := range ch {
+		actual[id] = struct{}{}
+	}
+	//assert.Equal(t, len(expected), len(actual), "UUIDs")
+	notFound := 0
+	for _, id := range expected {
+		_, found := actual[id]
+	//	assert.True(t, found, "UUID not found in ids collection", id)
+	if !found {
+		notFound++
+	}
+	}
+	assert.Equal(t, 0, notFound, "UUIDs not found")
+}

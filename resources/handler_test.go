@@ -17,7 +17,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	testLog "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/olivere/elastic.v5"
 )
@@ -481,24 +480,6 @@ func (service *dummyEsService) GetClusterHealth() (*elastic.ClusterHealthRespons
 	return nil, nil
 }
 
-type mockAuthorService struct {
-	mock.Mock
-}
-
-func (m *mockAuthorService) LoadAuthorIdentifiers() error {
-	args := m.Called()
-	return args.Error(0)
-}
-
-func (m *mockAuthorService) RefreshAuthorIdentifiers() {
-}
-
-func (m *mockAuthorService) IsFTAuthor(UUID string) (bool, error) {
-	args := m.Called(UUID)
-	return args.Bool(0), args.Error(1)
-}
-
-func (m *mockAuthorService) IsGTG() error {
-	args := m.Called()
-	return args.Error(0)
+func (service *dummyEsService) GetAllIds(ctx context.Context) chan string {
+	return nil
 }

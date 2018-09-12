@@ -142,6 +142,7 @@ func routeRequests(port *string, handler *resources.Handler, healthService *heal
 	servicesRouter.HandleFunc("/{concept-type}/{id}", handler.LoadData).Methods("PUT")
 	servicesRouter.HandleFunc("/{concept-type}/{id}", handler.ReadData).Methods("GET")
 	servicesRouter.HandleFunc("/{concept-type}/{id}", handler.DeleteData).Methods("DELETE")
+	servicesRouter.HandleFunc("/__ids", handler.GetAllIds).Methods("GET")
 
 	var monitoringRouter http.Handler = servicesRouter
 	monitoringRouter = httphandlers.TransactionAwareRequestLoggingHandler(log.StandardLogger(), monitoringRouter)
