@@ -568,7 +568,7 @@ func TestGetAllIds(t *testing.T) {
 		require.NoError(t, err, "expected successful write")
 		expected = append(expected, testUuid)
 	}
-	_, err := ec.Refresh(testIndexName).Do(context.Background())
+	_, err := ec.Refresh(indexName).Do(context.Background())
 	require.NoError(t, err, "expected successful flush")
 
 	ch := service.GetAllIds(context.Background())
