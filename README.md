@@ -61,6 +61,7 @@ Other parameters:
 - bulk-size
 - flush-interval
 - whitelisted-concepts - comma separated values with concept types that are supported by this writer. This is important if we don't want to end-up with automatically defined mapping types in our index.
+- elasticsearch-trace (defaults to false)
 
 The currently supported concept types are: "genres,topics,sections,subjects,locations,brands,organisations,people".
 

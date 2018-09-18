@@ -90,10 +90,15 @@ func newTestContext() context.Context {
 }
 
 func TestWrite(t *testing.T) {
+
+	bulkProcessorConfig := NewBulkProcessorConfig(1, 1, 1, time.Second)
+	ch := make(chan *elastic.Client)
+	service := NewEsService(ch, indexName, &bulkProcessorConfig)
 	esURL := getElasticSearchTestURL(t)
 	ec := getElasticClient(t, esURL)
-	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
-
+	ch <- ec 	 // will block until es service has received it
+    defer ec.Stop()
+	defer close(ch)
 	testUuid := uuid.NewV4().String()
 	_, resp, err := writeDocument(service, organisationsType, testUuid)
 	assert.NoError(t, err, "expected successful write")
@@ -102,24 +107,23 @@ func TestWrite(t *testing.T) {
 	assert.Equal(t, indexName, resp.Index, "index name")
 	assert.Equal(t, organisationsType, resp.Type, "concept type")
 	assert.Equal(t, testUuid, resp.Id, "document id")
+
 }
 
 func TestWriteWithGenericError(t *testing.T) {
 	hook := testLog.NewGlobal()
 	es := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 	defer es.Close()
-	ec, err := elastic.NewClient(
-		elastic.SetURL(es.URL),
-		elastic.SetSniff(false),
-	)
-	assert.NoError(t, err, "expected no error for ES client")
-	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
-
+	bulkProcessorConfig := NewBulkProcessorConfig(1, 1, 1, time.Second)
+	ch := make(chan *elastic.Client)
+	service := NewEsService(ch, indexName, &bulkProcessorConfig)
+	ec := getElasticClient(t, es.URL)
+	ch <- ec
+	defer close(ch)
 	testUuid := uuid.NewV4().String()
-	_, _, err = writeDocument(service, organisationsType, testUuid)
+	_, _, err := writeDocument(service, organisationsType, testUuid)
 	assert.EqualError(t, err, "unexpected end of JSON input")
 	require.NotNil(t, hook.LastEntry())
-
 	assert.Equal(t, log.ErrorLevel, hook.LastEntry().Level)
 	assert.Equal(t, "Failed operation to Elasticsearch", hook.LastEntry().Message)
 	assert.Equal(t, organisationsType, hook.LastEntry().Data[conceptTypeField])
@@ -134,16 +138,15 @@ func TestWriteWithESError(t *testing.T) {
 	hook := testLog.NewGlobal()
 	es := newBrokenESMock()
 	defer es.Close()
-	ec, err := elastic.NewClient(
-		elastic.SetURL(es.URL),
-		elastic.SetSniff(false),
-	)
-	assert.NoError(t, err, "expected no error for ES client")
-
-	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
-
+	bulkProcessorConfig := NewBulkProcessorConfig(1, 1, 1, time.Second)
+	ch := make(chan *elastic.Client)
+	service := NewEsService(ch, indexName, &bulkProcessorConfig)
+	ec := getElasticClient(t, es.URL)
+	ch <- ec
+	defer close(ch)
 	testUuid := uuid.NewV4().String()
-	_, _, err = writeDocument(service, organisationsType, testUuid)
+	_, _, err := writeDocument(service, organisationsType, testUuid)
+
 	assert.EqualError(t, err, "elastic: Error 500 (Internal Server Error)")
 	assert.Equal(t, log.ErrorLevel, hook.LastEntry().Level)
 	assert.Equal(t, "Failed operation to Elasticsearch", hook.LastEntry().Message)
@@ -167,7 +170,7 @@ func TestIsReadOnly(t *testing.T) {
 	esURL := getElasticSearchTestURL(t)
 	ec := getElasticClient(t, esURL)
 	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
-
+	defer ec.Stop()
 	readOnly, name, err := service.IsIndexReadOnly()
 	assert.False(t, readOnly, "index should not be read-only")
 	assert.Equal(t, name, indexName, "index name should be returned")
@@ -186,7 +189,7 @@ func TestIsReadOnlyIndexNotFound(t *testing.T) {
 	esURL := getElasticSearchTestURL(t)
 	ec := getElasticClient(t, esURL)
 	service := &esService{sync.RWMutex{}, ec, nil, "foo", nil}
-
+	defer ec.Stop()
 	readOnly, name, err := service.IsIndexReadOnly()
 	assert.False(t, readOnly, "index should not be read-only")
 	assert.Empty(t, name, "no index name should be returned")
@@ -194,9 +197,15 @@ func TestIsReadOnlyIndexNotFound(t *testing.T) {
 }
 
 func TestRead(t *testing.T) {
+	bulkProcessorConfig := NewBulkProcessorConfig(1, 1, 1, time.Second)
+	ch := make(chan *elastic.Client)
+	service := NewEsService(ch, indexName, &bulkProcessorConfig)
 	esURL := getElasticSearchTestURL(t)
 	ec := getElasticClient(t, esURL)
-	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
+	ch <- ec 	 // will block until es service has received it
+	defer ec.Stop()
+	defer close(ch)
+	//service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
 
 	testUuid := uuid.NewV4().String()
 	payload, _, err := writeDocument(service, organisationsType, testUuid)

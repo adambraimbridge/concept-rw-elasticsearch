@@ -91,7 +91,14 @@ func main() {
 		EnvVar: "ELASTICSEARCH_WHITELISTED_CONCEPTS",
 	})
 
-	accessConfig := service.NewAccessConfig(*accessKey, *secretKey, *esEndpoint)
+	esTraceLogging := app.Bool(cli.BoolOpt{
+		Name:   "elasticsearch-trace",
+		Value:  false,
+		Desc:   "Whether to log ElasticSearch HTTP requests and responses",
+		EnvVar: "ELASTICSEARCH_TRACE",
+	})
+
+	accessConfig := service.NewAccessConfig(*accessKey, *secretKey, *esEndpoint, *esTraceLogging)
 
 	log.SetLevel(log.InfoLevel)
 	log.Infof("[Startup] The writer handles the following concept types: %v\n", *elasticsearchWhitelistedConceptTypes)
