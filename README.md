@@ -62,14 +62,14 @@ Other parameters:
 - flush-interval
 - whitelisted-concepts - comma separated values with concept types that are supported by this writer. This is important if we don't want to end-up with automatically defined mapping types in our index.
 
-The currently supported concept types are: "genres,topics,sections,subjects,locations,brands,organisations,people".
+The currently supported concept types are: "genres,topics,sections,subjects,locations,brands,organisations,people, alphavilleseries".
 
 ## Available DATA endpoints:
 
 localhost:8080/{type}/{uuid}
 
 Available types:
-`organisations, brands, genres, locations, people, sections, subjects, topics`
+`organisations, brands, genres, locations, people, sections, subjects, topics, alphavilleseries`
 
 ### -XPUT localhost:8080/{type}/{uuid}
 
