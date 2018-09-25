@@ -156,6 +156,39 @@ func TestWriteWithESError(t *testing.T) {
 	assert.Equal(t, testTID, hook.LastEntry().Data[tid.TransactionIDKey])
 }
 
+func TestWritePreservesMetrics(t *testing.T) {
+	bulkProcessorConfig := NewBulkProcessorConfig(1, 1, 1, 100 * time.Millisecond)
+	esURL := getElasticSearchTestURL(t)
+	ec := getElasticClient(t, esURL)
+	bulkProcessor, err := newBulkProcessor(ec, &bulkProcessorConfig)
+	require.NoError(t, err, "require a bulk processor")
+
+	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
+
+	testUuid := uuid.NewV4().String()
+	_, _, err = writeDocument(service, organisationsType, testUuid)
+	require.NoError(t, err, "require successful concept write")
+
+	testMetrics := &MetricsPayload{Metrics: &ConceptMetrics{AnnotationsCount: 150000}}
+	service.PatchUpdateDataWithMetrics(newTestContext(), organisationsType, testUuid, testMetrics)
+	err = service.bulkProcessor.Flush() // wait for the bulk processor to write the data
+	require.NoError(t, err, "require successful metrics write")
+
+	_, _, err = writeDocument(service, organisationsType, testUuid)
+	err = service.bulkProcessor.Flush() // wait for the bulk processor to write the data
+	require.NoError(t, err, "require successful concept update")
+
+	actual, err := service.ReadData(organisationsType, testUuid)
+	assert.NoError(t, err, "expected successful concept read")
+	m := make(map[string]interface{})
+	json.Unmarshal(*actual.Source, &m)
+
+	actualMetrics := m["metrics"].(map[string]interface{})
+	actualCount := int(actualMetrics["annotationsCount"].(float64))
+	assert.NoError(t, err, "expected concept to contain annotations count")
+	assert.Equal(t, 150000, actualCount)
+}
+
 func newBrokenESMock() *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodHead {
