@@ -576,14 +576,13 @@ func TestGetAllIds(t *testing.T) {
 	for id := range ch {
 		actual[id] = struct{}{}
 	}
-	//assert.Equal(t, len(expected), len(actual), "UUIDs")
+
 	notFound := 0
 	for _, id := range expected {
 		_, found := actual[id]
-	//	assert.True(t, found, "UUID not found in ids collection", id)
-	if !found {
-		notFound++
-	}
+		if !found {
+			notFound++
+		}
 	}
 	assert.Equal(t, 0, notFound, "UUIDs not found")
 }
