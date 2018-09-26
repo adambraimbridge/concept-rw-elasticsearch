@@ -145,7 +145,7 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 
 	//get metrics to write them back, temporaty until metrics solution fully implemented
 	readResult, err := es.ReadData(conceptType, uuid)
-	metrics := &ConceptMetrics{}
+	var metrics *ConceptMetrics
 	if err != nil {
 		loadDataLog.WithError(err).Error("Failed operation to Elasticsearch, could not retrieve current values before write")
 
@@ -156,9 +156,11 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 		esConcept := new(EsConceptModel)
 		if readResult.Found {
 			err := json.Unmarshal(*readResult.Source, esConcept)
-			if err == nil {
+			if err != nil {
+				loadDataLog.WithError(err).Error("Failed to read metrics from Elasticsearch")
+			} else {
+				metrics = esConcept.Metrics
 			}
-			metrics = esConcept.Metrics
 		}
 	}
 	resp, err := es.elasticClient.Index().
