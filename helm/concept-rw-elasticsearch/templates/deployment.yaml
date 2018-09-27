@@ -36,7 +36,7 @@ spec:
         - name: APP_PORT
           value: "8080"
         - name: ELASTICSEARCH_WHITELISTED_CONCEPTS
-          value: "genres,topics,sections,subjects,locations,brands,organisations,people"
+          value: "genres,topics,sections,subjects,locations,brands,organisations,people,alphaville-series"
         - name: ELASTICSEARCH_ENDPOINT
           valueFrom:
             configMapKeyRef:

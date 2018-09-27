@@ -86,12 +86,19 @@ func main() {
 
 	elasticsearchWhitelistedConceptTypes := app.String(cli.StringOpt{
 		Name:   "whitelisted-concepts",
-		Value:  "genres,topics,sections,subjects,locations,brands,organisations,people",
+		Value:  "genres,topics,sections,subjects,locations,brands,organisations,people,alphaville-series",
 		Desc:   "List which are currently supported by elasticsearch (already have mapping associated)",
 		EnvVar: "ELASTICSEARCH_WHITELISTED_CONCEPTS",
 	})
 
-	accessConfig := service.NewAccessConfig(*accessKey, *secretKey, *esEndpoint)
+	esTraceLogging := app.Bool(cli.BoolOpt{
+		Name:   "elasticsearch-trace",
+		Value:  false,
+		Desc:   "Whether to log ElasticSearch HTTP requests and responses",
+		EnvVar: "ELASTICSEARCH_TRACE",
+	})
+
+	accessConfig := service.NewAccessConfig(*accessKey, *secretKey, *esEndpoint, *esTraceLogging)
 
 	log.SetLevel(log.InfoLevel)
 	log.Infof("[Startup] The writer handles the following concept types: %v\n", *elasticsearchWhitelistedConceptTypes)
