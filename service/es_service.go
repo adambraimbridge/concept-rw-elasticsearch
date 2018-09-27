@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strconv"
 	"strings"
@@ -142,6 +143,26 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 		return nil, err
 	}
 
+	//get metrics to write them back, temporaty until metrics solution fully implemented
+	readResult, err := es.ReadData(conceptType, uuid)
+	var metrics *ConceptMetrics
+	if err != nil {
+		loadDataLog.WithError(err).Error("Failed operation to Elasticsearch, could not retrieve current values before write")
+
+	} else {
+		//we need to write the annotation count separately as it is sourced from neo.
+		//there is a race condition between the dataload and the metrics patch this will be solved by querying for the latest metrics
+		//from neo before writing the metrics back
+		esConcept := new(EsConceptModel)
+		if readResult.Found {
+			err := json.Unmarshal(*readResult.Source, esConcept)
+			if err != nil {
+				loadDataLog.WithError(err).Error("Failed to read metrics from Elasticsearch")
+			} else {
+				metrics = esConcept.Metrics
+			}
+		}
+	}
 	resp, err := es.elasticClient.Index().
 		Index(es.indexName).
 		Type(conceptType).
@@ -159,6 +180,12 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 		}
 
 		loadDataLog.WithError(err).WithField(statusField, status).Error("Failed operation to Elasticsearch")
+	}
+
+	//check if metrics is empty
+	if metrics != nil {
+		mpayload := &MetricsPayload{Metrics: metrics}
+		es.PatchUpdateDataWithMetrics(ctx, conceptType, uuid, mpayload)
 	}
 
 	return resp, err
