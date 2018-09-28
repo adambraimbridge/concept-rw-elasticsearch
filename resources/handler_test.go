@@ -452,6 +452,9 @@ func TestIDsEndpointReturnsIDsWithInvalidIncludeTypesValue(t *testing.T) {
 		err = json.Unmarshal([]byte(line), &j)
 		require.NoError(t, err)
 		assert.Equal(t, "1", j["uuid"])
+
+		_, ok := j["type"]
+		assert.False(t, ok)
 	}
 }
 

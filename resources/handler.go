@@ -269,14 +269,14 @@ func (h *Handler) GetAllIds(writer http.ResponseWriter, request *http.Request) {
 	transactionID := tid.GetTransactionIDFromRequest(request)
 	ctx := tid.TransactionAwareContext(context.Background(), transactionID)
 
-	includeTypes := strings.ToLower(request.URL.Query().Get("includeTypes"))
+	includeTypes := strings.ToLower(request.URL.Query().Get("includeTypes")) == "true"
 
 	writer.Header().Set("Content-Type", "text/plain")
 	writer.WriteHeader(http.StatusOK)
 	ids := h.elasticService.GetAllIds(ctx)
 	i := 0
 	for id := range ids {
-		if includeTypes == "true" {
+		if includeTypes {
 			fmt.Fprintf(writer, "{\"uuid\":\"%s\",\"type\":\"%s\"}\n", id.ID, id.Type)
 		} else {
 			fmt.Fprintf(writer, "{\"uuid\":\"%s\"}\n", id.ID)
