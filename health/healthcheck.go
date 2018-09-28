@@ -99,8 +99,8 @@ func (service *HealthService) indexIsWriteableCheck() fthealth.Check {
 		Name:           "Check index is writeable",
 		PanicGuide:     "https://dewey.ft.com/up-crwes.html",
 		Severity:       2,
-		TechnicalSummary: `Elasticsearch index is locked for writing. 
-		This may be because the reindexer is creating a new index version, in which case this service will become healthy 
+		TechnicalSummary: `Elasticsearch index is locked for writing.
+		This may be because the reindexer is creating a new index version, in which case this service will become healthy
 		once that process is completed. This requires further investigation if there is no ongoing reindexing process.`,
 		Checker: service.readOnlyChecker,
 	}

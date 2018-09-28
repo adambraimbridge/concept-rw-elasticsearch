@@ -332,7 +332,7 @@ func parseHealthcheck(healthcheckJSON string) ([]fthealth.CheckResult, error) {
 	return result.Checks, err
 }
 
-func (m *EsServiceMock) GetAllIds(ctx context.Context) chan string {
+func (m *EsServiceMock) GetAllIds(ctx context.Context) chan service.EsIDTypePair {
 	args := m.Called()
-	return args.Get(0).(chan string)
+	return args.Get(0).(chan service.EsIDTypePair)
 }

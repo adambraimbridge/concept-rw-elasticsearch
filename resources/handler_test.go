@@ -427,10 +427,68 @@ func TestProcessConceptModelWithoutTransactionID(t *testing.T) {
 	assert.Equal(t, hook.LastEntry().Data[tid.TransactionIDKey], payload.(*service.EsConceptModel).PublishReference)
 }
 
+func TestIDsEndpointReturnsIDsWithInvalidIncludeTypesValue(t *testing.T) {
+	ids := make(chan service.EsIDTypePair, 4)
+	dummyEsService := &dummyEsService{ids: ids}
+
+	h := NewHandler(dummyEsService, []string{"genres"})
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/?includeTypes=somethingDodgy", nil)
+
+	go func() {
+		ids <- service.EsIDTypePair{ID: "1", Type: "people"}
+		close(ids)
+	}()
+
+	h.GetAllIds(w, req)
+
+	for {
+		line, err := w.Body.ReadString('\n')
+		if err != nil {
+			break
+		}
+
+		j := make(map[string]string)
+		err = json.Unmarshal([]byte(line), &j)
+		require.NoError(t, err)
+		assert.Equal(t, "1", j["uuid"])
+	}
+}
+
+func TestIDsEndpointReturnsTypes(t *testing.T) {
+	ids := make(chan service.EsIDTypePair, 4)
+	dummyEsService := &dummyEsService{ids: ids}
+
+	h := NewHandler(dummyEsService, []string{"genres"})
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/?includeTypes=true", nil)
+
+	go func() {
+		ids <- service.EsIDTypePair{ID: "1", Type: "people"}
+		close(ids)
+	}()
+
+	h.GetAllIds(w, req)
+
+	for {
+		line, err := w.Body.ReadString('\n')
+		if err != nil {
+			break
+		}
+
+		j := make(map[string]string)
+		err = json.Unmarshal([]byte(line), &j)
+		require.NoError(t, err)
+		assert.Equal(t, "1", j["uuid"])
+		assert.Equal(t, "people", j["type"])
+	}
+}
+
 type dummyEsService struct {
 	returnsError error
 	found        bool
 	source       *json.RawMessage
+	ids          chan service.EsIDTypePair
 }
 
 func (service *dummyEsService) LoadData(ctx context.Context, conceptType string, uuid string, payload interface{}) (*elastic.IndexResponse, error) {
@@ -480,6 +538,6 @@ func (service *dummyEsService) GetClusterHealth() (*elastic.ClusterHealthRespons
 	return nil, nil
 }
 
-func (service *dummyEsService) GetAllIds(ctx context.Context) chan string {
-	return nil
+func (service *dummyEsService) GetAllIds(ctx context.Context) chan service.EsIDTypePair {
+	return service.ids
 }

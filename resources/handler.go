@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 
 	"github.com/Financial-Times/concept-rw-elasticsearch/service"
 	tid "github.com/Financial-Times/transactionid-utils-go"
@@ -268,12 +269,18 @@ func (h *Handler) GetAllIds(writer http.ResponseWriter, request *http.Request) {
 	transactionID := tid.GetTransactionIDFromRequest(request)
 	ctx := tid.TransactionAwareContext(context.Background(), transactionID)
 
+	includeTypes := strings.ToLower(request.URL.Query().Get("includeTypes"))
+
 	writer.Header().Set("Content-Type", "text/plain")
 	writer.WriteHeader(http.StatusOK)
 	ids := h.elasticService.GetAllIds(ctx)
 	i := 0
 	for id := range ids {
-		fmt.Fprintf(writer, "{\"uuid\":\"%s\"}\n", id)
+		if includeTypes == "true" {
+			fmt.Fprintf(writer, "{\"uuid\":\"%s\",\"type\":\"%s\"}\n", id.ID, id.Type)
+		} else {
+			fmt.Fprintf(writer, "{\"uuid\":\"%s\"}\n", id.ID)
+		}
 		i++
 	}
 	log.Infof("wrote %v uuids", i)
