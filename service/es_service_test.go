@@ -157,7 +157,7 @@ func TestWriteWithESError(t *testing.T) {
 }
 
 func TestWritePreservesMetrics(t *testing.T) {
-	bulkProcessorConfig := NewBulkProcessorConfig(1, 1, 1, 100 * time.Millisecond)
+	bulkProcessorConfig := NewBulkProcessorConfig(1, 1, 1, 100*time.Millisecond)
 	esURL := getElasticSearchTestURL(t)
 	ec := getElasticClient(t, esURL)
 	bulkProcessor, err := newBulkProcessor(ec, &bulkProcessorConfig)
@@ -638,7 +638,7 @@ func TestGetAllIds(t *testing.T) {
 	ch := service.GetAllIds(context.Background())
 	actual := make(map[string]struct{})
 	for id := range ch {
-		actual[id] = struct{}{}
+		actual[id.ID] = struct{}{}
 	}
 
 	notFound := 0

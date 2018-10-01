@@ -8,10 +8,11 @@ import (
 	"strings"
 	"sync"
 
+	"io"
+
 	tid "github.com/Financial-Times/transactionid-utils-go"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/olivere/elastic.v5"
-	"io"
 )
 
 var (
@@ -48,7 +49,7 @@ type EsService interface {
 	CloseBulkProcessor() error
 	GetClusterHealth() (*elastic.ClusterHealthResponse, error)
 	IsIndexReadOnly() (bool, string, error)
-	GetAllIds(ctx context.Context) chan string
+	GetAllIds(ctx context.Context) chan EsIDTypePair
 }
 
 func NewEsService(ch chan *elastic.Client, indexName string, bulkProcessorConfig *BulkProcessorConfig) EsService {
@@ -335,8 +336,8 @@ func (es *esService) CloseBulkProcessor() error {
 	return es.bulkProcessor.Close()
 }
 
-func (es *esService) GetAllIds(ctx context.Context) chan string {
-	ids := make(chan string)
+func (es *esService) GetAllIds(ctx context.Context) chan EsIDTypePair {
+	ids := make(chan EsIDTypePair)
 
 	go func() {
 		defer close(ids)
@@ -363,7 +364,7 @@ func (es *esService) GetAllIds(ctx context.Context) chan string {
 	return ids
 }
 
-func (es *esService) processScrollPage(ctx context.Context, r *elastic.ScrollService, ch chan string) (*elastic.ScrollService, error) {
+func (es *esService) processScrollPage(ctx context.Context, r *elastic.ScrollService, ch chan EsIDTypePair) (*elastic.ScrollService, error) {
 	res, err := r.Do(ctx)
 	if err == io.EOF {
 		return nil, nil
@@ -374,7 +375,7 @@ func (es *esService) processScrollPage(ctx context.Context, r *elastic.ScrollSer
 
 	scrollId := res.ScrollId
 	for _, c := range res.Hits.Hits {
-		ch <- c.Id
+		ch <- EsIDTypePair{ID: c.Id, Type: c.Type}
 	}
 
 	return elastic.NewScrollService(es.elasticClient).ScrollId(scrollId), nil
