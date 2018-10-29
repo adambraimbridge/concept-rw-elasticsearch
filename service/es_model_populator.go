@@ -1,7 +1,6 @@
 package service
 
 import (
-	"strconv"
 	"time"
 
 	"github.com/Financial-Times/neo-model-utils-go/mapper"
@@ -23,8 +22,7 @@ func ConvertConceptToESConceptModel(concept ConceptModel, conceptType string, pu
 	switch conceptType {
 	case PERSON: // person type should not come through as the old model.
 		esPersonModel := &EsPersonConceptModel{
-			esModel,
-			"false",
+			EsConceptModel: esModel,
 		}
 		return esPersonModel, nil
 	default:
@@ -36,10 +34,8 @@ func ConvertAggregateConceptToESConceptModel(concept AggregateConceptModel, conc
 	esModel := newESConceptModel(concept.PrefUUID, conceptType, concept.DirectType, concept.Aliases, concept.GetAuthorities(), concept.PrefLabel, publishRef, concept.IsDeprecated, concept.ScopeNote)
 	switch conceptType {
 	case PERSON:
-		isFTAuthor := strconv.FormatBool(concept.IsAuthor)
 		esPersonModel := &EsPersonConceptModel{
-			esModel,
-			isFTAuthor,
+			EsConceptModel: esModel,
 		}
 		return esPersonModel, nil
 	default:

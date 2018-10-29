@@ -21,15 +21,28 @@ type ConceptModel struct {
 	ScopeNote              string                 `json:"scopeNote,omitempty"`
 }
 
+type AggregateMembershipRole struct {
+	RoleUUID        string `json:"membershipRoleUUID,omitempty"`
+	InceptionDate   string `json:"inceptionDate,omitempty"`
+	TerminationDate string `json:"terminationDate,omitempty"`
+}
+
 type AggregateConceptModel struct {
-	PrefUUID              string          `json:"prefUUID"`
-	DirectType            string          `json:"type"`
-	PrefLabel             string          `json:"prefLabel"`
-	Aliases               []string        `json:"aliases,omitempty"`
+	// Required fields
+	PrefUUID   string `json:"prefUUID"`
+	DirectType string `json:"type"`
+	PrefLabel  string `json:"prefLabel"`
+	// Additional fields
+	Aliases   []string `json:"aliases,omitempty"`
+	ScopeNote string   `json:"scopeNote,omitempty"`
+	// Membership
+	MembershipRoles  []AggregateMembershipRole `json:"membershipRoles,omitempty"`
+	OrganisationUUID string                    `json:"organisationUUID,omitempty"`
+	PersonUUID       string                    `json:"personUUID,omitempty"`
+	// Organisation
+	IsDeprecated bool `json:"isDeprecated,omitempty"`
+	// Source representations
 	SourceRepresentations []SourceConcept `json:"sourceRepresentations"`
-	IsAuthor              bool            `json:"isAuthor"`
-	IsDeprecated          bool            `json:"isDeprecated,omitempty"`
-	ScopeNote             string          `json:"scopeNote,omitempty"`
 }
 
 type SourceConcept struct {
@@ -67,7 +80,6 @@ type ConceptMetrics struct {
 
 type EsPersonConceptModel struct {
 	*EsConceptModel
-	IsFTAuthor string `json:"isFTAuthor"`
 }
 
 func (c AggregateConceptModel) PreferredUUID() string {
