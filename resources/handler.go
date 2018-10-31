@@ -40,9 +40,9 @@ func NewHandler(elasticService service.EsService, allowedConceptTypes []string) 
 // LoadData processes a single ES concept entity
 func (h *Handler) LoadData(w http.ResponseWriter, r *http.Request) {
 	transactionID := tid.GetTransactionIDFromRequest(r)
-	ctx := tid.TransactionAwareContext(context.Background(), transactionID)
+	ctx := tid.TransactionAwareContext(r.Context(), transactionID)
 
-	conceptType, concept, payload, err := h.processPayload(ctx, r)
+	conceptType, concept, payload, err := h.processPayload(r.WithContext(ctx))
 
 	if err != nil {
 		var errStatus int
@@ -76,9 +76,9 @@ func (h *Handler) LoadData(w http.ResponseWriter, r *http.Request) {
 // LoadBulkData write a concept to ES via the ES Bulk API
 func (h *Handler) LoadBulkData(w http.ResponseWriter, r *http.Request) {
 	transactionID := tid.GetTransactionIDFromRequest(r)
-	ctx := tid.TransactionAwareContext(context.Background(), transactionID)
+	ctx := tid.TransactionAwareContext(r.Context(), transactionID)
 
-	conceptType, concept, payload, err := h.processPayload(ctx, r)
+	conceptType, concept, payload, err := h.processPayload(r.WithContext(ctx))
 	if err == errUnsupportedConceptType {
 		writeMessage(w, err.Error(), http.StatusNotFound)
 		return
@@ -110,7 +110,7 @@ func (h *Handler) LoadMetrics(w http.ResponseWriter, r *http.Request) {
 
 	dec := json.NewDecoder(r.Body)
 
-	metrics := service.MetricsPayload{}
+	metrics := service.EsConceptModelPatch{}
 	err := dec.Decode(&metrics)
 
 	if err != nil {
@@ -127,7 +127,7 @@ func (h *Handler) LoadMetrics(w http.ResponseWriter, r *http.Request) {
 	writeMessage(w, "Concept updated with metrics successfully", http.StatusOK)
 }
 
-func (h *Handler) processPayload(ctx context.Context, r *http.Request) (string, service.Concept, interface{}, error) {
+func (h *Handler) processPayload(r *http.Request) (string, service.Concept, interface{}, error) {
 	vars := mux.Vars(r)
 	uuid := vars["id"]
 	conceptType := vars["concept-type"]
@@ -151,9 +151,9 @@ func (h *Handler) processPayload(ctx context.Context, r *http.Request) (string, 
 	var concept service.Concept
 	var payload interface{}
 	if aggConceptModel {
-		concept, payload, err = h.processAggregateConceptModel(ctx, uuid, conceptType, body)
+		concept, payload, err = h.processAggregateConceptModel(r.Context(), uuid, conceptType, body)
 	} else {
-		concept, payload, err = h.processConceptModel(ctx, uuid, conceptType, body)
+		concept, payload, err = h.processConceptModel(r.Context(), uuid, conceptType, body)
 	}
 
 	return conceptType, concept, payload, err

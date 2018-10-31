@@ -259,7 +259,7 @@ func TestReadData(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 
-	if contentType := rr.HeaderMap.Get("Content-Type"); contentType != "application/json" {
+	if contentType := rr.Header().Get("Content-Type"); contentType != "application/json" {
 		t.Errorf("handler returned wrong content type: got %v want %v", contentType, "application/json")
 	}
 
