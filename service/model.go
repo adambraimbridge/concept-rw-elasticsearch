@@ -10,6 +10,8 @@ type Concept interface {
 	PreferredUUID() string
 }
 
+type PayloadPatch interface{}
+
 type ConceptModel struct {
 	UUID                   string                 `json:"uuid"`
 	DirectType             string                 `json:"type"`
@@ -70,7 +72,7 @@ type EsIDTypePair struct {
 	Type string `json:"type,omitempty"`
 }
 
-type MetricsPayload struct {
+type EsConceptModelPatch struct {
 	Metrics *ConceptMetrics `json:"metrics"`
 }
 
@@ -80,6 +82,12 @@ type ConceptMetrics struct {
 
 type EsPersonConceptModel struct {
 	*EsConceptModel
+	IsFTAuthor string `json:"isFTAuthor"`
+}
+
+type EsPersonConceptPatch struct {
+	Metrics    *ConceptMetrics `json:"metrics"`
+	IsFTAuthor string          `json:"isFTAuthor"`
 }
 
 func (c AggregateConceptModel) PreferredUUID() string {

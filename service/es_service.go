@@ -19,17 +19,18 @@ var (
 	ErrNoElasticClient = errors.New("no ElasticSearch client available")
 )
 
-const conceptTypeField = "conceptType"
-const uuidField = "uuid"
-const concordedUUIDField = "concordedUUID"
-const prefUUIDField = "prefUUID"
-const statusField = "status"
-const operationField = "operation"
-const writeOperation = "write"
-const deleteOperation = "delete"
-const unknownStatus = "unknown"
-
-const tidNotFound = "not found"
+const (
+	conceptTypeField   = "conceptType"
+	uuidField          = "uuid"
+	concordedUUIDField = "concordedUUID"
+	prefUUIDField      = "prefUUID"
+	statusField        = "status"
+	operationField     = "operation"
+	writeOperation     = "write"
+	deleteOperation    = "delete"
+	unknownStatus      = "unknown"
+	tidNotFound        = "not found"
+)
 
 type esService struct {
 	sync.RWMutex
@@ -45,7 +46,7 @@ type EsService interface {
 	DeleteData(ctx context.Context, conceptType string, uuid string) (*elastic.DeleteResponse, error)
 	LoadBulkData(conceptType string, uuid string, payload interface{})
 	CleanupData(ctx context.Context, concept Concept)
-	PatchUpdateDataWithMetrics(ctx context.Context, conceptType string, uuid string, payload *MetricsPayload)
+	PatchUpdateDataWithMetrics(ctx context.Context, conceptType string, uuid string, payload PayloadPatch)
 	CloseBulkProcessor() error
 	GetClusterHealth() (*elastic.ClusterHealthResponse, error)
 	IsIndexReadOnly() (bool, string, error)
@@ -187,7 +188,7 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 
 	//check if metrics is empty
 	if metrics != nil {
-		mpayload := &MetricsPayload{Metrics: metrics}
+		mpayload := &EsConceptModelPatch{Metrics: metrics}
 		es.PatchUpdateDataWithMetrics(ctx, conceptType, uuid, mpayload)
 	}
 
@@ -323,7 +324,7 @@ func (es *esService) LoadBulkData(conceptType string, uuid string, payload inter
 }
 
 // PatchUpdateDataWithMetrics updates a concept document with metrics. See https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-update.html#_updates_with_a_partial_document
-func (es *esService) PatchUpdateDataWithMetrics(ctx context.Context, conceptType string, uuid string, payload *MetricsPayload) {
+func (es *esService) PatchUpdateDataWithMetrics(ctx context.Context, conceptType string, uuid string, payload PayloadPatch) {
 	r := elastic.NewBulkUpdateRequest().Index(es.indexName).Id(uuid).Type(conceptType).Doc(payload)
 
 	es.RLock()

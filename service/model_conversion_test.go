@@ -25,7 +25,7 @@ func TestConvertToESConceptModel(t *testing.T) {
 		esConceptModel EsConceptModel
 	}{
 		{
-			ConceptModel{
+			conceptModel: ConceptModel{
 				UUID:       "2384fa7a-d514-3d6a-a0ea-3a711f66d0d8",
 				DirectType: "PublicCompany",
 				PrefLabel:  "Apple, Inc.",
@@ -45,7 +45,7 @@ func TestConvertToESConceptModel(t *testing.T) {
 					"Apple Inc.",
 					"Apple, Inc."},
 			},
-			EsConceptModel{
+			esConceptModel: EsConceptModel{
 				Id:        "http://api.ft.com/things/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8",
 				ApiUrl:    "http://api.ft.com/organisations/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8",
 				PrefLabel: "Apple, Inc.",
@@ -74,14 +74,14 @@ func TestConvertToESConceptModel(t *testing.T) {
 			},
 		},
 		{
-			ConceptModel{
+			conceptModel: ConceptModel{
 				UUID:         "2384fa7a-d514-3d6a-a0ea-3a711f66d0d8",
 				DirectType:   "PublicCompany",
 				PrefLabel:    "Apple, Inc.",
 				Aliases:      []string{},
 				IsDeprecated: true,
 			},
-			EsConceptModel{
+			esConceptModel: EsConceptModel{
 				Id:        "http://api.ft.com/things/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8",
 				ApiUrl:    "http://api.ft.com/organisations/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8",
 				PrefLabel: "Apple, Inc.",
@@ -98,7 +98,7 @@ func TestConvertToESConceptModel(t *testing.T) {
 			},
 		},
 		{
-			ConceptModel{
+			conceptModel: ConceptModel{
 				UUID:         "2384fa7a-d514-3d6a-a0ea-3a711f66d0d9",
 				DirectType:   "PublicCompany",
 				PrefLabel:    "Apple, Inc.",
@@ -106,7 +106,7 @@ func TestConvertToESConceptModel(t *testing.T) {
 				IsDeprecated: true,
 				ScopeNote:    "The Apple company used as a PublicCompany concept",
 			},
-			EsConceptModel{
+			esConceptModel: EsConceptModel{
 				Id:        "http://api.ft.com/things/2384fa7a-d514-3d6a-a0ea-3a711f66d0d9",
 				ApiUrl:    "http://api.ft.com/organisations/2384fa7a-d514-3d6a-a0ea-3a711f66d0d9",
 				PrefLabel: "Apple, Inc.",

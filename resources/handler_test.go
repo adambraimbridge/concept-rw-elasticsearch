@@ -37,7 +37,7 @@ func TestCreateNewESWriter(t *testing.T) {
 
 func TestCreateNewESWriterWithEmptyWhitelist(t *testing.T) {
 	dummyEsService := &dummyEsService{}
-	allowedTypes := []string{}
+	var allowedTypes []string
 	writerService := NewHandler(dummyEsService, allowedTypes)
 	assert.Equal(t, 0, len(writerService.allowedConceptTypes))
 }
@@ -522,7 +522,7 @@ func (service *dummyEsService) LoadBulkData(conceptType string, uuid string, pay
 
 }
 
-func (service *dummyEsService) PatchUpdateDataWithMetrics(ctx context.Context, conceptType string, uuid string, payload *service.MetricsPayload) {
+func (service *dummyEsService) PatchUpdateDataWithMetrics(ctx context.Context, conceptType string, uuid string, payload service.PayloadPatch) {
 
 }
 
