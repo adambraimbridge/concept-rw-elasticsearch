@@ -128,7 +128,7 @@ func TestConvertToESConceptModel(t *testing.T) {
 	for _, testModel := range tests {
 		testTID := tid.NewTransactionID()
 
-		actual, _ := ConvertConceptToESConceptModel(testModel.conceptModel, "organisations", testTID)
+		actual := ConvertConceptToESConceptModel(testModel.conceptModel, "organisations", testTID)
 		esModel := actual.(*EsConceptModel)
 		assert.Equal(t, testModel.esConceptModel.Id, esModel.Id, fmt.Sprintf("Expected Id %s differs from actual id %s ", testModel.esConceptModel.Id, esModel.Id))
 		assert.Equal(t, testModel.esConceptModel.ApiUrl, esModel.ApiUrl, fmt.Sprintf("Expected ApiUrl %s differs from actual ApiUrl %s ", testModel.esConceptModel.ApiUrl, esModel.ApiUrl))
@@ -266,7 +266,7 @@ func TestConvertAggregateConceptToESConceptModel(t *testing.T) {
 	for _, testModel := range tests {
 		testTID := tid.NewTransactionID()
 
-		actual, _ := ConvertAggregateConceptToESConceptModel(testModel.conceptModel, "organisations", testTID)
+		actual := ConvertAggregateConceptToESConceptModel(testModel.conceptModel, "organisations", testTID)
 		esModel := actual.(*EsConceptModel)
 		assert.Equal(t, testModel.esConceptModel.Id, esModel.Id, fmt.Sprintf("Expected Id %s differs from actual id %s ", testModel.esConceptModel.Id, esModel.Id))
 		assert.Equal(t, testModel.esConceptModel.ApiUrl, esModel.ApiUrl, fmt.Sprintf("Expected ApiUrl %s differs from actual ApiUrl %s ", testModel.esConceptModel.ApiUrl, esModel.ApiUrl))
@@ -374,7 +374,7 @@ func TestConvertPersonToESConceptModel(t *testing.T) {
 	for _, testModel := range tests {
 		testTID := tid.NewTransactionID()
 
-		actual, _ := ConvertConceptToESConceptModel(testModel.conceptModel, "people", testTID)
+		actual := ConvertConceptToESConceptModel(testModel.conceptModel, "people", testTID)
 		esModel := actual.(*EsPersonConceptModel)
 		assert.Equal(t, testModel.esPersonConceptModel.Id, esModel.Id, fmt.Sprintf("Expected Id %s differs from actual id %s ", testModel.esPersonConceptModel.Id, esModel.Id))
 		assert.Equal(t, testModel.esPersonConceptModel.ApiUrl, esModel.ApiUrl, fmt.Sprintf("Expected ApiUrl %s differs from actual ApiUrl %s ", testModel.esPersonConceptModel.ApiUrl, esModel.ApiUrl))
@@ -466,7 +466,7 @@ func TestConvertPersonToAggregateConceptModel(t *testing.T) {
 	for _, testModel := range tests {
 		testTID := tid.NewTransactionID()
 
-		actual, _ := ConvertAggregateConceptToESConceptModel(testModel.aggregateConceptModel, "people", testTID)
+		actual := ConvertAggregateConceptToESConceptModel(testModel.aggregateConceptModel, "people", testTID)
 		esModel := actual.(*EsPersonConceptModel)
 		assert.Equal(t, testModel.esPersonConceptModel.Id, esModel.Id, fmt.Sprintf("Expected Id %s differs from actual id %s ", testModel.esPersonConceptModel.Id, esModel.Id))
 		assert.Equal(t, testModel.esPersonConceptModel.ApiUrl, esModel.ApiUrl, fmt.Sprintf("Expected ApiUrl %s differs from actual ApiUrl %s ", testModel.esPersonConceptModel.ApiUrl, esModel.ApiUrl))

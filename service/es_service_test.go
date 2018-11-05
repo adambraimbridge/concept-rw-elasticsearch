@@ -173,7 +173,7 @@ func TestWriteWithESError(t *testing.T) {
 	assert.Equal(t, testTID, hook.LastEntry().Data[tid.TransactionIDKey])
 }
 
-func TestWriteMakesPersonAnAuthor(t *testing.T) {
+func TestWriteMakesPersonAnFTColumnist(t *testing.T) {
 	bulkProcessorConfig := NewBulkProcessorConfig(1, 1, 1, 100*time.Millisecond)
 	esURL := getElasticSearchTestURL(t)
 	ec := getElasticClient(t, esURL)
@@ -187,6 +187,60 @@ func TestWriteMakesPersonAnAuthor(t *testing.T) {
 	ctx := context.Background()
 	_, err = ec.Refresh(indexName).Do(ctx)
 	require.NoError(t, err, "expected successful flush")
+
+	ftColumnist := EsMembershipModel{
+		Id:             uuid.NewV4().String(),
+		PersonId:       testUuid,
+		OrganisationId: "7bcfe07b-0fb1-49ce-a5fa-e51d5c01c3e0",
+		Memberships:    []string{"7ef75a6a-b6bf-4eb7-a1da-03e0acabef1a", "7ef75a6a-b6bf-4eb7-a1da-03e0acabef1b", "7ef75a6a-b6bf-4eb7-a1da-03e0acabef1c"},
+	}
+	_, err = service.LoadData(newTestContext(), "membership", ftColumnist.Id, ftColumnist)
+	require.NoError(t, err, "expected successful write")
+	_, err = ec.Refresh(indexName).Do(ctx)
+	require.NoError(t, err, "expected successful flush")
+	err = service.bulkProcessor.Flush() // wait for the bulk processor to write the data
+	require.NoError(t, err, "require successful write")
+
+	p, err := service.ReadData(peopleType, testUuid)
+	assert.NoError(t, err, "expected successful read")
+	var actual EsPersonConceptModel
+	assert.NoError(t, json.Unmarshal(*p.Source, &actual))
+	assert.True(t, actual.IsFTAuthor)
+}
+
+func TestWriteMakesPersonAnFTJournalist(t *testing.T) {
+	bulkProcessorConfig := NewBulkProcessorConfig(1, 1, 1, 100*time.Millisecond)
+	esURL := getElasticSearchTestURL(t)
+	ec := getElasticClient(t, esURL)
+	bulkProcessor, err := newBulkProcessor(ec, &bulkProcessorConfig)
+	require.NoError(t, err, "require a bulk processor")
+
+	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
+	testUuid := uuid.NewV4().String()
+	_, _, err = writePersonDocument(service, peopleType, testUuid, false)
+	require.NoError(t, err, "expected successful write")
+	ctx := context.Background()
+	_, err = ec.Refresh(indexName).Do(ctx)
+	require.NoError(t, err, "expected successful flush")
+
+	ftColumnist := EsMembershipModel{
+		Id:             uuid.NewV4().String(),
+		PersonId:       testUuid,
+		OrganisationId: "7bcfe07b-0fb1-49ce-a5fa-e51d5c01c3e0",
+		Memberships:    []string{"7ef75a6a-b6bf-4eb7-a1da-03e0acabef1a", "33ee38a4-c677-4952-a141-2ae14da3aedd", "7ef75a6a-b6bf-4eb7-a1da-03e0acabef1c"},
+	}
+	_, err = service.LoadData(newTestContext(), "membership", ftColumnist.Id, ftColumnist)
+	require.NoError(t, err, "expected successful write")
+	_, err = ec.Refresh(indexName).Do(ctx)
+	require.NoError(t, err, "expected successful flush")
+	err = service.bulkProcessor.Flush() // wait for the bulk processor to write the data
+	require.NoError(t, err, "require successful write")
+
+	p, err := service.ReadData(peopleType, testUuid)
+	assert.NoError(t, err, "expected successful read")
+	var actual EsPersonConceptModel
+	assert.NoError(t, json.Unmarshal(*p.Source, &actual))
+	assert.True(t, actual.IsFTAuthor)
 }
 
 func TestWritePreservesPatchableDataForPerson(t *testing.T) {

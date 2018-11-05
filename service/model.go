@@ -69,6 +69,13 @@ type EsConceptModel struct {
 	Metrics          *ConceptMetrics `json:"metrics,omitempty"`
 }
 
+type EsMembershipModel struct {
+	Id             string   `json:"id"`
+	PersonId       string   `json:"personId"`
+	OrganisationId string   `json:"organisationId"`
+	Memberships    []string `json:"memberships"`
+}
+
 type EsIDTypePair struct {
 	ID   string `json:"id,omitempty"`
 	Type string `json:"type,omitempty"`

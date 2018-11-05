@@ -131,7 +131,9 @@ func (es *esService) isIndexReadOnly(settings map[string]interface{}) (bool, err
 	return false, nil
 }
 
-func (es *esService) LoadData(ctx context.Context, conceptType string, uuid string, payload EsModel) (resp *elastic.IndexResponse, err error) {
+func (es *esService) LoadData(ctx context.Context, conceptType string, uuid string, payload EsModel) (
+	resp *elastic.IndexResponse, err error) {
+
 	loadDataLog := log.WithField(conceptTypeField, conceptType).
 		WithField(uuidField, uuid).
 		WithField(operationField, writeOperation)
@@ -153,18 +155,18 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 	var readResult *elastic.GetResult
 	// Check if membership is FT
 	if conceptType == membership {
-		acm := payload.(AggregateConceptModel)
-		if len(acm.MembershipRoles) < 1 {
+		acm := payload.(EsMembershipModel)
+		if len(acm.Memberships) < 1 {
 			return nil, nil
 		}
 
-		if acm.OrganisationUUID != ftOrgUUID {
+		if acm.OrganisationId != ftOrgUUID {
 			return nil, nil
 		}
 
 		var special bool
-		for _, m := range acm.MembershipRoles {
-			if m.RoleUUID == journalistUUID || m.RoleUUID == columnistUUID {
+		for _, m := range acm.Memberships {
+			if m == journalistUUID || m == columnistUUID {
 				special = true
 				break
 			}
@@ -174,8 +176,8 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 			return nil, nil
 		}
 
-		readResult, err = es.ReadData(person, acm.PersonUUID)
-		uuid = acm.PersonUUID
+		readResult, err = es.ReadData(person, acm.PersonId)
+		uuid = acm.PersonId
 	} else {
 		readResult, err = es.ReadData(conceptType, uuid)
 	}
@@ -196,9 +198,14 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 				if err != nil {
 					loadDataLog.WithError(err).Error("Failed to read patchData from Elasticsearch")
 				} else {
-					patchData = &EsPersonConceptPatch{Metrics: esConcept.Metrics, IsFTAuthor: esConcept.IsFTAuthor}
+					is := esConcept.IsFTAuthor
+					if conceptType == membership {
+						is = true // we only process FT members who are FT authors
+					}
+					patchData = &EsPersonConceptPatch{Metrics: esConcept.Metrics, IsFTAuthor: is}
 				}
 			}
+			conceptType = person
 		default:
 			esConcept := new(EsConceptModel)
 			if readResult.Found {
@@ -236,7 +243,7 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 
 	//check if patchData is empty
 	if patchData != nil {
-		log.Debugf("Patching: %s", uuid)
+		loadDataLog.Debugf("Patching: %s", uuid)
 		es.PatchUpdateDataWithMetrics(ctx, conceptType, uuid, patchData)
 	}
 

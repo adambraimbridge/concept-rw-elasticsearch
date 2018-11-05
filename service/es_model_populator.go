@@ -12,7 +12,7 @@ const (
 	membership = "membership"
 )
 
-func ConvertConceptToESConceptModel(concept ConceptModel, conceptType string, publishRef string) (EsModel, error) {
+func ConvertConceptToESConceptModel(concept ConceptModel, conceptType string, publishRef string) EsModel {
 	esModel := newESConceptModel(concept.UUID, conceptType, concept.DirectType, concept.Aliases, concept.GetAuthorities(), concept.PrefLabel, publishRef, concept.IsDeprecated, concept.ScopeNote)
 
 	switch conceptType {
@@ -20,23 +20,48 @@ func ConvertConceptToESConceptModel(concept ConceptModel, conceptType string, pu
 		esPersonModel := &EsPersonConceptModel{
 			EsConceptModel: esModel,
 		}
-		return esPersonModel, nil
+		return esPersonModel
 	default:
-		return esModel, nil
+		return esModel
 	}
 }
 
-func ConvertAggregateConceptToESConceptModel(concept AggregateConceptModel, conceptType string, publishRef string) (EsModel, error) {
-	esModel := newESConceptModel(concept.PrefUUID, conceptType, concept.DirectType, concept.Aliases, concept.GetAuthorities(), concept.PrefLabel, publishRef, concept.IsDeprecated, concept.ScopeNote)
+func ConvertAggregateConceptToESConceptModel(concept AggregateConceptModel, conceptType string, publishRef string) (esModel EsModel) {
+
 	switch conceptType {
-	case person:
-		esPersonModel := &EsPersonConceptModel{
-			EsConceptModel: esModel,
+	case membership:
+		memberships := make([]string, len(concept.MembershipRoles))
+		for i, m := range concept.MembershipRoles {
+			memberships[i] = m.RoleUUID
 		}
-		return esPersonModel, nil
+		esModel = &EsMembershipModel{
+			Id:             concept.PrefUUID,
+			PersonId:       concept.PersonUUID,
+			OrganisationId: concept.OrganisationUUID,
+			Memberships:    memberships,
+		}
+	case person:
+		esModel = &EsPersonConceptModel{
+			EsConceptModel: getEsConcept(concept, conceptType, publishRef),
+		}
 	default:
-		return esModel, nil
+		esModel = getEsConcept(concept, conceptType, publishRef)
 	}
+
+	return esModel
+}
+
+func getEsConcept(concept AggregateConceptModel, conceptType string, publishRef string) *EsConceptModel {
+	return newESConceptModel(
+		concept.PrefUUID,
+		conceptType,
+		concept.DirectType,
+		concept.Aliases,
+		concept.GetAuthorities(),
+		concept.PrefLabel,
+		publishRef,
+		concept.IsDeprecated,
+		concept.ScopeNote)
 }
 
 func newESConceptModel(uuid string, conceptType string, directType string, aliases []string, authorities []string, prefLabel string, publishRef string, isDeprecated bool, scopeNote string) (esModel *EsConceptModel) {

@@ -42,7 +42,7 @@ func (h *Handler) LoadData(w http.ResponseWriter, r *http.Request) {
 	transactionID := tid.GetTransactionIDFromRequest(r)
 	ctx := tid.TransactionAwareContext(r.Context(), transactionID)
 
-	conceptType, concept, payload, err := h.processPayload(r.WithContext(ctx))
+	conceptType, concept, esModel, err := h.processPayload(r.WithContext(ctx))
 
 	if err != nil {
 		var errStatus int
@@ -56,7 +56,7 @@ func (h *Handler) LoadData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = h.elasticService.LoadData(ctx, conceptType, concept.PreferredUUID(), payload)
+	_, err = h.elasticService.LoadData(ctx, conceptType, concept.PreferredUUID(), esModel)
 	if err == service.ErrNoElasticClient {
 		writeMessage(w, "ES unavailable", http.StatusServiceUnavailable)
 		return
@@ -127,7 +127,7 @@ func (h *Handler) LoadMetrics(w http.ResponseWriter, r *http.Request) {
 	writeMessage(w, "Concept updated with metrics successfully", http.StatusOK)
 }
 
-func (h *Handler) processPayload(r *http.Request) (conceptType string, concept service.Concept, payload service.EsModel, err error) {
+func (h *Handler) processPayload(r *http.Request) (conceptType string, concept service.Concept, esModel service.EsModel, err error) {
 	vars := mux.Vars(r)
 	uuid := vars["id"]
 	conceptType = vars["concept-type"]
@@ -149,27 +149,27 @@ func (h *Handler) processPayload(r *http.Request) (conceptType string, concept s
 	}
 
 	if aggConceptModel {
-		concept, payload, err = processAggregateConceptModel(r.Context(), uuid, conceptType, body)
+		concept, esModel, err = processAggregateConceptModel(r.Context(), uuid, conceptType, body)
 	} else {
-		concept, payload, err = processConceptModel(r.Context(), uuid, conceptType, body)
+		concept, esModel, err = processConceptModel(r.Context(), uuid, conceptType, body)
 	}
 
-	return conceptType, concept, payload, err
+	return conceptType, concept, esModel, err
 }
 
 func processConceptModel(ctx context.Context, uuid string, conceptType string, body []byte) (concept service.ConceptModel, payload service.EsModel, err error) {
 	err = json.Unmarshal(body, &concept)
 	if err != nil {
 		log.WithError(err).Info("Failed to unmarshal body into concept model.")
-		return concept, nil, errProcessingBody
+		return concept, payload, errProcessingBody
 	}
 
 	if concept.UUID != uuid {
-		return concept, nil, errPathUUID
+		return concept, payload, errPathUUID
 	}
 
 	if concept.DirectType == "" || concept.PrefLabel == "" {
-		return concept, nil, errInvalidConceptModel
+		return concept, payload, errInvalidConceptModel
 	}
 
 	transactionID, err := tid.GetTransactionIDFromContext(ctx)
@@ -177,13 +177,14 @@ func processConceptModel(ctx context.Context, uuid string, conceptType string, b
 	if err != nil {
 		transactionID = tid.NewTransactionID()
 		log.WithError(err).WithField(tid.TransactionIDKey, transactionID).Warn("Transaction ID not found to process concept model. Generated new transaction ID")
+		err = nil // blank error just in case
 	}
 
-	payload, err = service.ConvertConceptToESConceptModel(concept, conceptType, transactionID)
+	payload = service.ConvertConceptToESConceptModel(concept, conceptType, transactionID)
 	return concept, payload, err
 }
 
-func processAggregateConceptModel(ctx context.Context, uuid string, conceptType string, body []byte) (concept service.AggregateConceptModel, payload service.EsModel, err error) {
+func processAggregateConceptModel(ctx context.Context, uuid string, conceptType string, body []byte) (concept service.AggregateConceptModel, esModel service.EsModel, err error) {
 	err = json.Unmarshal(body, &concept)
 	if err != nil {
 		log.WithError(err).Info("Failed to unmarshal body into aggregate concept model.")
@@ -205,8 +206,8 @@ func processAggregateConceptModel(ctx context.Context, uuid string, conceptType 
 		log.WithError(err).WithField(tid.TransactionIDKey, transactionID).Warn("Transaction ID not found to process aggregate concept model. Generated new transaction ID")
 	}
 
-	payload, err = service.ConvertAggregateConceptToESConceptModel(concept, conceptType, transactionID)
-	return concept, payload, err
+	esModel = service.ConvertAggregateConceptToESConceptModel(concept, conceptType, transactionID)
+	return concept, esModel, err
 }
 
 func (h *Handler) ReadData(writer http.ResponseWriter, request *http.Request) {
