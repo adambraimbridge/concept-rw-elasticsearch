@@ -415,9 +415,7 @@ func TestProcessConceptModelWithoutTransactionID(t *testing.T) {
 	testUUID := "8ff7dfef-0330-3de0-b37a-2d6aa9c98580"
 	testBody := []byte(`{"uuid":"8ff7dfef-0330-3de0-b37a-2d6aa9c98580","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report","type":"Genre"}`)
 
-	dummyEsService := &dummyEsService{returnsError: errTest}
-	h := NewHandler(dummyEsService, []string{"genres"})
-	_, payload, err := h.processConceptModel(context.Background(), testUUID, "genres", testBody)
+	_, payload, err := processConceptModel(context.Background(), testUUID, "genres", testBody)
 	assert.NoError(t, err)
 	assert.NotNil(t, payload)
 	assert.NotEmpty(t, payload.(*service.EsConceptModel).PublishReference)

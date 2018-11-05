@@ -9,12 +9,8 @@ import (
 
 const (
 	person = "people"
+	membership = "membership"
 )
-
-type ModelPopulator interface {
-	ConvertConceptToESConceptModel(concept ConceptModel, conceptType string, publishRef string) (interface{}, error)
-	ConvertAggregateConceptToESConceptModel(concept AggregateConceptModel, conceptType string, publishRef string) (interface{}, error)
-}
 
 func ConvertConceptToESConceptModel(concept ConceptModel, conceptType string, publishRef string) (interface{}, error) {
 	esModel := newESConceptModel(concept.UUID, conceptType, concept.DirectType, concept.Aliases, concept.GetAuthorities(), concept.PrefLabel, publishRef, concept.IsDeprecated, concept.ScopeNote)

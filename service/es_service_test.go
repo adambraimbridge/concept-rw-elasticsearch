@@ -202,6 +202,8 @@ func TestWritePreservesPatchableDataForPerson(t *testing.T) {
 	payload.Metrics = nil // blank metrics
 	_, err = service.LoadData(ctx, peopleType, testUuid, payload)
 	require.NoError(t, err, "require successful metrics write")
+	err = service.bulkProcessor.Flush() // wait for the bulk processor to write the data
+	require.NoError(t, err, "require successful metrics write")
 	_, err = ec.Refresh(indexName).Do(ctx)
 	require.NoError(t, err, "expected successful flush")
 

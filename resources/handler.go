@@ -151,15 +151,15 @@ func (h *Handler) processPayload(r *http.Request) (string, service.Concept, inte
 	var concept service.Concept
 	var payload interface{}
 	if aggConceptModel {
-		concept, payload, err = h.processAggregateConceptModel(r.Context(), uuid, conceptType, body)
+		concept, payload, err = processAggregateConceptModel(r.Context(), uuid, conceptType, body)
 	} else {
-		concept, payload, err = h.processConceptModel(r.Context(), uuid, conceptType, body)
+		concept, payload, err = processConceptModel(r.Context(), uuid, conceptType, body)
 	}
 
 	return conceptType, concept, payload, err
 }
 
-func (h *Handler) processConceptModel(ctx context.Context, uuid string, conceptType string, body []byte) (service.Concept, interface{}, error) {
+func processConceptModel(ctx context.Context, uuid string, conceptType string, body []byte) (service.Concept, interface{}, error) {
 	var concept service.ConceptModel
 	err := json.Unmarshal(body, &concept)
 	if err != nil {
@@ -186,7 +186,7 @@ func (h *Handler) processConceptModel(ctx context.Context, uuid string, conceptT
 	return concept, payload, err
 }
 
-func (h *Handler) processAggregateConceptModel(ctx context.Context, uuid string, conceptType string, body []byte) (service.Concept, interface{}, error) {
+func processAggregateConceptModel(ctx context.Context, uuid string, conceptType string, body []byte) (service.Concept, interface{}, error) {
 	var concept service.AggregateConceptModel
 	err := json.Unmarshal(body, &concept)
 	if err != nil {
