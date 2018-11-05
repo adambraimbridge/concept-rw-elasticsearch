@@ -85,6 +85,23 @@ func writeDocument(es EsService, t string, u string) (EsConceptModel, *elastic.I
 	return payload, resp, err
 }
 
+func writePersonDocument(es EsService, t string, u string, isFTAuthor bool) (EsPersonConceptModel, *elastic.IndexResponse, error) {
+	payload := EsPersonConceptModel{
+		EsConceptModel: &EsConceptModel{
+			Id:         u,
+			ApiUrl:     fmt.Sprintf("%s/%ss/%s", apiBaseUrl, t, u),
+			PrefLabel:  fmt.Sprintf("Test concept %s %s", t, u),
+			Types:      []string{},
+			DirectType: "",
+			Aliases:    []string{},
+		},
+		IsFTAuthor: isFTAuthor,
+	}
+
+	resp, err := es.LoadData(newTestContext(), t, u, payload)
+	return payload, resp, err
+}
+
 func newTestContext() context.Context {
 	return tid.TransactionAwareContext(context.Background(), testTID)
 }
@@ -154,6 +171,47 @@ func TestWriteWithESError(t *testing.T) {
 	assert.Equal(t, "500", hook.LastEntry().Data[statusField])
 	assert.Equal(t, "write", hook.LastEntry().Data[operationField])
 	assert.Equal(t, testTID, hook.LastEntry().Data[tid.TransactionIDKey])
+}
+
+func TestWritePreservesPatchableDataForPerson(t *testing.T) {
+	bulkProcessorConfig := NewBulkProcessorConfig(1, 1, 1, 100*time.Millisecond)
+	esURL := getElasticSearchTestURL(t)
+	ec := getElasticClient(t, esURL)
+	bulkProcessor, err := newBulkProcessor(ec, &bulkProcessorConfig)
+	require.NoError(t, err, "require a bulk processor")
+
+	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
+
+	testUuid := uuid.NewV4().String()
+	payload, _, err := writePersonDocument(service, peopleType, testUuid, true)
+	assert.NoError(t, err, "expected successful write")
+	ctx := context.Background()
+	_, err = ec.Refresh(indexName).Do(ctx)
+	require.NoError(t, err, "expected successful flush")
+	service.PatchUpdateDataWithMetrics(ctx, peopleType, testUuid, &EsConceptModelPatch{Metrics: &ConceptMetrics{AnnotationsCount: 1234}})
+	err = service.bulkProcessor.Flush() // wait for the bulk processor to write the data
+	require.NoError(t, err, "require successful metrics write")
+
+	p, err := service.ReadData(peopleType, testUuid)
+	assert.NoError(t, err, "expected successful read")
+	var previous EsPersonConceptModel
+	assert.NoError(t, json.Unmarshal(*p.Source, &previous))
+	assert.True(t, previous.IsFTAuthor)
+
+	payload.PrefLabel = "Updated PrefLabel"
+	payload.Metrics = nil // blank metrics
+	_, err = service.LoadData(ctx, peopleType, testUuid, payload)
+	require.NoError(t, err, "require successful metrics write")
+	_, err = ec.Refresh(indexName).Do(ctx)
+	require.NoError(t, err, "expected successful flush")
+
+	p, err = service.ReadData(peopleType, testUuid)
+	assert.NoError(t, err, "expected successful read")
+	var actual EsPersonConceptModel
+	assert.NoError(t, json.Unmarshal(*p.Source, &actual))
+
+	previous.PrefLabel = payload.PrefLabel
+	assert.Equal(t, previous, actual)
 }
 
 func TestWritePreservesMetrics(t *testing.T) {

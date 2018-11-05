@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	PERSON = "people"
+	person = "people"
 )
 
 type ModelPopulator interface {
@@ -20,7 +20,7 @@ func ConvertConceptToESConceptModel(concept ConceptModel, conceptType string, pu
 	esModel := newESConceptModel(concept.UUID, conceptType, concept.DirectType, concept.Aliases, concept.GetAuthorities(), concept.PrefLabel, publishRef, concept.IsDeprecated, concept.ScopeNote)
 
 	switch conceptType {
-	case PERSON: // person type should not come through as the old model.
+	case person: // person type should not come through as the old model.
 		esPersonModel := &EsPersonConceptModel{
 			EsConceptModel: esModel,
 		}
@@ -33,7 +33,7 @@ func ConvertConceptToESConceptModel(concept ConceptModel, conceptType string, pu
 func ConvertAggregateConceptToESConceptModel(concept AggregateConceptModel, conceptType string, publishRef string) (interface{}, error) {
 	esModel := newESConceptModel(concept.PrefUUID, conceptType, concept.DirectType, concept.Aliases, concept.GetAuthorities(), concept.PrefLabel, publishRef, concept.IsDeprecated, concept.ScopeNote)
 	switch conceptType {
-	case PERSON:
+	case person:
 		esPersonModel := &EsPersonConceptModel{
 			EsConceptModel: esModel,
 		}
