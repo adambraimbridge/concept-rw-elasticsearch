@@ -30,9 +30,9 @@ const (
 	deleteOperation    = "delete"
 	unknownStatus      = "unknown"
 	tidNotFound        = "not found"
-	ftOrgUUID = "7bcfe07b-0fb1-49ce-a5fa-e51d5c01c3e0"
-	columnistUUID= "7ef75a6a-b6bf-4eb7-a1da-03e0acabef1b"
-journalistUUID= "33ee38a4-c677-4952-a141-2ae14da3aedd"
+	ftOrgUUID          = "7bcfe07b-0fb1-49ce-a5fa-e51d5c01c3e0"
+	columnistUUID      = "7ef75a6a-b6bf-4eb7-a1da-03e0acabef1b"
+	journalistUUID     = "33ee38a4-c677-4952-a141-2ae14da3aedd"
 )
 
 type esService struct {
@@ -44,7 +44,7 @@ type esService struct {
 }
 
 type EsService interface {
-	LoadData(ctx context.Context, conceptType string, uuid string, payload interface{}) (*elastic.IndexResponse, error)
+	LoadData(ctx context.Context, conceptType string, uuid string, payload EsModel) (*elastic.IndexResponse, error)
 	ReadData(conceptType string, uuid string) (*elastic.GetResult, error)
 	DeleteData(ctx context.Context, conceptType string, uuid string) (*elastic.DeleteResponse, error)
 	LoadBulkData(conceptType string, uuid string, payload interface{})
@@ -131,7 +131,7 @@ func (es *esService) isIndexReadOnly(settings map[string]interface{}) (bool, err
 	return false, nil
 }
 
-func (es *esService) LoadData(ctx context.Context, conceptType string, uuid string, payload interface{}) (resp *elastic.IndexResponse, err error) {
+func (es *esService) LoadData(ctx context.Context, conceptType string, uuid string, payload EsModel) (resp *elastic.IndexResponse, err error) {
 	loadDataLog := log.WithField(conceptTypeField, conceptType).
 		WithField(uuidField, uuid).
 		WithField(operationField, writeOperation)
@@ -154,7 +154,7 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 	// Check if membership is FT
 	if conceptType == membership {
 		acm := payload.(AggregateConceptModel)
-		if len(acm.MembershipRoles)  < 1 {
+		if len(acm.MembershipRoles) < 1 {
 			return nil, nil
 		}
 

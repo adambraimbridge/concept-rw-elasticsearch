@@ -173,6 +173,22 @@ func TestWriteWithESError(t *testing.T) {
 	assert.Equal(t, testTID, hook.LastEntry().Data[tid.TransactionIDKey])
 }
 
+func TestWriteMakesPersonAnAuthor(t *testing.T) {
+	bulkProcessorConfig := NewBulkProcessorConfig(1, 1, 1, 100*time.Millisecond)
+	esURL := getElasticSearchTestURL(t)
+	ec := getElasticClient(t, esURL)
+	bulkProcessor, err := newBulkProcessor(ec, &bulkProcessorConfig)
+	require.NoError(t, err, "require a bulk processor")
+
+	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
+	testUuid := uuid.NewV4().String()
+	_, _, err = writePersonDocument(service, peopleType, testUuid, false)
+	require.NoError(t, err, "expected successful write")
+	ctx := context.Background()
+	_, err = ec.Refresh(indexName).Do(ctx)
+	require.NoError(t, err, "expected successful flush")
+}
+
 func TestWritePreservesPatchableDataForPerson(t *testing.T) {
 	bulkProcessorConfig := NewBulkProcessorConfig(1, 1, 1, 100*time.Millisecond)
 	esURL := getElasticSearchTestURL(t)

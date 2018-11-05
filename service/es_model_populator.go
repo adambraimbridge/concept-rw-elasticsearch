@@ -8,11 +8,11 @@ import (
 )
 
 const (
-	person = "people"
+	person     = "people"
 	membership = "membership"
 )
 
-func ConvertConceptToESConceptModel(concept ConceptModel, conceptType string, publishRef string) (interface{}, error) {
+func ConvertConceptToESConceptModel(concept ConceptModel, conceptType string, publishRef string) (EsModel, error) {
 	esModel := newESConceptModel(concept.UUID, conceptType, concept.DirectType, concept.Aliases, concept.GetAuthorities(), concept.PrefLabel, publishRef, concept.IsDeprecated, concept.ScopeNote)
 
 	switch conceptType {
@@ -26,7 +26,7 @@ func ConvertConceptToESConceptModel(concept ConceptModel, conceptType string, pu
 	}
 }
 
-func ConvertAggregateConceptToESConceptModel(concept AggregateConceptModel, conceptType string, publishRef string) (interface{}, error) {
+func ConvertAggregateConceptToESConceptModel(concept AggregateConceptModel, conceptType string, publishRef string) (EsModel, error) {
 	esModel := newESConceptModel(concept.PrefUUID, conceptType, concept.DirectType, concept.Aliases, concept.GetAuthorities(), concept.PrefLabel, publishRef, concept.IsDeprecated, concept.ScopeNote)
 	switch conceptType {
 	case person:
@@ -39,8 +39,8 @@ func ConvertAggregateConceptToESConceptModel(concept AggregateConceptModel, conc
 	}
 }
 
-func newESConceptModel(uuid string, conceptType string, directType string, aliases []string, authorities []string, prefLabel string, publishRef string, isDeprecated bool, scopeNote string) *EsConceptModel {
-	esModel := &EsConceptModel{}
+func newESConceptModel(uuid string, conceptType string, directType string, aliases []string, authorities []string, prefLabel string, publishRef string, isDeprecated bool, scopeNote string) (esModel *EsConceptModel) {
+	esModel = &EsConceptModel{}
 	esModel.ApiUrl = mapper.APIURL(uuid, []string{directType}, "")
 	esModel.Id = mapper.IDURL(uuid)
 	esModel.Types = mapper.TypeURIs(getTypes(directType))

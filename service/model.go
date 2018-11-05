@@ -52,6 +52,8 @@ type SourceConcept struct {
 	Authority string `json:"authority"`
 }
 
+type EsModel interface{}
+
 type EsConceptModel struct {
 	Id               string          `json:"id"`
 	ApiUrl           string          `json:"apiUrl"`

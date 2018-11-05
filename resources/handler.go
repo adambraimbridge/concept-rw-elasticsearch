@@ -127,10 +127,10 @@ func (h *Handler) LoadMetrics(w http.ResponseWriter, r *http.Request) {
 	writeMessage(w, "Concept updated with metrics successfully", http.StatusOK)
 }
 
-func (h *Handler) processPayload(r *http.Request) (string, service.Concept, interface{}, error) {
+func (h *Handler) processPayload(r *http.Request) (conceptType string, concept service.Concept, payload service.EsModel, err error) {
 	vars := mux.Vars(r)
 	uuid := vars["id"]
-	conceptType := vars["concept-type"]
+	conceptType = vars["concept-type"]
 
 	if !h.allowedConceptTypes[conceptType] {
 		return "", nil, nil, errUnsupportedConceptType
@@ -148,8 +148,6 @@ func (h *Handler) processPayload(r *http.Request) (string, service.Concept, inte
 		return "", nil, nil, errProcessingBody
 	}
 
-	var concept service.Concept
-	var payload interface{}
 	if aggConceptModel {
 		concept, payload, err = processAggregateConceptModel(r.Context(), uuid, conceptType, body)
 	} else {
@@ -159,20 +157,19 @@ func (h *Handler) processPayload(r *http.Request) (string, service.Concept, inte
 	return conceptType, concept, payload, err
 }
 
-func processConceptModel(ctx context.Context, uuid string, conceptType string, body []byte) (service.Concept, interface{}, error) {
-	var concept service.ConceptModel
-	err := json.Unmarshal(body, &concept)
+func processConceptModel(ctx context.Context, uuid string, conceptType string, body []byte) (concept service.ConceptModel, payload service.EsModel, err error) {
+	err = json.Unmarshal(body, &concept)
 	if err != nil {
 		log.WithError(err).Info("Failed to unmarshal body into concept model.")
-		return nil, nil, errProcessingBody
+		return concept, nil, errProcessingBody
 	}
 
 	if concept.UUID != uuid {
-		return nil, nil, errPathUUID
+		return concept, nil, errPathUUID
 	}
 
 	if concept.DirectType == "" || concept.PrefLabel == "" {
-		return nil, nil, errInvalidConceptModel
+		return concept, nil, errInvalidConceptModel
 	}
 
 	transactionID, err := tid.GetTransactionIDFromContext(ctx)
@@ -182,24 +179,23 @@ func processConceptModel(ctx context.Context, uuid string, conceptType string, b
 		log.WithError(err).WithField(tid.TransactionIDKey, transactionID).Warn("Transaction ID not found to process concept model. Generated new transaction ID")
 	}
 
-	payload, err := service.ConvertConceptToESConceptModel(concept, conceptType, transactionID)
+	payload, err = service.ConvertConceptToESConceptModel(concept, conceptType, transactionID)
 	return concept, payload, err
 }
 
-func processAggregateConceptModel(ctx context.Context, uuid string, conceptType string, body []byte) (service.Concept, interface{}, error) {
-	var concept service.AggregateConceptModel
-	err := json.Unmarshal(body, &concept)
+func processAggregateConceptModel(ctx context.Context, uuid string, conceptType string, body []byte) (concept service.AggregateConceptModel, payload service.EsModel, err error) {
+	err = json.Unmarshal(body, &concept)
 	if err != nil {
 		log.WithError(err).Info("Failed to unmarshal body into aggregate concept model.")
-		return nil, nil, errProcessingBody
+		return concept, nil, errProcessingBody
 	}
 
 	if concept.PrefUUID != uuid {
-		return nil, nil, errPathUUID
+		return concept, nil, errPathUUID
 	}
 
 	if concept.DirectType == "" || concept.PrefLabel == "" {
-		return nil, nil, errInvalidConceptModel
+		return concept, nil, errInvalidConceptModel
 	}
 
 	transactionID, err := tid.GetTransactionIDFromContext(ctx)
@@ -209,7 +205,7 @@ func processAggregateConceptModel(ctx context.Context, uuid string, conceptType 
 		log.WithError(err).WithField(tid.TransactionIDKey, transactionID).Warn("Transaction ID not found to process aggregate concept model. Generated new transaction ID")
 	}
 
-	payload, err := service.ConvertAggregateConceptToESConceptModel(concept, conceptType, transactionID)
+	payload, err = service.ConvertAggregateConceptToESConceptModel(concept, conceptType, transactionID)
 	return concept, payload, err
 }
 

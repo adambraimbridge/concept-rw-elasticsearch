@@ -492,7 +492,7 @@ type dummyEsService struct {
 	ids          chan service.EsIDTypePair
 }
 
-func (service *dummyEsService) LoadData(ctx context.Context, conceptType string, uuid string, payload interface{}) (*elastic.IndexResponse, error) {
+func (service *dummyEsService) LoadData(ctx context.Context, conceptType string, uuid string, payload service.EsModel) (*elastic.IndexResponse, error) {
 	if service.returnsError != nil {
 		return nil, service.returnsError
 	}

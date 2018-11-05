@@ -281,7 +281,7 @@ type EsServiceMock struct {
 	mock.Mock
 }
 
-func (m *EsServiceMock) LoadData(ctx context.Context, conceptType string, uuid string, payload interface{}) (*elastic.IndexResponse, error) {
+func (m *EsServiceMock) LoadData(ctx context.Context, conceptType string, uuid string, payload service.EsModel) (*elastic.IndexResponse, error) {
 	args := m.Called(ctx, conceptType, uuid, payload)
 	return args.Get(0).(*elastic.IndexResponse), args.Error(1)
 }
