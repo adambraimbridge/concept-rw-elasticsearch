@@ -10,8 +10,8 @@ import (
 
 	"io"
 
+	log "github.com/Financial-Times/go-logger"
 	tid "github.com/Financial-Times/transactionid-utils-go"
-	log "github.com/sirupsen/logrus"
 	"gopkg.in/olivere/elastic.v5"
 )
 
@@ -286,7 +286,7 @@ func (es *esService) CleanupData(ctx context.Context, concept Concept) {
 	if err != nil {
 		transactionID = tidNotFound
 	}
-	cleanupDataLog = cleanupDataLog.WithField(tid.TransactionIDKey, transactionID)
+	cleanupDataLog = cleanupDataLog.WithTransactionID(transactionID)
 
 	conceptTypeMap, err := es.findConceptTypes(ctx, concept.ConcordedUUIDs())
 	if err != nil {

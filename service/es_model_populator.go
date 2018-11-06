@@ -3,8 +3,8 @@ package service
 import (
 	"time"
 
+	log "github.com/Financial-Times/go-logger"
 	"github.com/Financial-Times/neo-model-utils-go/mapper"
-	log "github.com/sirupsen/logrus"
 )
 
 const (

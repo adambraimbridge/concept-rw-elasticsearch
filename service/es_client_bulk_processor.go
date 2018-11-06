@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	log "github.com/Financial-Times/go-logger"
 	"gopkg.in/olivere/elastic.v5"
 )
 

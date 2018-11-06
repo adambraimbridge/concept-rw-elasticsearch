@@ -10,6 +10,7 @@ import (
 	"github.com/Financial-Times/concept-rw-elasticsearch/health"
 	"github.com/Financial-Times/concept-rw-elasticsearch/resources"
 	"github.com/Financial-Times/concept-rw-elasticsearch/service"
+	"github.com/Financial-Times/go-logger"
 	"github.com/Financial-Times/http-handlers-go/httphandlers"
 	status "github.com/Financial-Times/service-status-go/httphandlers"
 	"github.com/gorilla/mux"
@@ -21,6 +22,12 @@ import (
 
 func main() {
 	app := cli.App("concept-rw-es", "Service for loading concepts into elasticsearch")
+	appSystemCode := app.String(cli.StringOpt{
+		Name:   "app-system-code",
+		Value:  "aggregate-concept-transformer",
+		Desc:   "System Code of the application",
+		EnvVar: "APP_SYSTEM_CODE",
+	})
 	port := app.String(cli.StringOpt{
 		Name:   "port",
 		Value:  "8080",
@@ -97,11 +104,17 @@ func main() {
 		Desc:   "Whether to log ElasticSearch HTTP requests and responses",
 		EnvVar: "ELASTICSEARCH_TRACE",
 	})
+	logLevel := app.String(cli.StringOpt{
+		Name:   "logLevel",
+		Value:  "info",
+		Desc:   "App log level",
+		EnvVar: "LOG_LEVEL",
+	})
 
 	accessConfig := service.NewAccessConfig(*accessKey, *secretKey, *esEndpoint, *esTraceLogging)
 
-	log.SetLevel(log.InfoLevel)
-	log.Infof("[Startup] The writer handles the following concept types: %v\n", *elasticsearchWhitelistedConceptTypes)
+	logger.InitLogger(*appSystemCode, *logLevel)
+	logger.Infof("[Startup] The writer handles the following concept types: %v\n", *elasticsearchWhitelistedConceptTypes)
 
 	// It seems that once we have a connection, we can lose and reconnect to Elastic OK
 	// so just keep going until successful
@@ -112,11 +125,11 @@ func main() {
 			for {
 				ec, err := service.NewElasticClient(*esRegion, accessConfig)
 				if err == nil {
-					log.Infof("connected to ElasticSearch")
+					logger.Info("connected to ElasticSearch")
 					ecc <- ec
 					return
 				}
-				log.Errorf("could not connect to ElasticSearch: %s", err.Error())
+				logger.Errorf("could not connect to ElasticSearch: %s", err.Error())
 				time.Sleep(time.Minute)
 			}
 		}()

@@ -10,9 +10,9 @@ import (
 	"strings"
 
 	"github.com/Financial-Times/concept-rw-elasticsearch/service"
+	log "github.com/Financial-Times/go-logger"
 	tid "github.com/Financial-Times/transactionid-utils-go"
 	"github.com/gorilla/mux"
-	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -222,7 +222,7 @@ func (h *Handler) ReadData(writer http.ResponseWriter, request *http.Request) {
 	getResult, err := h.elasticService.ReadData(conceptType, uuid)
 
 	if err != nil {
-		log.Errorf(err.Error())
+		log.Error(err.Error())
 
 		if err == service.ErrNoElasticClient {
 			writer.WriteHeader(http.StatusServiceUnavailable)

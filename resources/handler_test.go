@@ -11,6 +11,7 @@ import (
 	"context"
 
 	"github.com/Financial-Times/concept-rw-elasticsearch/service"
+	"github.com/Financial-Times/go-logger"
 	tid "github.com/Financial-Times/transactionid-utils-go"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
@@ -24,6 +25,10 @@ import (
 var (
 	errTest = errors.New("test error")
 )
+
+func init() {
+	logger.InitLogger("test-concept-rw-elasticsearch", "debug")
+}
 
 func TestCreateNewESWriter(t *testing.T) {
 	dummyEsService := &dummyEsService{}
@@ -424,7 +429,7 @@ func TestDeleteDataEsServerError(t *testing.T) {
 }
 
 func TestProcessConceptModelWithoutTransactionID(t *testing.T) {
-	hook := testLog.NewGlobal()
+	hook := testLog.NewLocal(logger.Logger())
 	testUUID := "8ff7dfef-0330-3de0-b37a-2d6aa9c98580"
 	testBody := []byte(`{"uuid":"8ff7dfef-0330-3de0-b37a-2d6aa9c98580","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report","type":"Genre"}`)
 

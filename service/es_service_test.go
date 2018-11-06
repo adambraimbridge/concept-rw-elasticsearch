@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/Financial-Times/go-logger"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -31,6 +32,10 @@ const (
 
 	esStatusCreated = "created"
 )
+
+func init() {
+	logger.InitLogger("test-concept-rw-elasticsearch", "info")
+}
 
 func TestNoElasticClient(t *testing.T) {
 	service := esService{sync.RWMutex{}, nil, nil, "test", nil}
@@ -126,7 +131,7 @@ func TestWrite(t *testing.T) {
 }
 
 func TestWriteWithGenericError(t *testing.T) {
-	hook := testLog.NewGlobal()
+	hook := testLog.NewLocal(logger.Logger())
 	es := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 	defer es.Close()
 	bulkProcessorConfig := NewBulkProcessorConfig(1, 1, 1, time.Second)
@@ -150,7 +155,7 @@ func TestWriteWithGenericError(t *testing.T) {
 }
 
 func TestWriteWithESError(t *testing.T) {
-	hook := testLog.NewGlobal()
+	hook := testLog.NewLocal(logger.Logger())
 	es := newBrokenESMock()
 	defer es.Close()
 	bulkProcessorConfig := NewBulkProcessorConfig(1, 1, 1, time.Second)
@@ -385,7 +390,7 @@ func TestRead(t *testing.T) {
 }
 
 func TestDeleteWithESError(t *testing.T) {
-	hook := testLog.NewGlobal()
+	hook := testLog.NewLocal(logger.Logger())
 	es := newBrokenESMock()
 	defer es.Close()
 	ec, err := elastic.NewClient(
@@ -492,7 +497,7 @@ func TestDeleteNotFoundConcept(t *testing.T) {
 }
 
 func TestDeleteWithGenericError(t *testing.T) {
-	hook := testLog.NewGlobal()
+	hook := testLog.NewLocal(logger.Logger())
 	es := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 	defer es.Close()
 	ec, err := elastic.NewClient(
@@ -574,7 +579,7 @@ func TestCleanup(t *testing.T) {
 }
 
 func TestCleanupErrorLogging(t *testing.T) {
-	hook := testLog.NewGlobal()
+	hook := testLog.NewLocal(logger.Logger())
 	es := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 	defer es.Close()
 	ec, err := elastic.NewClient(
