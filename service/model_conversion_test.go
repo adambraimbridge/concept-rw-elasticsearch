@@ -438,7 +438,7 @@ func TestConvertMembershipToAggregateConceptModel(t *testing.T) {
 	for _, testModel := range tests {
 		t.Run(testModel.testName, func(t *testing.T) {
 			testTID := tid.NewTransactionID()
-			actual := ConvertAggregateConceptToESConceptModel(testModel.aggregateConceptModel, "membership", testTID)
+			actual := ConvertAggregateConceptToESConceptModel(testModel.aggregateConceptModel, "memberships", testTID)
 			esModel := actual.(*EsMembershipModel)
 			assert.Equal(t, testModel.esMembershipModel, *esModel)
 		})

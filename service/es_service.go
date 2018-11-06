@@ -154,7 +154,7 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 
 	var readResult *elastic.GetResult
 	// Check if membership is FT
-	if conceptType == membership {
+	if conceptType == memberships {
 		acm := payload.(EsMembershipModel)
 		if len(acm.Memberships) < 1 {
 			return nil, nil
@@ -191,7 +191,7 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 		//there is a race condition between the dataload and the patchData patch this will be solved by querying for the latest patchData
 		//from neo before writing the patchData back
 		switch conceptType {
-		case person, membership:
+		case person, memberships:
 			esConcept := new(EsPersonConceptModel)
 			if readResult.Found {
 				err := json.Unmarshal(*readResult.Source, esConcept)
@@ -199,7 +199,7 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 					loadDataLog.WithError(err).Error("Failed to read patchData from Elasticsearch")
 				} else {
 					is := esConcept.IsFTAuthor
-					if conceptType == membership {
+					if conceptType == memberships {
 						is = true // we only process FT members who are FT authors
 					}
 					patchData = &EsPersonConceptPatch{Metrics: esConcept.Metrics, IsFTAuthor: is}
@@ -219,7 +219,7 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 		}
 	}
 
-	if conceptType != membership {
+	if conceptType != memberships {
 		log.Debugf("Writing: %s", uuid)
 		resp, err = es.elasticClient.Index().
 			Index(es.indexName).

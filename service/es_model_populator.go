@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	person     = "people"
-	membership = "membership"
+	person      = "people"
+	memberships = "memberships"
 )
 
 func ConvertConceptToESConceptModel(concept ConceptModel, conceptType string, publishRef string) EsModel {
@@ -29,16 +29,16 @@ func ConvertConceptToESConceptModel(concept ConceptModel, conceptType string, pu
 func ConvertAggregateConceptToESConceptModel(concept AggregateConceptModel, conceptType string, publishRef string) (esModel EsModel) {
 
 	switch conceptType {
-	case membership:
-		memberships := make([]string, len(concept.MembershipRoles))
+	case memberships:
+		ms := make([]string, len(concept.MembershipRoles))
 		for i, m := range concept.MembershipRoles {
-			memberships[i] = m.RoleUUID
+			ms[i] = m.RoleUUID
 		}
 		esModel = &EsMembershipModel{
 			Id:             concept.PrefUUID,
 			PersonId:       concept.PersonUUID,
 			OrganisationId: concept.OrganisationUUID,
-			Memberships:    memberships,
+			Memberships:    ms,
 		}
 	case person:
 		esModel = &EsPersonConceptModel{

@@ -201,7 +201,7 @@ func TestWriteMakesPersonAnFTColumnist(t *testing.T) {
 		OrganisationId: "7bcfe07b-0fb1-49ce-a5fa-e51d5c01c3e0",
 		Memberships:    []string{"7ef75a6a-b6bf-4eb7-a1da-03e0acabef1a", "7ef75a6a-b6bf-4eb7-a1da-03e0acabef1b", "7ef75a6a-b6bf-4eb7-a1da-03e0acabef1c"},
 	}
-	_, err = service.LoadData(newTestContext(), "membership", ftColumnist.Id, ftColumnist)
+	_, err = service.LoadData(newTestContext(), "memberships", ftColumnist.Id, ftColumnist)
 	require.NoError(t, err, "expected successful write")
 	_, err = ec.Refresh(indexName).Do(ctx)
 	require.NoError(t, err, "expected successful flush")
@@ -236,7 +236,7 @@ func TestWriteMakesPersonAnFTJournalist(t *testing.T) {
 		OrganisationId: "7bcfe07b-0fb1-49ce-a5fa-e51d5c01c3e0",
 		Memberships:    []string{"7ef75a6a-b6bf-4eb7-a1da-03e0acabef1a", "33ee38a4-c677-4952-a141-2ae14da3aedd", "7ef75a6a-b6bf-4eb7-a1da-03e0acabef1c"},
 	}
-	_, err = service.LoadData(newTestContext(), "membership", ftColumnist.Id, ftColumnist)
+	_, err = service.LoadData(newTestContext(), "memberships", ftColumnist.Id, ftColumnist)
 	require.NoError(t, err, "expected successful write")
 	_, err = ec.Refresh(indexName).Do(ctx)
 	require.NoError(t, err, "expected successful flush")
@@ -299,7 +299,7 @@ func TestWriteMakesDoesNotMakePersonAnFTAuthor(t *testing.T) {
 
 	for _, c := range testCases {
 		t.Run(c.name, func(t *testing.T) {
-			_, err = service.LoadData(newTestContext(), "membership", c.model.Id, c.model)
+			_, err = service.LoadData(newTestContext(), "memberships", c.model.Id, c.model)
 			require.NoError(t, err, "expected successful write")
 			_, err = ec.Refresh(indexName).Do(ctx)
 			require.NoError(t, err, "expected successful flush")
