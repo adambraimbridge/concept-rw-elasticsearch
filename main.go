@@ -150,7 +150,7 @@ func main() {
 
 	err := app.Run(os.Args)
 	if err != nil {
-		log.Errorf("App could not start, error=[%s]\n", err)
+		logger.Errorf("App could not start, error=[%s]\n", err)
 		return
 	}
 }
@@ -176,6 +176,6 @@ func routeRequests(port *string, handler *resources.Handler, healthService *heal
 	http.Handle("/", monitoringRouter)
 
 	if err := http.ListenAndServe(":"+*port, nil); err != nil {
-		log.Fatalf("Unable to start: %v", err)
+		logger.Fatalf("Unable to start: %v", err)
 	}
 }
