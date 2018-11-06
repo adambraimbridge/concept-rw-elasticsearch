@@ -155,7 +155,7 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 	var readResult *elastic.GetResult
 	// Check if membership is FT
 	if conceptType == memberships {
-		acm := payload.(EsMembershipModel)
+		acm := payload.(*EsMembershipModel)
 		if len(acm.Memberships) < 1 {
 			return nil, nil
 		}

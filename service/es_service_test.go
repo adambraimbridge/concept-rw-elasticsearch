@@ -195,7 +195,7 @@ func TestWriteMakesPersonAnFTColumnist(t *testing.T) {
 	_, err = ec.Refresh(indexName).Do(ctx)
 	require.NoError(t, err, "expected successful flush")
 
-	ftColumnist := EsMembershipModel{
+	ftColumnist := &EsMembershipModel{
 		Id:             uuid.NewV4().String(),
 		PersonId:       testUuid,
 		OrganisationId: "7bcfe07b-0fb1-49ce-a5fa-e51d5c01c3e0",
@@ -230,7 +230,7 @@ func TestWriteMakesPersonAnFTJournalist(t *testing.T) {
 	_, err = ec.Refresh(indexName).Do(ctx)
 	require.NoError(t, err, "expected successful flush")
 
-	ftColumnist := EsMembershipModel{
+	ftColumnist := &EsMembershipModel{
 		Id:             uuid.NewV4().String(),
 		PersonId:       testUuid,
 		OrganisationId: "7bcfe07b-0fb1-49ce-a5fa-e51d5c01c3e0",
@@ -267,11 +267,11 @@ func TestWriteMakesDoesNotMakePersonAnFTAuthor(t *testing.T) {
 
 	testCases := []struct {
 		name  string
-		model EsMembershipModel
+		model *EsMembershipModel
 	}{
 		{
 			name: "Not FT org",
-			model: EsMembershipModel{
+			model: &EsMembershipModel{
 				Id:             uuid.NewV4().String(),
 				PersonId:       testUuid,
 				OrganisationId: "7aafe07b-0fb1-49ce-a5fa-e51d5c01c3e0",
@@ -280,7 +280,7 @@ func TestWriteMakesDoesNotMakePersonAnFTAuthor(t *testing.T) {
 		},
 		{
 			name: "FT but not a columnist or journalist",
-			model: EsMembershipModel{
+			model: &EsMembershipModel{
 				Id:             uuid.NewV4().String(),
 				PersonId:       testUuid,
 				OrganisationId: "7bcfe07b-0fb1-49ce-a5fa-e51d5c01c3e0",
@@ -289,7 +289,7 @@ func TestWriteMakesDoesNotMakePersonAnFTAuthor(t *testing.T) {
 		},
 		{
 			name: "FT but has no memberships",
-			model: EsMembershipModel{
+			model: &EsMembershipModel{
 				Id:             uuid.NewV4().String(),
 				PersonId:       testUuid,
 				OrganisationId: "7bcfe07b-0fb1-49ce-a5fa-e51d5c01c3e0",
