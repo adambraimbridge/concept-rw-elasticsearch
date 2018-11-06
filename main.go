@@ -24,7 +24,7 @@ func main() {
 	app := cli.App("concept-rw-es", "Service for loading concepts into elasticsearch")
 	appSystemCode := app.String(cli.StringOpt{
 		Name:   "app-system-code",
-		Value:  "aggregate-concept-transformer",
+		Value:  "concept-rw-elasticsearch",
 		Desc:   "System Code of the application",
 		EnvVar: "APP_SYSTEM_CODE",
 	})
