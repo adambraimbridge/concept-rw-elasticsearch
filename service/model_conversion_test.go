@@ -151,10 +151,12 @@ func TestConvertToESConceptModel(t *testing.T) {
 func TestConvertAggregateConceptToESConceptModel(t *testing.T) {
 
 	tests := []struct {
+		testName       string
 		conceptModel   AggregateConceptModel
 		esConceptModel EsConceptModel
 	}{
 		{
+			testName: "AggregateConceptModel with Aliases",
 			conceptModel: AggregateConceptModel{
 				PrefUUID:   "2384fa7a-d514-3d6a-a0ea-3a711f66d0d8",
 				DirectType: "PublicCompany",
@@ -212,6 +214,7 @@ func TestConvertAggregateConceptToESConceptModel(t *testing.T) {
 			},
 		},
 		{
+			testName: "Simple AggregateConceptModel",
 			conceptModel: AggregateConceptModel{
 				PrefUUID:     "2384fa7a-d514-3d6a-a0ea-3a711f66d0d8",
 				DirectType:   "PublicCompany",
@@ -236,6 +239,7 @@ func TestConvertAggregateConceptToESConceptModel(t *testing.T) {
 			},
 		},
 		{
+			testName: "AggregateConceptModel with ScopeNote",
 			conceptModel: AggregateConceptModel{
 				PrefUUID:     "2384fa7a-d514-3d6a-a0ea-3a711f66d0d9",
 				DirectType:   "PublicCompany",
@@ -264,24 +268,26 @@ func TestConvertAggregateConceptToESConceptModel(t *testing.T) {
 	}
 
 	for _, testModel := range tests {
-		testTID := tid.NewTransactionID()
+		t.Run(testModel.testName, func(t *testing.T) {
+			testTID := tid.NewTransactionID()
 
-		actual := ConvertAggregateConceptToESConceptModel(testModel.conceptModel, "organisations", testTID)
-		esModel := actual.(*EsConceptModel)
-		assert.Equal(t, testModel.esConceptModel.Id, esModel.Id, fmt.Sprintf("Expected Id %s differs from actual id %s ", testModel.esConceptModel.Id, esModel.Id))
-		assert.Equal(t, testModel.esConceptModel.ApiUrl, esModel.ApiUrl, fmt.Sprintf("Expected ApiUrl %s differs from actual ApiUrl %s ", testModel.esConceptModel.ApiUrl, esModel.ApiUrl))
-		assert.Equal(t, testModel.esConceptModel.DirectType, esModel.DirectType, fmt.Sprintf("Expected DirectType %s differs from actual DirectType %s ", testModel.esConceptModel.DirectType, esModel.DirectType))
-		assert.Equal(t, testModel.esConceptModel.PrefLabel, esModel.PrefLabel, fmt.Sprintf("Expected PrefLabel %s differs from actual PrefLabel %s ", testModel.esConceptModel.PrefLabel, esModel.PrefLabel))
-		assert.Equal(t, testModel.esConceptModel.Types, esModel.Types, fmt.Sprintf("Expected Types %s differ from actual Types %s ", testModel.esConceptModel.Types, esModel.Types))
-		assert.Equal(t, testModel.esConceptModel.Aliases, esModel.Aliases, fmt.Sprintf("Expected Aliases %s differ from actual Aliases %s ", testModel.esConceptModel.Aliases, esModel.Aliases))
-		assert.Subset(t, testModel.esConceptModel.Authorities, esModel.Authorities, fmt.Sprintf("Expected Authorities %s differ from actual Authorities %s ", testModel.esConceptModel.Authorities, esModel.Authorities))
-		assert.Equal(t, testTID, esModel.PublishReference)
-		assert.Equal(t, testModel.esConceptModel.IsDeprecated, esModel.IsDeprecated, fmt.Sprintf("Expected IsDeprecated %t differ from actual IsDeprecated %t", testModel.esConceptModel.IsDeprecated, esModel.IsDeprecated))
-		assert.Equal(t, testModel.esConceptModel.ScopeNote, esModel.ScopeNote, fmt.Sprintf("Expected ScopeNote %s differ from actual ScopeNote %s", testModel.esConceptModel.ScopeNote, esModel.ScopeNote))
+			actual := ConvertAggregateConceptToESConceptModel(testModel.conceptModel, "organisations", testTID)
+			esModel := actual.(*EsConceptModel)
+			assert.Equal(t, testModel.esConceptModel.Id, esModel.Id, fmt.Sprintf("Expected Id %s differs from actual id %s ", testModel.esConceptModel.Id, esModel.Id))
+			assert.Equal(t, testModel.esConceptModel.ApiUrl, esModel.ApiUrl, fmt.Sprintf("Expected ApiUrl %s differs from actual ApiUrl %s ", testModel.esConceptModel.ApiUrl, esModel.ApiUrl))
+			assert.Equal(t, testModel.esConceptModel.DirectType, esModel.DirectType, fmt.Sprintf("Expected DirectType %s differs from actual DirectType %s ", testModel.esConceptModel.DirectType, esModel.DirectType))
+			assert.Equal(t, testModel.esConceptModel.PrefLabel, esModel.PrefLabel, fmt.Sprintf("Expected PrefLabel %s differs from actual PrefLabel %s ", testModel.esConceptModel.PrefLabel, esModel.PrefLabel))
+			assert.Equal(t, testModel.esConceptModel.Types, esModel.Types, fmt.Sprintf("Expected Types %s differ from actual Types %s ", testModel.esConceptModel.Types, esModel.Types))
+			assert.Equal(t, testModel.esConceptModel.Aliases, esModel.Aliases, fmt.Sprintf("Expected Aliases %s differ from actual Aliases %s ", testModel.esConceptModel.Aliases, esModel.Aliases))
+			assert.Subset(t, testModel.esConceptModel.Authorities, esModel.Authorities, fmt.Sprintf("Expected Authorities %s differ from actual Authorities %s ", testModel.esConceptModel.Authorities, esModel.Authorities))
+			assert.Equal(t, testTID, esModel.PublishReference)
+			assert.Equal(t, testModel.esConceptModel.IsDeprecated, esModel.IsDeprecated, fmt.Sprintf("Expected IsDeprecated %t differ from actual IsDeprecated %t", testModel.esConceptModel.IsDeprecated, esModel.IsDeprecated))
+			assert.Equal(t, testModel.esConceptModel.ScopeNote, esModel.ScopeNote, fmt.Sprintf("Expected ScopeNote %s differ from actual ScopeNote %s", testModel.esConceptModel.ScopeNote, esModel.ScopeNote))
 
-		actualLastModified, err := time.Parse(time.RFC3339, esModel.LastModified)
-		assert.NoError(t, err)
-		assert.WithinDuration(t, time.Now(), actualLastModified, 3*time.Second)
+			actualLastModified, err := time.Parse(time.RFC3339, esModel.LastModified)
+			assert.NoError(t, err)
+			assert.WithinDuration(t, time.Now(), actualLastModified, 3*time.Second)
+		})
 	}
 }
 
@@ -387,6 +393,55 @@ func TestConvertPersonToESConceptModel(t *testing.T) {
 		actualLastModified, err := time.Parse(time.RFC3339, esModel.LastModified)
 		assert.NoError(t, err)
 		assert.WithinDuration(t, time.Now(), actualLastModified, 3*time.Second)
+	}
+}
+
+func TestConvertMembershipToAggregateConceptModel(t *testing.T) {
+	tests := []struct {
+		testName              string
+		aggregateConceptModel AggregateConceptModel
+		esMembershipModel     EsMembershipModel
+	}{
+		{
+			testName: "basic membership",
+			aggregateConceptModel: AggregateConceptModel{
+				PrefUUID:         "b159a539-527e-42ba-b5ee-29c33c0e016a",
+				PersonUUID:       "d52d8fdf-656c-4db3-b27c-06b16cdbb580",
+				OrganisationUUID: "fa2b743d-f535-4deb-8524-df65bd536d09",
+				MembershipRoles: []AggregateMembershipRole{
+					{RoleUUID: "c55f1d31-00fc-47a5-8a2e-19a967e07955", InceptionDate: "InceptionDate", TerminationDate: "TerminationDate"},
+					{RoleUUID: "5c1f6da5-596e-4853-89b9-7f08652d366a", InceptionDate: "InceptionDate"},
+				},
+			},
+			esMembershipModel: EsMembershipModel{
+				Id:             "b159a539-527e-42ba-b5ee-29c33c0e016a",
+				PersonId:       "d52d8fdf-656c-4db3-b27c-06b16cdbb580",
+				OrganisationId: "fa2b743d-f535-4deb-8524-df65bd536d09",
+				Memberships:    []string{"c55f1d31-00fc-47a5-8a2e-19a967e07955", "5c1f6da5-596e-4853-89b9-7f08652d366a"},
+			},
+		},
+		{
+			testName: "empty membership",
+			aggregateConceptModel: AggregateConceptModel{
+				PrefUUID:         "b159a539-527e-42ba-b5ee-29c33c0e016a",
+				PersonUUID:       "d52d8fdf-656c-4db3-b27c-06b16cdbb580",
+				OrganisationUUID: "fa2b743d-f535-4deb-8524-df65bd536d09",
+			},
+			esMembershipModel: EsMembershipModel{
+				Id:             "b159a539-527e-42ba-b5ee-29c33c0e016a",
+				PersonId:       "d52d8fdf-656c-4db3-b27c-06b16cdbb580",
+				OrganisationId: "fa2b743d-f535-4deb-8524-df65bd536d09",
+				Memberships:    make([]string, 0),
+			},
+		},
+	}
+	for _, testModel := range tests {
+		t.Run(testModel.testName, func(t *testing.T) {
+			testTID := tid.NewTransactionID()
+			actual := ConvertAggregateConceptToESConceptModel(testModel.aggregateConceptModel, "membership", testTID)
+			esModel := actual.(*EsMembershipModel)
+			assert.Equal(t, testModel.esMembershipModel, *esModel)
+		})
 	}
 }
 
