@@ -238,6 +238,7 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 			}
 
 			loadDataLog.WithError(err).WithField(statusField, status).Error("Failed operation to Elasticsearch")
+			return resp, err
 		}
 	}
 

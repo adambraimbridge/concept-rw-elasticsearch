@@ -56,20 +56,25 @@ func (h *Handler) LoadData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = h.elasticService.LoadData(ctx, conceptType, concept.PreferredUUID(), esModel)
-	if err == service.ErrNoElasticClient {
-		writeMessage(w, "ES unavailable", http.StatusServiceUnavailable)
-		return
-	}
+	eir, err := h.elasticService.LoadData(ctx, conceptType, concept.PreferredUUID(), esModel)
 
 	if err != nil {
+		if err == service.ErrNoElasticClient {
+			writeMessage(w, "ES unavailable", http.StatusServiceUnavailable)
+			return
+		}
+
 		log.WithError(err).Warn("Failed to write data to elasticsearch.")
 		writeMessage(w, "Failed to write data to ES", http.StatusInternalServerError)
 		return
 	}
 
-	h.elasticService.CleanupData(ctx, concept)
+	if eir == nil {
+		writeMessage(w, "Concept dropped", http.StatusNotModified)
+		return
+	}
 
+	h.elasticService.CleanupData(ctx, concept)
 	writeMessage(w, "Concept written successfully", http.StatusOK)
 }
 
