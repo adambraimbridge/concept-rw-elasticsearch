@@ -59,12 +59,14 @@ func getElasticSearchTestURL(t *testing.T) string {
 }
 
 func getElasticClient(t *testing.T, url string) *elastic.Client {
-	ec, err := elastic.NewClient(
-		elastic.SetURL(url),
-		elastic.SetSniff(false),
-	)
-	assert.NoError(t, err, "expected no error for ES client")
 
+	config := EsAccessConfig{
+		esEndpoint:   url,
+		traceLogging: false,
+	}
+
+	ec, err := NewElasticClient("local", config)
+	require.NoError(t, err, "expected no error for ES client")
 	return ec
 }
 
