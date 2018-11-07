@@ -155,17 +155,17 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 	var readResult *elastic.GetResult
 	// Check if membership is FT
 	if conceptType == memberships {
-		acm := payload.(*EsMembershipModel)
-		if len(acm.Memberships) < 1 {
+		emm := payload.(*EsMembershipModel)
+		if len(emm.Memberships) < 1 {
 			return nil, nil
 		}
 
-		if acm.OrganisationId != ftOrgUUID {
+		if emm.OrganisationId != ftOrgUUID {
 			return nil, nil
 		}
 
 		var special bool
-		for _, m := range acm.Memberships {
+		for _, m := range emm.Memberships {
 			if m == journalistUUID || m == columnistUUID {
 				special = true
 				break
@@ -176,8 +176,8 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 			return nil, nil
 		}
 
-		readResult, err = es.ReadData(person, acm.PersonId)
-		uuid = acm.PersonId
+		readResult, err = es.ReadData(person, emm.PersonId)
+		uuid = emm.PersonId
 	} else {
 		readResult, err = es.ReadData(conceptType, uuid)
 	}
@@ -205,7 +205,6 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 					patchData = &EsPersonConceptPatch{Metrics: esConcept.Metrics, IsFTAuthor: is}
 				}
 			}
-			conceptType = person
 		default:
 			esConcept := new(EsConceptModel)
 			if readResult.Found {
@@ -245,6 +244,9 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 	//check if patchData is empty
 	if patchData != nil {
 		loadDataLog.Debugf("Patching: %s", uuid)
+		if conceptType == memberships {
+			conceptType = person
+		}
 		es.PatchUpdateDataWithMetrics(ctx, conceptType, uuid, patchData)
 	}
 
