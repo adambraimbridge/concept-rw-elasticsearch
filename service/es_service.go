@@ -44,7 +44,7 @@ type esService struct {
 }
 
 type EsService interface {
-	LoadData(ctx context.Context, conceptType string, uuid string, payload EsModel) (*elastic.IndexResponse, error)
+	LoadData(ctx context.Context, conceptType string, uuid string, payload EsModel) (bool, *elastic.IndexResponse, error)
 	ReadData(conceptType string, uuid string) (*elastic.GetResult, error)
 	DeleteData(ctx context.Context, conceptType string, uuid string) (*elastic.DeleteResponse, error)
 	LoadBulkData(conceptType string, uuid string, payload interface{})
@@ -132,7 +132,7 @@ func (es *esService) isIndexReadOnly(settings map[string]interface{}) (bool, err
 }
 
 func (es *esService) LoadData(ctx context.Context, conceptType string, uuid string, payload EsModel) (
-	resp *elastic.IndexResponse, err error) {
+	updated bool, resp *elastic.IndexResponse, err error) {
 
 	loadDataLog := log.WithField(conceptTypeField, conceptType).
 		WithField(uuidField, uuid).
@@ -141,6 +141,7 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 	transactionID, err := tid.GetTransactionIDFromContext(ctx)
 	if err != nil {
 		transactionID = tidNotFound
+		err = nil
 	}
 	loadDataLog = loadDataLog.WithField(tid.TransactionIDKey, transactionID)
 
@@ -149,7 +150,7 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 
 	if err = es.checkElasticClient(); err != nil {
 		loadDataLog.WithError(err).WithField(statusField, unknownStatus).Error("Failed operation to Elasticsearch")
-		return nil, err
+		return updated, resp, err
 	}
 
 	var readResult *elastic.GetResult
@@ -157,11 +158,11 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 	if conceptType == memberships {
 		emm := payload.(*EsMembershipModel)
 		if len(emm.Memberships) < 1 {
-			return nil, nil
+			return updated, resp, err
 		}
 
 		if emm.OrganisationId != ftOrgUUID {
-			return nil, nil
+			return updated, resp, err
 		}
 
 		var special bool
@@ -173,7 +174,7 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 		}
 
 		if !special {
-			return nil, nil
+			return updated, resp, err
 		}
 
 		readResult, err = es.ReadData(person, emm.PersonId)
@@ -185,7 +186,6 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 	var patchData PayloadPatch
 	if err != nil {
 		loadDataLog.WithError(err).Error("Failed operation to Elasticsearch, could not retrieve current values before write")
-
 	} else {
 		//we need to write the annotation count separately as it is sourced from neo.
 		//there is a race condition between the dataload and the patchData patch this will be solved by querying for the latest patchData
@@ -237,8 +237,9 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 			}
 
 			loadDataLog.WithError(err).WithField(statusField, status).Error("Failed operation to Elasticsearch")
-			return resp, err
+			return updated, resp, err
 		}
+		updated = true
 	}
 
 	//check if patchData is empty
@@ -248,9 +249,10 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 			conceptType = person
 		}
 		es.PatchUpdateDataWithMetrics(ctx, conceptType, uuid, patchData)
+		updated = true
 	}
 
-	return resp, err
+	return updated, resp, err
 }
 
 func (es *esService) checkElasticClient() error {

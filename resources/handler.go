@@ -56,7 +56,7 @@ func (h *Handler) LoadData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	eir, err := h.elasticService.LoadData(ctx, conceptType, concept.PreferredUUID(), esModel)
+	up, _, err := h.elasticService.LoadData(ctx, conceptType, concept.PreferredUUID(), esModel)
 
 	if err != nil {
 		if err == service.ErrNoElasticClient {
@@ -69,7 +69,7 @@ func (h *Handler) LoadData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if eir == nil {
+	if !up {
 		writeMessage(w, "Concept dropped", http.StatusNotModified)
 		return
 	}

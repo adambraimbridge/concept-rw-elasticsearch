@@ -511,14 +511,14 @@ type dummyEsService struct {
 	ids          chan service.EsIDTypePair
 }
 
-func (service *dummyEsService) LoadData(ctx context.Context, conceptType string, uuid string, payload service.EsModel) (*elastic.IndexResponse, error) {
+func (service *dummyEsService) LoadData(ctx context.Context, conceptType string, uuid string, payload service.EsModel) (bool, *elastic.IndexResponse, error) {
 	if service.returnsError != nil {
-		return nil, service.returnsError
+		return false, nil, service.returnsError
 	}
 	if service.noop {
-		return nil, nil
+		return false, nil, nil
 	}
-	return &elastic.IndexResponse{}, nil
+	return true, &elastic.IndexResponse{}, nil
 }
 
 func (service *dummyEsService) CleanupData(ctx context.Context, concept service.Concept) {
