@@ -837,13 +837,31 @@ func TestGetAllIds(t *testing.T) {
 	ec := getElasticClient(t, esURL)
 	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
 
-	expected := make([]string, 0)
-	for i := 0; i < 1001; i++ {
-		testUuid := uuid.NewV4().String()
-		_, _, _, err := writeDocument(service, organisationsType, testUuid)
-		require.NoError(t, err, "expected successful write")
-		expected = append(expected, testUuid)
+	max := 1001
+	expected := make([]string, max)
+	workers := 4
+	ids := make(chan string, workers)
+	var wg sync.WaitGroup
+	wg.Add(max)
+
+	for i := 0; i < workers; i++ {
+		go func() {
+			for id := range ids {
+				_, _, _, err := writeDocument(service, organisationsType, id)
+				require.NoError(t, err, "expected successful write")
+				wg.Done()
+			}
+		}()
 	}
+
+	for i := 0; i < max; i++ {
+		testUuid := uuid.NewV4().String()
+		expected[i] = testUuid
+		ids <- testUuid
+	}
+
+	close(ids)
+	wg.Wait()
 	_, err := ec.Refresh(indexName).Do(context.Background())
 	require.NoError(t, err, "expected successful flush")
 
