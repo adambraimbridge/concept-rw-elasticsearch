@@ -447,11 +447,13 @@ func TestConvertMembershipToAggregateConceptModel(t *testing.T) {
 
 func TestConvertPersonToAggregateConceptModel(t *testing.T) {
 	tests := []struct {
+		name                  string
 		aggregateConceptModel AggregateConceptModel
 		esPersonConceptModel  EsPersonConceptModel
 	}{
 		{
-			aggregateConceptModel: AggregateConceptModel{ // default to false
+			name: "default to false",
+			aggregateConceptModel: AggregateConceptModel{
 				PrefUUID:   "0f07d468-fc37-3c44-bf19-a81f2aae9f36",
 				DirectType: "Person",
 				PrefLabel:  "Martin Wolf",
@@ -470,10 +472,12 @@ func TestConvertPersonToAggregateConceptModel(t *testing.T) {
 					DirectType: "http://www.ft.com/ontology/person/Person",
 					Aliases:    []string{},
 				},
+				IsFTAuthor: "false",
 			},
 		},
 		{
-			aggregateConceptModel: AggregateConceptModel{ // matches on true
+			name: "matches on true",
+			aggregateConceptModel: AggregateConceptModel{
 				PrefUUID:   "0f07d468-fc37-3c44-bf19-a81f2aae9f36",
 				DirectType: "Person",
 				PrefLabel:  "Martin Wolf",
@@ -492,10 +496,11 @@ func TestConvertPersonToAggregateConceptModel(t *testing.T) {
 					DirectType: "http://www.ft.com/ontology/person/Person",
 					Aliases:    []string{},
 				},
+				IsFTAuthor: "false",
 			},
 		},
-		{
-			aggregateConceptModel: AggregateConceptModel{ // matches on false
+		{name: "matches on false",
+			aggregateConceptModel: AggregateConceptModel{
 				PrefUUID:   "0f07d468-fc37-3c44-bf19-a81f2aae9f36",
 				DirectType: "Person",
 				PrefLabel:  "Martin Wolf",
@@ -514,26 +519,30 @@ func TestConvertPersonToAggregateConceptModel(t *testing.T) {
 					DirectType: "http://www.ft.com/ontology/person/Person",
 					Aliases:    []string{},
 				},
+				IsFTAuthor: "false",
 			},
 		},
 	}
 
 	for _, testModel := range tests {
-		testTID := tid.NewTransactionID()
+		t.Run(testModel.name, func(t *testing.T) {
+			testTID := tid.NewTransactionID()
 
-		actual := ConvertAggregateConceptToESConceptModel(testModel.aggregateConceptModel, "people", testTID)
-		esModel := actual.(*EsPersonConceptModel)
-		assert.Equal(t, testModel.esPersonConceptModel.Id, esModel.Id, fmt.Sprintf("Expected Id %s differs from actual id %s ", testModel.esPersonConceptModel.Id, esModel.Id))
-		assert.Equal(t, testModel.esPersonConceptModel.ApiUrl, esModel.ApiUrl, fmt.Sprintf("Expected ApiUrl %s differs from actual ApiUrl %s ", testModel.esPersonConceptModel.ApiUrl, esModel.ApiUrl))
-		assert.Equal(t, testModel.esPersonConceptModel.DirectType, esModel.DirectType, fmt.Sprintf("Expected DirectType %s differs from actual DirectType %s ", testModel.esPersonConceptModel.DirectType, esModel.DirectType))
-		assert.Equal(t, testModel.esPersonConceptModel.PrefLabel, esModel.PrefLabel, fmt.Sprintf("Expected PrefLabel %s differs from actual PrefLabel %s ", testModel.esPersonConceptModel.PrefLabel, esModel.PrefLabel))
-		assert.Equal(t, testModel.esPersonConceptModel.Types, esModel.Types, fmt.Sprintf("Expected Types %s differ from actual Types %s ", testModel.esPersonConceptModel.Types, esModel.Types))
-		assert.Equal(t, testModel.esPersonConceptModel.Aliases, esModel.Aliases, fmt.Sprintf("Expected Aliases %s differ from actual Aliases %s ", testModel.esPersonConceptModel.Aliases, esModel.Aliases))
-		assert.Equal(t, testTID, esModel.PublishReference)
+			actual := ConvertAggregateConceptToESConceptModel(testModel.aggregateConceptModel, "people", testTID)
+			esModel := actual.(*EsPersonConceptModel)
+			assert.Equal(t, testModel.esPersonConceptModel.Id, esModel.Id, fmt.Sprintf("Expected Id %s differs from actual id %s ", testModel.esPersonConceptModel.Id, esModel.Id))
+			assert.Equal(t, testModel.esPersonConceptModel.ApiUrl, esModel.ApiUrl, fmt.Sprintf("Expected ApiUrl %s differs from actual ApiUrl %s ", testModel.esPersonConceptModel.ApiUrl, esModel.ApiUrl))
+			assert.Equal(t, testModel.esPersonConceptModel.DirectType, esModel.DirectType, fmt.Sprintf("Expected DirectType %s differs from actual DirectType %s ", testModel.esPersonConceptModel.DirectType, esModel.DirectType))
+			assert.Equal(t, testModel.esPersonConceptModel.PrefLabel, esModel.PrefLabel, fmt.Sprintf("Expected PrefLabel %s differs from actual PrefLabel %s ", testModel.esPersonConceptModel.PrefLabel, esModel.PrefLabel))
+			assert.Equal(t, testModel.esPersonConceptModel.Types, esModel.Types, fmt.Sprintf("Expected Types %s differ from actual Types %s ", testModel.esPersonConceptModel.Types, esModel.Types))
+			assert.Equal(t, testModel.esPersonConceptModel.Aliases, esModel.Aliases, fmt.Sprintf("Expected Aliases %s differ from actual Aliases %s ", testModel.esPersonConceptModel.Aliases, esModel.Aliases))
+			assert.Equal(t, testTID, esModel.PublishReference)
+			assert.Equal(t, testModel.esPersonConceptModel.IsFTAuthor, esModel.IsFTAuthor)
 
-		actualLastModified, err := time.Parse(time.RFC3339, esModel.LastModified)
-		assert.NoError(t, err)
-		assert.WithinDuration(t, time.Now(), actualLastModified, 3*time.Second)
+			actualLastModified, err := time.Parse(time.RFC3339, esModel.LastModified)
+			assert.NoError(t, err)
+			assert.WithinDuration(t, time.Now(), actualLastModified, 3*time.Second)
+		})
 	}
 }
 

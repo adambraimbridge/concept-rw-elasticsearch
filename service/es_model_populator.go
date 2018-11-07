@@ -8,8 +8,9 @@ import (
 )
 
 const (
-	person      = "people"
-	memberships = "memberships"
+	person            = "people"
+	memberships       = "memberships"
+	defaultIsFTAuthor = "false"
 )
 
 func ConvertConceptToESConceptModel(concept ConceptModel, conceptType string, publishRef string) EsModel {
@@ -43,6 +44,7 @@ func ConvertAggregateConceptToESConceptModel(concept AggregateConceptModel, conc
 	case person:
 		esModel = &EsPersonConceptModel{
 			EsConceptModel: getEsConcept(concept, conceptType, publishRef),
+			IsFTAuthor:     defaultIsFTAuthor, // default as controlled by memberships concept
 		}
 	default:
 		esModel = getEsConcept(concept, conceptType, publishRef)
