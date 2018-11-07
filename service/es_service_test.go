@@ -92,7 +92,7 @@ func writeDocument(es EsService, t string, u string) (EsConceptModel, *elastic.I
 	return payload, resp, err
 }
 
-func writePersonDocument(es EsService, t string, u string, isFTAuthor bool) (EsPersonConceptModel, *elastic.IndexResponse, error) {
+func writePersonDocument(es EsService, t string, u string, isFTAuthor string) (EsPersonConceptModel, *elastic.IndexResponse, error) {
 	payload := EsPersonConceptModel{
 		EsConceptModel: &EsConceptModel{
 			Id:         u,
@@ -189,7 +189,7 @@ func TestWriteMakesPersonAnFTColumnist(t *testing.T) {
 
 	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
 	testUuid := uuid.NewV4().String()
-	_, _, err = writePersonDocument(service, peopleType, testUuid, false)
+	_, _, err = writePersonDocument(service, peopleType, testUuid, "false")
 	require.NoError(t, err, "expected successful write")
 	ctx := context.Background()
 	_, err = ec.Refresh(indexName).Do(ctx)
@@ -212,7 +212,7 @@ func TestWriteMakesPersonAnFTColumnist(t *testing.T) {
 	assert.NoError(t, err, "expected successful read")
 	var actual EsPersonConceptModel
 	assert.NoError(t, json.Unmarshal(*p.Source, &actual))
-	assert.True(t, actual.IsFTAuthor)
+	assert.Equal(t, "true", actual.IsFTAuthor)
 }
 
 func TestWriteMakesPersonAnFTJournalist(t *testing.T) {
@@ -224,7 +224,7 @@ func TestWriteMakesPersonAnFTJournalist(t *testing.T) {
 
 	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
 	testUuid := uuid.NewV4().String()
-	_, _, err = writePersonDocument(service, peopleType, testUuid, false)
+	_, _, err = writePersonDocument(service, peopleType, testUuid, "false")
 	require.NoError(t, err, "expected successful write")
 	ctx := context.Background()
 	_, err = ec.Refresh(indexName).Do(ctx)
@@ -247,7 +247,7 @@ func TestWriteMakesPersonAnFTJournalist(t *testing.T) {
 	assert.NoError(t, err, "expected successful read")
 	var actual EsPersonConceptModel
 	assert.NoError(t, json.Unmarshal(*p.Source, &actual))
-	assert.True(t, actual.IsFTAuthor)
+	assert.Equal(t, "true", actual.IsFTAuthor)
 }
 
 func TestWriteMakesDoesNotMakePersonAnFTAuthor(t *testing.T) {
@@ -259,7 +259,7 @@ func TestWriteMakesDoesNotMakePersonAnFTAuthor(t *testing.T) {
 
 	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
 	testUuid := uuid.NewV4().String()
-	_, _, err = writePersonDocument(service, peopleType, testUuid, false)
+	_, _, err = writePersonDocument(service, peopleType, testUuid, "false")
 	require.NoError(t, err, "expected successful write")
 	ctx := context.Background()
 	_, err = ec.Refresh(indexName).Do(ctx)
@@ -310,7 +310,7 @@ func TestWriteMakesDoesNotMakePersonAnFTAuthor(t *testing.T) {
 			assert.NoError(t, err, "expected successful read")
 			var actual EsPersonConceptModel
 			assert.NoError(t, json.Unmarshal(*p.Source, &actual))
-			assert.False(t, actual.IsFTAuthor)
+			assert.Equal(t, "false", actual.IsFTAuthor)
 		})
 	}
 }
@@ -325,7 +325,7 @@ func TestWritePreservesPatchableDataForPerson(t *testing.T) {
 	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
 
 	testUuid := uuid.NewV4().String()
-	payload, _, err := writePersonDocument(service, peopleType, testUuid, true)
+	payload, _, err := writePersonDocument(service, peopleType, testUuid, "true")
 	assert.NoError(t, err, "expected successful write")
 	ctx := context.Background()
 	_, err = ec.Refresh(indexName).Do(ctx)
@@ -338,7 +338,7 @@ func TestWritePreservesPatchableDataForPerson(t *testing.T) {
 	assert.NoError(t, err, "expected successful read")
 	var previous EsPersonConceptModel
 	assert.NoError(t, json.Unmarshal(*p.Source, &previous))
-	assert.True(t, previous.IsFTAuthor)
+	assert.Equal(t, "true", previous.IsFTAuthor)
 
 	payload.PrefLabel = "Updated PrefLabel"
 	payload.Metrics = nil // blank metrics

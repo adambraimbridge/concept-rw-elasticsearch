@@ -91,12 +91,12 @@ type ConceptMetrics struct {
 
 type EsPersonConceptModel struct {
 	*EsConceptModel
-	IsFTAuthor bool `json:"isFTAuthor"`
+	IsFTAuthor string `json:"isFTAuthor"`
 }
 
 type EsPersonConceptPatch struct {
 	Metrics    *ConceptMetrics `json:"metrics"`
-	IsFTAuthor bool            `json:"isFTAuthor"`
+	IsFTAuthor string          `json:"isFTAuthor"`
 }
 
 func (c AggregateConceptModel) PreferredUUID() string {

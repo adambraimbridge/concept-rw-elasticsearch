@@ -200,7 +200,7 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 				} else {
 					is := esConcept.IsFTAuthor
 					if conceptType == memberships {
-						is = true // we only process FT members who are FT authors
+						is = "true" // we only process FT members who are FT authors
 					}
 					patchData = &EsPersonConceptPatch{Metrics: esConcept.Metrics, IsFTAuthor: is}
 				}
