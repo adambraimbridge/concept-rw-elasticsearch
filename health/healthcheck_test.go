@@ -300,7 +300,7 @@ func (m *EsServiceMock) LoadBulkData(conceptType string, uuid string, payload in
 	m.Called(conceptType, uuid, payload)
 }
 
-func (m *EsServiceMock) PatchUpdateDataWithMetrics(ctx context.Context, conceptType string, uuid string, payload service.PayloadPatch) {
+func (m *EsServiceMock) PatchUpdateConcept(ctx context.Context, conceptType string, uuid string, payload service.PayloadPatch) {
 	m.Called(ctx, conceptType, uuid, payload)
 }
 

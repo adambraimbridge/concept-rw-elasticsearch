@@ -339,7 +339,7 @@ func TestWritePreservesPatchableDataForPerson(t *testing.T) {
 	ctx := context.Background()
 	_, err = ec.Refresh(indexName).Do(ctx)
 	require.NoError(t, err, "expected successful flush")
-	service.PatchUpdateDataWithMetrics(ctx, peopleType, testUuid, &EsConceptModelPatch{Metrics: &ConceptMetrics{AnnotationsCount: 1234}})
+	service.PatchUpdateConcept(ctx, peopleType, testUuid, &EsConceptModelPatch{Metrics: &ConceptMetrics{AnnotationsCount: 1234}})
 	err = service.bulkProcessor.Flush() // wait for the bulk processor to write the data
 	require.NoError(t, err, "require successful metrics write")
 
@@ -382,7 +382,7 @@ func TestWritePreservesMetrics(t *testing.T) {
 	require.NoError(t, err, "require successful concept write")
 
 	testMetrics := &EsConceptModelPatch{Metrics: &ConceptMetrics{AnnotationsCount: 150000}}
-	service.PatchUpdateDataWithMetrics(newTestContext(), organisationsType, testUuid, testMetrics)
+	service.PatchUpdateConcept(newTestContext(), organisationsType, testUuid, testMetrics)
 	err = service.bulkProcessor.Flush() // wait for the bulk processor to write the data
 	require.NoError(t, err, "require successful metrics write")
 
@@ -799,7 +799,7 @@ func TestMetricsUpdated(t *testing.T) {
 	assert.Equal(t, testUUID, resp.Id, "document id")
 
 	testMetrics := &EsConceptModelPatch{Metrics: &ConceptMetrics{AnnotationsCount: 150000}}
-	service.PatchUpdateDataWithMetrics(newTestContext(), organisationsType, testUUID, testMetrics)
+	service.PatchUpdateConcept(newTestContext(), organisationsType, testUUID, testMetrics)
 
 	service.bulkProcessor.Flush() // wait for the bulk processor to write the data
 
@@ -839,7 +839,7 @@ func TestGetAllIds(t *testing.T) {
 
 	max := 1001
 	expected := make([]string, max)
-	workers := 4
+	workers := 8
 	ids := make(chan string, workers)
 	var wg sync.WaitGroup
 	wg.Add(max)
