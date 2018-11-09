@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/sirupsen/logrus"
 	"strconv"
 	"strings"
 	"sync"
@@ -131,6 +132,15 @@ func (es *esService) isIndexReadOnly(settings map[string]interface{}) (bool, err
 	return false, nil
 }
 
+func isFtAuthor(memberships []string) bool {
+	for _, m := range memberships {
+		if m == journalistUUID || m == columnistUUID {
+			return true
+		}
+	}
+	return false
+}
+
 func (es *esService) LoadData(ctx context.Context, conceptType string, uuid string, payload EsModel) (
 	updated bool, resp *elastic.IndexResponse, err error) {
 
@@ -157,77 +167,28 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 	// Check if membership is FT
 	if conceptType == memberships {
 		emm := payload.(*EsMembershipModel)
-		if len(emm.Memberships) < 1 {
-			return updated, resp, err
-		}
-
-		if emm.OrganisationId != ftOrgUUID {
-			return updated, resp, err
-		}
-
-		var special bool
-		for _, m := range emm.Memberships {
-			if m == journalistUUID || m == columnistUUID {
-				special = true
-				break
-			}
-		}
-
-		if !special {
+		if emm.OrganisationId != ftOrgUUID || len(emm.Memberships) < 1 || !isFtAuthor(emm.Memberships) { // drop as not FT Author
 			return updated, resp, err
 		}
 
 		readResult, err = es.ReadData(person, emm.PersonId)
-		uuid = emm.PersonId
+		uuid = emm.PersonId // membership is for person
 	} else {
 		readResult, err = es.ReadData(conceptType, uuid)
 	}
 
-	var patchData PayloadPatch
-	if err != nil {
-		loadDataLog.WithError(err).Error("Failed operation to Elasticsearch, could not retrieve current values before write")
-	} else {
-		//we need to write the annotation count separately as it is sourced from neo.
-		//there is a race condition between the dataload and the patchData patch this will be solved by querying for the latest patchData
-		//from neo before writing the patchData back
-		switch conceptType {
-		case person, memberships:
-			esConcept := new(EsPersonConceptModel)
-			if readResult.Found {
-				err := json.Unmarshal(*readResult.Source, esConcept)
-				if err != nil {
-					loadDataLog.WithError(err).Error("Failed to read patchData from Elasticsearch")
-				} else {
-					is := esConcept.IsFTAuthor
-					if conceptType == memberships {
-						is = "true" // we only process FT members who are FT authors
-					}
-					patchData = &EsPersonConceptPatch{Metrics: esConcept.Metrics, IsFTAuthor: is}
-				}
-			}
-		default:
-			esConcept := new(EsConceptModel)
-			if readResult.Found {
-				err := json.Unmarshal(*readResult.Source, esConcept)
-				if err != nil {
-					loadDataLog.WithError(err).Error("Failed to read patchData from Elasticsearch")
-				} else {
-					patchData = &EsConceptModelPatch{Metrics: esConcept.Metrics}
-				}
-			}
-		}
-	}
+	patchData := getPatchData(err, loadDataLog, conceptType, readResult)
 
-	if conceptType != memberships {
+	if conceptType != memberships { // memberships only patch people
+
 		log.Debugf("Writing: %s", uuid)
-		resp, err = es.elasticClient.Index().
+		if resp, err = es.elasticClient.Index().
 			Index(es.indexName).
 			Type(conceptType).
 			Id(uuid).
 			BodyJson(payload).
-			Do(ctx)
+			Do(ctx); err != nil {
 
-		if err != nil {
 			var status string
 			switch err.(type) {
 			case *elastic.Error:
@@ -246,7 +207,7 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 	if patchData != nil {
 		loadDataLog.Debugf("Patching: %s", uuid)
 		if conceptType == memberships {
-			// Patch data is for a person
+			// `patchData` is for a person
 			es.PatchUpdateConcept(ctx, person, uuid, patchData)
 		} else {
 			es.PatchUpdateConcept(ctx, conceptType, uuid, patchData)
@@ -255,6 +216,42 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 	}
 
 	return updated, resp, err
+}
+
+func getPatchData(err error, loadDataLog *logrus.Entry, conceptType string, readResult *elastic.GetResult) (patchData PayloadPatch) {
+	if err != nil {
+		loadDataLog.WithError(err).Error("Failed operation to Elasticsearch, could not retrieve current values before write")
+		return patchData
+	} else {
+		//we need to write the annotation count separately as it is sourced from neo.
+		//there is a race condition between the dataload and the patchData patch this will be solved by querying for the latest patchData
+		//from neo before writing the patchData back
+		switch conceptType {
+		case person, memberships:
+			esConcept := new(EsPersonConceptModel)
+			if readResult.Found {
+				if err := json.Unmarshal(*readResult.Source, esConcept); err != nil {
+					loadDataLog.WithError(err).Error("Failed to read patchData from Elasticsearch")
+					return patchData
+				} else {
+					if conceptType == memberships {
+						return &EsPersonConceptPatch{Metrics: esConcept.Metrics, IsFTAuthor: "true"} // we only process FT members who are FT authors
+					}
+					return &EsPersonConceptPatch{Metrics: esConcept.Metrics, IsFTAuthor: esConcept.IsFTAuthor}
+				}
+			}
+		default:
+			esConcept := new(EsConceptModel)
+			if readResult.Found {
+				if err := json.Unmarshal(*readResult.Source, esConcept); err != nil {
+					loadDataLog.WithError(err).Error("Failed to read patchData from Elasticsearch")
+					return patchData
+				}
+				return &EsConceptModelPatch{Metrics: esConcept.Metrics}
+			}
+		}
+	}
+	return patchData
 }
 
 func (es *esService) checkElasticClient() error {
