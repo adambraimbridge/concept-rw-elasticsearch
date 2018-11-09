@@ -1,54 +1,73 @@
 package service
 
 import (
-	"strconv"
 	"time"
 
+	log "github.com/Financial-Times/go-logger"
 	"github.com/Financial-Times/neo-model-utils-go/mapper"
-	log "github.com/sirupsen/logrus"
 )
 
 const (
-	PERSON = "people"
+	person            = "people"
+	memberships       = "memberships"
+	defaultIsFTAuthor = "false"
 )
 
-type ModelPopulator interface {
-	ConvertConceptToESConceptModel(concept ConceptModel, conceptType string, publishRef string) (interface{}, error)
-	ConvertAggregateConceptToESConceptModel(concept AggregateConceptModel, conceptType string, publishRef string) (interface{}, error)
-}
-
-func ConvertConceptToESConceptModel(concept ConceptModel, conceptType string, publishRef string) (interface{}, error) {
+func ConvertConceptToESConceptModel(concept ConceptModel, conceptType string, publishRef string) EsModel {
 	esModel := newESConceptModel(concept.UUID, conceptType, concept.DirectType, concept.Aliases, concept.GetAuthorities(), concept.PrefLabel, publishRef, concept.IsDeprecated, concept.ScopeNote)
 
 	switch conceptType {
-	case PERSON: // person type should not come through as the old model.
+	case person: // person type should not come through as the old model.
 		esPersonModel := &EsPersonConceptModel{
-			esModel,
-			"false",
+			EsConceptModel: esModel,
 		}
-		return esPersonModel, nil
+		return esPersonModel
 	default:
-		return esModel, nil
+		return esModel
 	}
 }
 
-func ConvertAggregateConceptToESConceptModel(concept AggregateConceptModel, conceptType string, publishRef string) (interface{}, error) {
-	esModel := newESConceptModel(concept.PrefUUID, conceptType, concept.DirectType, concept.Aliases, concept.GetAuthorities(), concept.PrefLabel, publishRef, concept.IsDeprecated, concept.ScopeNote)
+func ConvertAggregateConceptToESConceptModel(concept AggregateConceptModel, conceptType string, publishRef string) (esModel EsModel) {
+
 	switch conceptType {
-	case PERSON:
-		isFTAuthor := strconv.FormatBool(concept.IsAuthor)
-		esPersonModel := &EsPersonConceptModel{
-			esModel,
-			isFTAuthor,
+	case memberships:
+		ms := make([]string, len(concept.MembershipRoles))
+		for i, m := range concept.MembershipRoles {
+			ms[i] = m.RoleUUID
 		}
-		return esPersonModel, nil
+		esModel = &EsMembershipModel{
+			Id:             concept.PrefUUID,
+			PersonId:       concept.PersonUUID,
+			OrganisationId: concept.OrganisationUUID,
+			Memberships:    ms,
+		}
+	case person:
+		esModel = &EsPersonConceptModel{
+			EsConceptModel: getEsConcept(concept, conceptType, publishRef),
+			IsFTAuthor:     defaultIsFTAuthor, // default as controlled by memberships concept
+		}
 	default:
-		return esModel, nil
+		esModel = getEsConcept(concept, conceptType, publishRef)
 	}
+
+	return esModel
 }
 
-func newESConceptModel(uuid string, conceptType string, directType string, aliases []string, authorities []string, prefLabel string, publishRef string, isDeprecated bool, scopeNote string) *EsConceptModel {
-	esModel := &EsConceptModel{}
+func getEsConcept(concept AggregateConceptModel, conceptType string, publishRef string) *EsConceptModel {
+	return newESConceptModel(
+		concept.PrefUUID,
+		conceptType,
+		concept.DirectType,
+		concept.Aliases,
+		concept.GetAuthorities(),
+		concept.PrefLabel,
+		publishRef,
+		concept.IsDeprecated,
+		concept.ScopeNote)
+}
+
+func newESConceptModel(uuid string, conceptType string, directType string, aliases []string, authorities []string, prefLabel string, publishRef string, isDeprecated bool, scopeNote string) (esModel *EsConceptModel) {
+	esModel = &EsConceptModel{}
 	esModel.ApiUrl = mapper.APIURL(uuid, []string{directType}, "")
 	esModel.Id = mapper.IDURL(uuid)
 	esModel.Types = mapper.TypeURIs(getTypes(directType))

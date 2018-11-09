@@ -10,6 +10,7 @@ import (
 	"github.com/Financial-Times/concept-rw-elasticsearch/health"
 	"github.com/Financial-Times/concept-rw-elasticsearch/resources"
 	"github.com/Financial-Times/concept-rw-elasticsearch/service"
+	"github.com/Financial-Times/go-logger"
 	"github.com/Financial-Times/http-handlers-go/httphandlers"
 	status "github.com/Financial-Times/service-status-go/httphandlers"
 	"github.com/gorilla/mux"
@@ -21,6 +22,12 @@ import (
 
 func main() {
 	app := cli.App("concept-rw-es", "Service for loading concepts into elasticsearch")
+	appSystemCode := app.String(cli.StringOpt{
+		Name:   "app-system-code",
+		Value:  "concept-rw-elasticsearch",
+		Desc:   "System Code of the application",
+		EnvVar: "APP_SYSTEM_CODE",
+	})
 	port := app.String(cli.StringOpt{
 		Name:   "port",
 		Value:  "8080",
@@ -29,12 +36,12 @@ func main() {
 	})
 	accessKey := app.String(cli.StringOpt{
 		Name:   "aws-access-key",
-		Desc:   "AWS ACCES KEY",
+		Desc:   "AWS ACCESS KEY",
 		EnvVar: "AWS_ACCESS_KEY_ID",
 	})
 	secretKey := app.String(cli.StringOpt{
 		Name:   "aws-secret-access-key",
-		Desc:   "AWS SECRET ACCES KEY",
+		Desc:   "AWS SECRET ACCESS KEY",
 		EnvVar: "AWS_SECRET_ACCESS_KEY",
 	})
 	esEndpoint := app.String(cli.StringOpt{
@@ -52,7 +59,7 @@ func main() {
 	indexName := app.String(cli.StringOpt{
 		Name:   "index-name",
 		Value:  "concepts",
-		Desc:   "The name of the elaticsearch index",
+		Desc:   "The name of the elasticsearch index",
 		EnvVar: "ELASTICSEARCH_INDEX",
 	})
 
@@ -86,7 +93,7 @@ func main() {
 
 	elasticsearchWhitelistedConceptTypes := app.String(cli.StringOpt{
 		Name:   "whitelisted-concepts",
-		Value:  "genres,topics,sections,subjects,locations,brands,organisations,people,alphaville-series",
+		Value:  "genres,topics,sections,subjects,locations,brands,organisations,people,alphaville-series,memberships",
 		Desc:   "List which are currently supported by elasticsearch (already have mapping associated)",
 		EnvVar: "ELASTICSEARCH_WHITELISTED_CONCEPTS",
 	})
@@ -97,11 +104,17 @@ func main() {
 		Desc:   "Whether to log ElasticSearch HTTP requests and responses",
 		EnvVar: "ELASTICSEARCH_TRACE",
 	})
+	logLevel := app.String(cli.StringOpt{
+		Name:   "logLevel",
+		Value:  "info",
+		Desc:   "App log level",
+		EnvVar: "LOG_LEVEL",
+	})
 
 	accessConfig := service.NewAccessConfig(*accessKey, *secretKey, *esEndpoint, *esTraceLogging)
 
-	log.SetLevel(log.InfoLevel)
-	log.Infof("[Startup] The writer handles the following concept types: %v\n", *elasticsearchWhitelistedConceptTypes)
+	logger.InitLogger(*appSystemCode, *logLevel)
+	logger.Infof("[Startup] The writer handles the following concept types: %v\n", *elasticsearchWhitelistedConceptTypes)
 
 	// It seems that once we have a connection, we can lose and reconnect to Elastic OK
 	// so just keep going until successful
@@ -112,11 +125,11 @@ func main() {
 			for {
 				ec, err := service.NewElasticClient(*esRegion, accessConfig)
 				if err == nil {
-					log.Infof("connected to ElasticSearch")
+					logger.Info("connected to ElasticSearch")
 					ecc <- ec
 					return
 				}
-				log.Errorf("could not connect to ElasticSearch: %s", err.Error())
+				logger.Errorf("could not connect to ElasticSearch: %s", err.Error())
 				time.Sleep(time.Minute)
 			}
 		}()
@@ -137,7 +150,7 @@ func main() {
 
 	err := app.Run(os.Args)
 	if err != nil {
-		log.Errorf("App could not start, error=[%s]\n", err)
+		logger.Errorf("App could not start, error=[%s]\n", err)
 		return
 	}
 }
@@ -163,6 +176,6 @@ func routeRequests(port *string, handler *resources.Handler, healthService *heal
 	http.Handle("/", monitoringRouter)
 
 	if err := http.ListenAndServe(":"+*port, nil); err != nil {
-		log.Fatalf("Unable to start: %v", err)
+		logger.Fatalf("Unable to start: %v", err)
 	}
 }

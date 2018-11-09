@@ -43,12 +43,12 @@ func TestHealthDetailsHealthyCluster(t *testing.T) {
 	handler.ServeHTTP(rr, req)
 
 	// Check the status code is what we expect.
-	if status := rr.Code; status != http.StatusOK {
+	if st := rr.Code; st != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusOK)
+			st, http.StatusOK)
 	}
 
-	if contentType := rr.HeaderMap.Get("Content-Type"); contentType != "application/json" {
+	if contentType := rr.Header().Get("Content-Type"); contentType != "application/json" {
 		t.Errorf("handler returned wrong content type: got %v want %v",
 			contentType, "application/json")
 	}
@@ -86,12 +86,12 @@ func TestHealthDetailsReturnsError(t *testing.T) {
 	handler.ServeHTTP(rr, req)
 
 	// Series of verifications:
-	if status := rr.Code; status != http.StatusInternalServerError {
+	if st := rr.Code; st != http.StatusInternalServerError {
 		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusInternalServerError)
+			st, http.StatusInternalServerError)
 	}
 
-	if contentType := rr.HeaderMap.Get("Content-Type"); contentType != "application/json" {
+	if contentType := rr.Header().Get("Content-Type"); contentType != "application/json" {
 		t.Errorf("handler returned wrong content type: got %v want %v",
 			contentType, "application/json")
 	}
@@ -122,9 +122,9 @@ func TestGoodToGoUnhealthyESCluster(t *testing.T) {
 	handler.ServeHTTP(rr, req)
 
 	// Series of verifications:
-	if status := rr.Code; status != http.StatusServiceUnavailable {
+	if st := rr.Code; st != http.StatusServiceUnavailable {
 		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusServiceUnavailable)
+			st, http.StatusServiceUnavailable)
 	}
 
 	assert.Equal(t, "computer says no", rr.Body.String(), "GTG response body")
@@ -152,9 +152,9 @@ func TestHappyGoodToGo(t *testing.T) {
 	handler.ServeHTTP(rr, req)
 
 	// Series of verifications:
-	if status := rr.Code; status != http.StatusOK {
+	if st := rr.Code; st != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusOK)
+			st, http.StatusOK)
 	}
 
 	assert.Equal(t, "OK", rr.Body.String(), "GTG response body")
@@ -281,9 +281,9 @@ type EsServiceMock struct {
 	mock.Mock
 }
 
-func (m *EsServiceMock) LoadData(ctx context.Context, conceptType string, uuid string, payload interface{}) (*elastic.IndexResponse, error) {
+func (m *EsServiceMock) LoadData(ctx context.Context, conceptType string, uuid string, payload service.EsModel) (bool, *elastic.IndexResponse, error) {
 	args := m.Called(ctx, conceptType, uuid, payload)
-	return args.Get(0).(*elastic.IndexResponse), args.Error(1)
+	return args.Bool(0), args.Get(1).(*elastic.IndexResponse), args.Error(1)
 }
 
 func (m *EsServiceMock) ReadData(conceptType string, uuid string) (*elastic.GetResult, error) {
@@ -300,7 +300,7 @@ func (m *EsServiceMock) LoadBulkData(conceptType string, uuid string, payload in
 	m.Called(conceptType, uuid, payload)
 }
 
-func (m *EsServiceMock) PatchUpdateDataWithMetrics(ctx context.Context, conceptType string, uuid string, payload *service.MetricsPayload) {
+func (m *EsServiceMock) PatchUpdateConcept(ctx context.Context, conceptType string, uuid string, payload service.PayloadPatch) {
 	m.Called(ctx, conceptType, uuid, payload)
 }
 

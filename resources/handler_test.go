@@ -11,6 +11,7 @@ import (
 	"context"
 
 	"github.com/Financial-Times/concept-rw-elasticsearch/service"
+	"github.com/Financial-Times/go-logger"
 	tid "github.com/Financial-Times/transactionid-utils-go"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
@@ -25,6 +26,10 @@ var (
 	errTest = errors.New("test error")
 )
 
+func init() {
+	logger.InitLogger("test-concept-rw-elasticsearch", "debug")
+}
+
 func TestCreateNewESWriter(t *testing.T) {
 	dummyEsService := &dummyEsService{}
 
@@ -37,7 +42,7 @@ func TestCreateNewESWriter(t *testing.T) {
 
 func TestCreateNewESWriterWithEmptyWhitelist(t *testing.T) {
 	dummyEsService := &dummyEsService{}
-	allowedTypes := []string{}
+	var allowedTypes []string
 	writerService := NewHandler(dummyEsService, allowedTypes)
 	assert.Equal(t, 0, len(writerService.allowedConceptTypes))
 }
@@ -49,6 +54,7 @@ func TestLoadData(t *testing.T) {
 		payload string
 		status  int
 		msg     string
+		noop    bool
 	}{
 		{
 			name:    "Succesful write",
@@ -62,6 +68,14 @@ func TestLoadData(t *testing.T) {
 			payload: `{"prefUUID":"8ff7dfef-0330-3de0-b37a-2d6aa9c98580","prefLabel":"Smartlogics Brands PrefLabel","type":"Brand","strapline":"Some strapline","descriptionXML":"Some description","_imageUrl":"Some image url","sourceRepresentations":[{"uuid":"4ebbd9c4-3bb7-4d18-a14c-4c45aac5d966","prefLabel":"TMEs PrefLabel","type":"Brand","authority":"TME","authorityValue":"745212"},{"uuid":"56388858-38d6-4dfc-a001-506394259b51","prefLabel":"Smartlogics Brands PrefLabel","type":"Brand","authority":"Smartlogic","authorityValue":"123456789","lastModifiedEpoch":1498127042,"strapline":"Some strapline","descriptionXML":"Some description","_imageUrl":"Some image url"}]}`,
 			status:  http.StatusOK,
 			msg:     `{"message":"Concept written successfully"}`,
+			path:    "/valid-type/8ff7dfef-0330-3de0-b37a-2d6aa9c98580",
+		},
+		{
+			name:    "Model dropped",
+			payload: `{"prefUUID":"8ff7dfef-0330-3de0-b37a-2d6aa9c98580","prefLabel":"Smartlogics Brands PrefLabel","type":"Brand","strapline":"Some strapline","descriptionXML":"Some description","_imageUrl":"Some image url","sourceRepresentations":[{"uuid":"4ebbd9c4-3bb7-4d18-a14c-4c45aac5d966","prefLabel":"TMEs PrefLabel","type":"Brand","authority":"TME","authorityValue":"745212"},{"uuid":"56388858-38d6-4dfc-a001-506394259b51","prefLabel":"Smartlogics Brands PrefLabel","type":"Brand","authority":"Smartlogic","authorityValue":"123456789","lastModifiedEpoch":1498127042,"strapline":"Some strapline","descriptionXML":"Some description","_imageUrl":"Some image url"}]}`,
+			status:  http.StatusNotModified,
+			msg:     `{"message":"Concept dropped"}`,
+			noop:    true,
 			path:    "/valid-type/8ff7dfef-0330-3de0-b37a-2d6aa9c98580",
 		},
 		{
@@ -172,22 +186,24 @@ func TestLoadData(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		req, err := http.NewRequest("PUT", tc.path, bytes.NewReader([]byte(tc.payload)))
-		require.NoError(t, err, `Current test "%v"`, tc.name)
+		t.Run(tc.name, func(t *testing.T) {
+			req, err := http.NewRequest("PUT", tc.path, bytes.NewReader([]byte(tc.payload)))
+			require.NoError(t, err, `Current test "%v"`, tc.name)
 
-		rr := httptest.NewRecorder()
+			rr := httptest.NewRecorder()
 
-		dummyEsService := &dummyEsService{}
-		writerService := NewHandler(dummyEsService, []string{"valid-type"})
+			dummyEsService := &dummyEsService{noop: tc.noop}
+			writerService := NewHandler(dummyEsService, []string{"valid-type"})
 
-		servicesRouter := mux.NewRouter()
-		servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.LoadData).Methods("PUT")
-		servicesRouter.HandleFunc("/bulk/{concept-type}/{id}", writerService.LoadBulkData).Methods("PUT")
-		servicesRouter.HandleFunc("/metrics/{concept-type}/{id}", writerService.LoadMetrics).Methods("PUT")
-		servicesRouter.ServeHTTP(rr, req)
+			servicesRouter := mux.NewRouter()
+			servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.LoadData).Methods("PUT")
+			servicesRouter.HandleFunc("/bulk/{concept-type}/{id}", writerService.LoadBulkData).Methods("PUT")
+			servicesRouter.HandleFunc("/metrics/{concept-type}/{id}", writerService.LoadMetrics).Methods("PUT")
+			servicesRouter.ServeHTTP(rr, req)
 
-		assert.Equal(t, tc.status, rr.Code, `Current test "%v"`, tc.name)
-		assert.JSONEq(t, tc.msg, rr.Body.String(), `Current test "%v"`, tc.name)
+			assert.Equal(t, tc.status, rr.Code, `Current test "%v"`, tc.name)
+			assert.JSONEq(t, tc.msg, rr.Body.String(), `Current test "%v"`, tc.name)
+		})
 	}
 }
 
@@ -210,20 +226,22 @@ func TestLoadDataEsClientServerErrors(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		req, err := http.NewRequest("PUT", "/valid-type/8ff7dfef-0330-3de0-b37a-2d6aa9c98580", bytes.NewReader([]byte(`{"uuid":"8ff7dfef-0330-3de0-b37a-2d6aa9c98580","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report","type":"Genre"}`)))
-		require.NoError(t, err)
+		t.Run(tc.err.Error(), func(t *testing.T) {
+			req, err := http.NewRequest("PUT", "/valid-type/8ff7dfef-0330-3de0-b37a-2d6aa9c98580", bytes.NewReader([]byte(`{"uuid":"8ff7dfef-0330-3de0-b37a-2d6aa9c98580","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report","type":"Genre"}`)))
+			require.NoError(t, err)
 
-		rr := httptest.NewRecorder()
+			rr := httptest.NewRecorder()
 
-		dummyEsService := &dummyEsService{returnsError: tc.err}
-		writerService := NewHandler(dummyEsService, []string{"valid-type"})
+			dummyEsService := &dummyEsService{returnsError: tc.err}
+			writerService := NewHandler(dummyEsService, []string{"valid-type"})
 
-		servicesRouter := mux.NewRouter()
-		servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.LoadData).Methods("PUT")
-		servicesRouter.ServeHTTP(rr, req)
+			servicesRouter := mux.NewRouter()
+			servicesRouter.HandleFunc("/{concept-type}/{id}", writerService.LoadData).Methods("PUT")
+			servicesRouter.ServeHTTP(rr, req)
 
-		assert.Equal(t, tc.status, rr.Code)
-		assert.JSONEq(t, tc.msg, rr.Body.String())
+			assert.Equal(t, tc.status, rr.Code)
+			assert.JSONEq(t, tc.msg, rr.Body.String())
+		})
 	}
 }
 
@@ -259,7 +277,7 @@ func TestReadData(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 
-	if contentType := rr.HeaderMap.Get("Content-Type"); contentType != "application/json" {
+	if contentType := rr.Header().Get("Content-Type"); contentType != "application/json" {
 		t.Errorf("handler returned wrong content type: got %v want %v", contentType, "application/json")
 	}
 
@@ -411,13 +429,11 @@ func TestDeleteDataEsServerError(t *testing.T) {
 }
 
 func TestProcessConceptModelWithoutTransactionID(t *testing.T) {
-	hook := testLog.NewGlobal()
+	hook := testLog.NewLocal(logger.Logger())
 	testUUID := "8ff7dfef-0330-3de0-b37a-2d6aa9c98580"
 	testBody := []byte(`{"uuid":"8ff7dfef-0330-3de0-b37a-2d6aa9c98580","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report","type":"Genre"}`)
 
-	dummyEsService := &dummyEsService{returnsError: errTest}
-	h := NewHandler(dummyEsService, []string{"genres"})
-	_, payload, err := h.processConceptModel(context.Background(), testUUID, "genres", testBody)
+	_, payload, err := processConceptModel(context.Background(), testUUID, "genres", testBody)
 	assert.NoError(t, err)
 	assert.NotNil(t, payload)
 	assert.NotEmpty(t, payload.(*service.EsConceptModel).PublishReference)
@@ -488,17 +504,21 @@ func TestIDsEndpointReturnsTypes(t *testing.T) {
 }
 
 type dummyEsService struct {
+	noop         bool
 	returnsError error
 	found        bool
 	source       *json.RawMessage
 	ids          chan service.EsIDTypePair
 }
 
-func (service *dummyEsService) LoadData(ctx context.Context, conceptType string, uuid string, payload interface{}) (*elastic.IndexResponse, error) {
+func (service *dummyEsService) LoadData(ctx context.Context, conceptType string, uuid string, payload service.EsModel) (bool, *elastic.IndexResponse, error) {
 	if service.returnsError != nil {
-		return nil, service.returnsError
+		return false, nil, service.returnsError
 	}
-	return &elastic.IndexResponse{}, nil
+	if service.noop {
+		return false, nil, nil
+	}
+	return true, &elastic.IndexResponse{}, nil
 }
 
 func (service *dummyEsService) CleanupData(ctx context.Context, concept service.Concept) {
@@ -522,7 +542,7 @@ func (service *dummyEsService) LoadBulkData(conceptType string, uuid string, pay
 
 }
 
-func (service *dummyEsService) PatchUpdateDataWithMetrics(ctx context.Context, conceptType string, uuid string, payload *service.MetricsPayload) {
+func (service *dummyEsService) PatchUpdateConcept(ctx context.Context, conceptType string, uuid string, payload service.PayloadPatch) {
 
 }
 

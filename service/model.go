@@ -10,6 +10,8 @@ type Concept interface {
 	PreferredUUID() string
 }
 
+type PayloadPatch interface{}
+
 type ConceptModel struct {
 	UUID                   string                 `json:"uuid"`
 	DirectType             string                 `json:"type"`
@@ -21,21 +23,36 @@ type ConceptModel struct {
 	ScopeNote              string                 `json:"scopeNote,omitempty"`
 }
 
+type AggregateMembershipRole struct {
+	RoleUUID        string `json:"membershipRoleUUID,omitempty"`
+	InceptionDate   string `json:"inceptionDate,omitempty"`
+	TerminationDate string `json:"terminationDate,omitempty"`
+}
+
 type AggregateConceptModel struct {
-	PrefUUID              string          `json:"prefUUID"`
-	DirectType            string          `json:"type"`
-	PrefLabel             string          `json:"prefLabel"`
-	Aliases               []string        `json:"aliases,omitempty"`
+	// Required fields
+	PrefUUID   string `json:"prefUUID"`
+	DirectType string `json:"type"`
+	PrefLabel  string `json:"prefLabel"`
+	// Additional fields
+	Aliases   []string `json:"aliases,omitempty"`
+	ScopeNote string   `json:"scopeNote,omitempty"`
+	// Membership
+	MembershipRoles  []AggregateMembershipRole `json:"membershipRoles,omitempty"`
+	OrganisationUUID string                    `json:"organisationUUID,omitempty"`
+	PersonUUID       string                    `json:"personUUID,omitempty"`
+	// Organisation
+	IsDeprecated bool `json:"isDeprecated,omitempty"`
+	// Source representations
 	SourceRepresentations []SourceConcept `json:"sourceRepresentations"`
-	IsAuthor              bool            `json:"isAuthor"`
-	IsDeprecated          bool            `json:"isDeprecated,omitempty"`
-	ScopeNote             string          `json:"scopeNote,omitempty"`
 }
 
 type SourceConcept struct {
 	UUID      string `json:"uuid"`
 	Authority string `json:"authority"`
 }
+
+type EsModel interface{}
 
 type EsConceptModel struct {
 	Id               string          `json:"id"`
@@ -52,12 +69,19 @@ type EsConceptModel struct {
 	Metrics          *ConceptMetrics `json:"metrics,omitempty"`
 }
 
+type EsMembershipModel struct {
+	Id             string   `json:"id"`
+	PersonId       string   `json:"personId"`
+	OrganisationId string   `json:"organisationId"`
+	Memberships    []string `json:"memberships"`
+}
+
 type EsIDTypePair struct {
 	ID   string `json:"id,omitempty"`
 	Type string `json:"type,omitempty"`
 }
 
-type MetricsPayload struct {
+type EsConceptModelPatch struct {
 	Metrics *ConceptMetrics `json:"metrics"`
 }
 
@@ -68,6 +92,11 @@ type ConceptMetrics struct {
 type EsPersonConceptModel struct {
 	*EsConceptModel
 	IsFTAuthor string `json:"isFTAuthor"`
+}
+
+type EsPersonConceptPatch struct {
+	Metrics    *ConceptMetrics `json:"metrics"`
+	IsFTAuthor string          `json:"isFTAuthor"`
 }
 
 func (c AggregateConceptModel) PreferredUUID() string {

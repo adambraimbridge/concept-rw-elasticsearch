@@ -4,14 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/sirupsen/logrus"
 	"strconv"
 	"strings"
 	"sync"
 
 	"io"
 
+	log "github.com/Financial-Times/go-logger"
 	tid "github.com/Financial-Times/transactionid-utils-go"
-	log "github.com/sirupsen/logrus"
 	"gopkg.in/olivere/elastic.v5"
 )
 
@@ -19,17 +20,21 @@ var (
 	ErrNoElasticClient = errors.New("no ElasticSearch client available")
 )
 
-const conceptTypeField = "conceptType"
-const uuidField = "uuid"
-const concordedUUIDField = "concordedUUID"
-const prefUUIDField = "prefUUID"
-const statusField = "status"
-const operationField = "operation"
-const writeOperation = "write"
-const deleteOperation = "delete"
-const unknownStatus = "unknown"
-
-const tidNotFound = "not found"
+const (
+	conceptTypeField   = "conceptType"
+	uuidField          = "uuid"
+	concordedUUIDField = "concordedUUID"
+	prefUUIDField      = "prefUUID"
+	statusField        = "status"
+	operationField     = "operation"
+	writeOperation     = "write"
+	deleteOperation    = "delete"
+	unknownStatus      = "unknown"
+	tidNotFound        = "not found"
+	ftOrgUUID          = "7bcfe07b-0fb1-49ce-a5fa-e51d5c01c3e0"
+	columnistUUID      = "7ef75a6a-b6bf-4eb7-a1da-03e0acabef1b"
+	journalistUUID     = "33ee38a4-c677-4952-a141-2ae14da3aedd"
+)
 
 type esService struct {
 	sync.RWMutex
@@ -40,12 +45,12 @@ type esService struct {
 }
 
 type EsService interface {
-	LoadData(ctx context.Context, conceptType string, uuid string, payload interface{}) (*elastic.IndexResponse, error)
+	LoadData(ctx context.Context, conceptType string, uuid string, payload EsModel) (bool, *elastic.IndexResponse, error)
 	ReadData(conceptType string, uuid string) (*elastic.GetResult, error)
 	DeleteData(ctx context.Context, conceptType string, uuid string) (*elastic.DeleteResponse, error)
 	LoadBulkData(conceptType string, uuid string, payload interface{})
 	CleanupData(ctx context.Context, concept Concept)
-	PatchUpdateDataWithMetrics(ctx context.Context, conceptType string, uuid string, payload *MetricsPayload)
+	PatchUpdateConcept(ctx context.Context, conceptType string, uuid string, payload PayloadPatch)
 	CloseBulkProcessor() error
 	GetClusterHealth() (*elastic.ClusterHealthResponse, error)
 	IsIndexReadOnly() (bool, string, error)
@@ -127,7 +132,18 @@ func (es *esService) isIndexReadOnly(settings map[string]interface{}) (bool, err
 	return false, nil
 }
 
-func (es *esService) LoadData(ctx context.Context, conceptType string, uuid string, payload interface{}) (*elastic.IndexResponse, error) {
+func isFtAuthor(memberships []string) bool {
+	for _, m := range memberships {
+		if m == journalistUUID || m == columnistUUID {
+			return true
+		}
+	}
+	return false
+}
+
+func (es *esService) LoadData(ctx context.Context, conceptType string, uuid string, payload EsModel) (
+	updated bool, resp *elastic.IndexResponse, err error) {
+
 	loadDataLog := log.WithField(conceptTypeField, conceptType).
 		WithField(uuidField, uuid).
 		WithField(operationField, writeOperation)
@@ -135,6 +151,7 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 	transactionID, err := tid.GetTransactionIDFromContext(ctx)
 	if err != nil {
 		transactionID = tidNotFound
+		err = nil
 	}
 	loadDataLog = loadDataLog.WithField(tid.TransactionIDKey, transactionID)
 
@@ -143,55 +160,98 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 
 	if err = es.checkElasticClient(); err != nil {
 		loadDataLog.WithError(err).WithField(statusField, unknownStatus).Error("Failed operation to Elasticsearch")
-		return nil, err
+		return updated, resp, err
 	}
 
-	//get metrics to write them back, temporaty until metrics solution fully implemented
-	readResult, err := es.ReadData(conceptType, uuid)
-	var metrics *ConceptMetrics
+	var readResult *elastic.GetResult
+	// Check if membership is FT
+	if conceptType == memberships {
+		emm := payload.(*EsMembershipModel)
+		if emm.OrganisationId != ftOrgUUID || len(emm.Memberships) < 1 || !isFtAuthor(emm.Memberships) { // drop as not FT Author
+			return updated, resp, err
+		}
+
+		readResult, err = es.ReadData(person, emm.PersonId)
+		uuid = emm.PersonId // membership is for person
+	} else {
+		readResult, err = es.ReadData(conceptType, uuid)
+	}
+
+	patchData := getPatchData(err, loadDataLog, conceptType, readResult)
+
+	if conceptType != memberships { // memberships only patch people
+
+		log.Debugf("Writing: %s", uuid)
+		if resp, err = es.elasticClient.Index().
+			Index(es.indexName).
+			Type(conceptType).
+			Id(uuid).
+			BodyJson(payload).
+			Do(ctx); err != nil {
+
+			var status string
+			switch err.(type) {
+			case *elastic.Error:
+				status = strconv.Itoa(err.(*elastic.Error).Status)
+			default:
+				status = unknownStatus
+			}
+
+			loadDataLog.WithError(err).WithField(statusField, status).Error("Failed operation to Elasticsearch")
+			return updated, resp, err
+		}
+		updated = true
+	}
+
+	//check if patchData is empty
+	if patchData != nil {
+		loadDataLog.Debugf("Patching: %s", uuid)
+		if conceptType == memberships {
+			// `patchData` is for a person
+			es.PatchUpdateConcept(ctx, person, uuid, patchData)
+		} else {
+			es.PatchUpdateConcept(ctx, conceptType, uuid, patchData)
+		}
+		updated = true
+	}
+
+	return updated, resp, err
+}
+
+func getPatchData(err error, loadDataLog *logrus.Entry, conceptType string, readResult *elastic.GetResult) (patchData PayloadPatch) {
 	if err != nil {
 		loadDataLog.WithError(err).Error("Failed operation to Elasticsearch, could not retrieve current values before write")
-
+		return patchData
 	} else {
 		//we need to write the annotation count separately as it is sourced from neo.
-		//there is a race condition between the dataload and the metrics patch this will be solved by querying for the latest metrics
-		//from neo before writing the metrics back
-		esConcept := new(EsConceptModel)
-		if readResult.Found {
-			err := json.Unmarshal(*readResult.Source, esConcept)
-			if err != nil {
-				loadDataLog.WithError(err).Error("Failed to read metrics from Elasticsearch")
-			} else {
-				metrics = esConcept.Metrics
+		//there is a race condition between the dataload and the patchData patch this will be solved by querying for the latest patchData
+		//from neo before writing the patchData back
+		switch conceptType {
+		case person, memberships:
+			esConcept := new(EsPersonConceptModel)
+			if readResult.Found {
+				if err := json.Unmarshal(*readResult.Source, esConcept); err != nil {
+					loadDataLog.WithError(err).Error("Failed to read patchData from Elasticsearch")
+					return patchData
+				} else {
+					if conceptType == memberships {
+						return &EsPersonConceptPatch{Metrics: esConcept.Metrics, IsFTAuthor: "true"} // we only process FT members who are FT authors
+					}
+					return &EsPersonConceptPatch{Metrics: esConcept.Metrics, IsFTAuthor: esConcept.IsFTAuthor}
+				}
+			}
+		default:
+			esConcept := new(EsConceptModel)
+			if readResult.Found {
+				if err := json.Unmarshal(*readResult.Source, esConcept); err != nil {
+					loadDataLog.WithError(err).Error("Failed to read patchData from Elasticsearch")
+					return patchData
+				}
+				return &EsConceptModelPatch{Metrics: esConcept.Metrics}
 			}
 		}
 	}
-	resp, err := es.elasticClient.Index().
-		Index(es.indexName).
-		Type(conceptType).
-		Id(uuid).
-		BodyJson(payload).
-		Do(ctx)
-
-	if err != nil {
-		var status string
-		switch err.(type) {
-		case *elastic.Error:
-			status = strconv.Itoa(err.(*elastic.Error).Status)
-		default:
-			status = unknownStatus
-		}
-
-		loadDataLog.WithError(err).WithField(statusField, status).Error("Failed operation to Elasticsearch")
-	}
-
-	//check if metrics is empty
-	if metrics != nil {
-		mpayload := &MetricsPayload{Metrics: metrics}
-		es.PatchUpdateDataWithMetrics(ctx, conceptType, uuid, mpayload)
-	}
-
-	return resp, err
+	return patchData
 }
 
 func (es *esService) checkElasticClient() error {
@@ -229,7 +289,7 @@ func (es *esService) CleanupData(ctx context.Context, concept Concept) {
 	if err != nil {
 		transactionID = tidNotFound
 	}
-	cleanupDataLog = cleanupDataLog.WithField(tid.TransactionIDKey, transactionID)
+	cleanupDataLog = cleanupDataLog.WithTransactionID(transactionID)
 
 	conceptTypeMap, err := es.findConceptTypes(ctx, concept.ConcordedUUIDs())
 	if err != nil {
@@ -322,8 +382,8 @@ func (es *esService) LoadBulkData(conceptType string, uuid string, payload inter
 	es.bulkProcessor.Add(r)
 }
 
-// PatchUpdateDataWithMetrics updates a concept document with metrics. See https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-update.html#_updates_with_a_partial_document
-func (es *esService) PatchUpdateDataWithMetrics(ctx context.Context, conceptType string, uuid string, payload *MetricsPayload) {
+// PatchUpdateConcept updates a concept document with metrics. See https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-update.html#_updates_with_a_partial_document
+func (es *esService) PatchUpdateConcept(ctx context.Context, conceptType string, uuid string, payload PayloadPatch) {
 	r := elastic.NewBulkUpdateRequest().Index(es.indexName).Id(uuid).Type(conceptType).Doc(payload)
 
 	es.RLock()
