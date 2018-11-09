@@ -246,9 +246,11 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 	if patchData != nil {
 		loadDataLog.Debugf("Patching: %s", uuid)
 		if conceptType == memberships {
-			conceptType = person
+			// Patch data is for a person
+			es.PatchUpdateConcept(ctx, person, uuid, patchData)
+		} else {
+			es.PatchUpdateConcept(ctx, conceptType, uuid, patchData)
 		}
-		es.PatchUpdateConcept(ctx, conceptType, uuid, patchData)
 		updated = true
 	}
 
