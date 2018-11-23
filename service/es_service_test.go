@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/Financial-Times/go-logger"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -13,6 +12,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/Financial-Times/go-logger"
 
 	tid "github.com/Financial-Times/transactionid-utils-go"
 	"github.com/satori/go.uuid"
@@ -339,7 +340,7 @@ func TestWritePreservesPatchableDataForPerson(t *testing.T) {
 	ctx := context.Background()
 	_, err = ec.Refresh(indexName).Do(ctx)
 	require.NoError(t, err, "expected successful flush")
-	service.PatchUpdateConcept(ctx, peopleType, testUuid, &EsConceptModelPatch{Metrics: &ConceptMetrics{AnnotationsCount: 1234}})
+	service.PatchUpdateConcept(ctx, peopleType, testUuid, &EsConceptModelPatch{Metrics: &ConceptMetrics{AnnotationsCount: Stats{Total: 1234}}})
 	err = service.bulkProcessor.Flush() // wait for the bulk processor to write the data
 	require.NoError(t, err, "require successful metrics write")
 
@@ -381,7 +382,7 @@ func TestWritePreservesMetrics(t *testing.T) {
 	_, _, _, err = writeDocument(service, organisationsType, testUuid)
 	require.NoError(t, err, "require successful concept write")
 
-	testMetrics := &EsConceptModelPatch{Metrics: &ConceptMetrics{AnnotationsCount: 150000}}
+	testMetrics := &EsConceptModelPatch{Metrics: &ConceptMetrics{AnnotationsCount: Stats{Total: 150000}}}
 	service.PatchUpdateConcept(newTestContext(), organisationsType, testUuid, testMetrics)
 	err = service.bulkProcessor.Flush() // wait for the bulk processor to write the data
 	require.NoError(t, err, "require successful metrics write")
@@ -396,7 +397,8 @@ func TestWritePreservesMetrics(t *testing.T) {
 	json.Unmarshal(*actual.Source, &m)
 
 	actualMetrics := m["metrics"].(map[string]interface{})
-	actualCount := int(actualMetrics["annotationsCount"].(float64))
+	actualAnnotationsCount := actualMetrics["annotationsCount"].(map[string]interface{})
+	actualCount := int(actualAnnotationsCount["total"].(float64))
 	assert.NoError(t, err, "expected concept to contain annotations count")
 	assert.Equal(t, 150000, actualCount)
 }
@@ -798,7 +800,7 @@ func TestMetricsUpdated(t *testing.T) {
 	assert.Equal(t, organisationsType, resp.Type, "concept type")
 	assert.Equal(t, testUUID, resp.Id, "document id")
 
-	testMetrics := &EsConceptModelPatch{Metrics: &ConceptMetrics{AnnotationsCount: 150000}}
+	testMetrics := &EsConceptModelPatch{Metrics: &ConceptMetrics{AnnotationsCount: Stats{Total: 150000}}}
 	service.PatchUpdateConcept(newTestContext(), organisationsType, testUUID, testMetrics)
 
 	service.bulkProcessor.Flush() // wait for the bulk processor to write the data
