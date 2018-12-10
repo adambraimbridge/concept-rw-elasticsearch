@@ -1,11 +1,11 @@
 package service
 
 import (
-	"net/http"
-
 	log "github.com/Financial-Times/go-logger"
 	"github.com/smartystreets/go-aws-auth"
 	"gopkg.in/olivere/elastic.v5"
+	"net/http"
+	"net/url"
 )
 
 type EsAccessConfig struct {
@@ -22,14 +22,20 @@ func NewAccessConfig(accessKey string, secretKey string, endpoint string, tracel
 type AWSSigningTransport struct {
 	HTTPClient  *http.Client
 	Credentials awsauth.Credentials
+	Host string
 }
 
 // RoundTrip implementation
 func (a AWSSigningTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	req.Host = a.Host
 	return a.HTTPClient.Do(awsauth.Sign4(req, a.Credentials))
 }
 
 func newAmazonClient(config EsAccessConfig) (*elastic.Client, error) {
+	u, err := url.Parse(config.esEndpoint)
+	if err != nil {
+		log.Errorf("Failed to parse host=[%v]", err)
+	}
 
 	signingTransport := AWSSigningTransport{
 		Credentials: awsauth.Credentials{
@@ -37,6 +43,7 @@ func newAmazonClient(config EsAccessConfig) (*elastic.Client, error) {
 			SecretAccessKey: config.secretKey,
 		},
 		HTTPClient: http.DefaultClient,
+		Host: u.Host,
 	}
 	signingClient := &http.Client{Transport: http.RoundTripper(signingTransport)}
 
