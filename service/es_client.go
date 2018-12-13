@@ -26,6 +26,7 @@ type AWSSigningTransport struct {
 
 // RoundTrip implementation
 func (a AWSSigningTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	log.Infof("Request.Host=%s", req.Host)
 	return a.HTTPClient.Do(awsauth.Sign4(req, a.Credentials))
 }
 
