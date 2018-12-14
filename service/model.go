@@ -86,12 +86,8 @@ type EsConceptModelPatch struct {
 }
 
 type ConceptMetrics struct {
-	AnnotationsCount Stats `json:"annotationsCount"`
-}
-
-type Stats struct {
-	Recent int64 `json:"recent"`
-	Total  int64 `json:"total"`
+	AnnotationsCount         int `json:"annotationsCount"`
+	PrevWeekAnnotationsCount int `json:"prevWeekAnnotationsCount"`
 }
 
 type EsPersonConceptModel struct {
