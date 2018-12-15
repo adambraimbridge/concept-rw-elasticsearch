@@ -397,8 +397,7 @@ func TestWritePreservesMetrics(t *testing.T) {
 	json.Unmarshal(*actual.Source, &m)
 
 	actualMetrics := m["metrics"].(map[string]interface{})
-	actualAnnotationsCount := actualMetrics["annotationsCount"].(map[string]interface{})
-	actualCount := int(actualAnnotationsCount["total"].(float64))
+	actualCount := int(actualMetrics["annotationsCount"].(float64))
 	assert.NoError(t, err, "expected concept to contain annotations count")
 	assert.Equal(t, 150000, actualCount)
 }
