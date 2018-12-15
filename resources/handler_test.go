@@ -171,7 +171,7 @@ func TestLoadData(t *testing.T) {
 		},
 		{
 			name:    "Metrics are not written for invalid type",
-			payload: `{"metrics":{{"annotationsCount": 796, "prevWeekAnnotationsCount": 79}}`,
+			payload: `{"metrics":{"annotationsCount": 796, "prevWeekAnnotationsCount": 79}`,
 			status:  http.StatusNotFound,
 			msg:     `{"message":"Unsupported or invalid concept type"}`,
 			path:    "/metrics/invalid-type/8ff7dfef-0330-3de0-b37a-2d6aa9c98580",
