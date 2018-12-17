@@ -382,7 +382,7 @@ func TestWritePreservesMetrics(t *testing.T) {
 	_, _, _, err = writeDocument(service, organisationsType, testUuid)
 	require.NoError(t, err, "require successful concept write")
 
-	testMetrics := &EsConceptModelPatch{Metrics: &ConceptMetrics{AnnotationsCount: 15000, PrevWeekAnnotationsCount: 15}}
+	testMetrics := &EsConceptModelPatch{Metrics: &ConceptMetrics{AnnotationsCount: 150000, PrevWeekAnnotationsCount: 15}}
 	service.PatchUpdateConcept(newTestContext(), organisationsType, testUuid, testMetrics)
 	err = service.bulkProcessor.Flush() // wait for the bulk processor to write the data
 	require.NoError(t, err, "require successful metrics write")
