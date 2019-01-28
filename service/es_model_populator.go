@@ -8,9 +8,11 @@ import (
 )
 
 const (
-	person            = "people"
-	memberships       = "memberships"
-	defaultIsFTAuthor = "false"
+	person                  = "people"
+	memberships             = "memberships"
+	organisation            = "organisations"
+	defaultIsFTAuthor       = "false"
+	directTypePublicCompany = "PublicCompany"
 )
 
 func ConvertConceptToESConceptModel(concept ConceptModel, conceptType string, publishRef string) EsModel {
@@ -46,6 +48,14 @@ func ConvertAggregateConceptToESConceptModel(concept AggregateConceptModel, conc
 			EsConceptModel: getEsConcept(concept, conceptType, publishRef),
 			IsFTAuthor:     defaultIsFTAuthor, // default as controlled by memberships concept
 		}
+	case organisation:
+		esConceptModel := getEsConcept(concept, conceptType, publishRef)
+
+		if concept.DirectType == directTypePublicCompany {
+			esConceptModel.CountryCode = concept.CountryCode
+			esConceptModel.CountryOfIncorporation = concept.CountryOfIncorporation
+		}
+		esModel = esConceptModel
 	default:
 		esModel = getEsConcept(concept, conceptType, publishRef)
 	}
