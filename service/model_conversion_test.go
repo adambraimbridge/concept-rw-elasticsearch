@@ -287,8 +287,8 @@ func TestConvertAggregateConceptToESConceptModel(t *testing.T) {
 			assert.Equal(t, testTID, esModel.PublishReference)
 			assert.Equal(t, testModel.esConceptModel.IsDeprecated, esModel.IsDeprecated, fmt.Sprintf("Expected IsDeprecated %t differ from actual IsDeprecated %t", testModel.esConceptModel.IsDeprecated, esModel.IsDeprecated))
 			assert.Equal(t, testModel.esConceptModel.ScopeNote, esModel.ScopeNote, fmt.Sprintf("Expected ScopeNote %s differ from actual ScopeNote %s", testModel.esConceptModel.ScopeNote, esModel.ScopeNote))
-			assert.Equal(t, testModel.esConceptModel.CountryCode, esModel.CountryCode, fmt.Sprintf("Expected CountryCode %s differ from actual CountryCode %s", testModel.esConceptModel.ScopeNote, esModel.ScopeNote))
-			assert.Equal(t, testModel.esConceptModel.CountryOfIncorporation, esModel.CountryOfIncorporation, fmt.Sprintf("Expected CountryOfIncorporation %s differ from actual CountryOfIncorporation %s", testModel.esConceptModel.ScopeNote, esModel.ScopeNote))
+			assert.Equal(t, testModel.esConceptModel.CountryCode, esModel.CountryCode, fmt.Sprintf("Expected CountryCode %s differ from actual CountryCode %s", testModel.esConceptModel.CountryCode, esModel.CountryCode))
+			assert.Equal(t, testModel.esConceptModel.CountryOfIncorporation, esModel.CountryOfIncorporation, fmt.Sprintf("Expected CountryOfIncorporation %s differ from actual CountryOfIncorporation %s", testModel.esConceptModel.CountryOfIncorporation, esModel.CountryOfIncorporation))
 
 			actualLastModified, err := time.Parse(time.RFC3339, esModel.LastModified)
 			assert.NoError(t, err)
