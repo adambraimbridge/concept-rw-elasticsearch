@@ -42,7 +42,9 @@ type AggregateConceptModel struct {
 	OrganisationUUID string                    `json:"organisationUUID,omitempty"`
 	PersonUUID       string                    `json:"personUUID,omitempty"`
 	// Organisation
-	IsDeprecated bool `json:"isDeprecated,omitempty"`
+	CountryCode            string `json:"countryCode,omitempty"`
+	CountryOfIncorporation string `json:"countryOfIncorporation,omitempty"`
+	IsDeprecated           bool   `json:"isDeprecated,omitempty"`
 	// Source representations
 	SourceRepresentations []SourceConcept `json:"sourceRepresentations"`
 }
@@ -55,18 +57,20 @@ type SourceConcept struct {
 type EsModel interface{}
 
 type EsConceptModel struct {
-	Id               string          `json:"id"`
-	ApiUrl           string          `json:"apiUrl"`
-	PrefLabel        string          `json:"prefLabel"`
-	Types            []string        `json:"types"`
-	Authorities      []string        `json:"authorities"`
-	DirectType       string          `json:"directType"`
-	Aliases          []string        `json:"aliases,omitempty"`
-	LastModified     string          `json:"lastModified"`
-	PublishReference string          `json:"publishReference"`
-	IsDeprecated     bool            `json:"isDeprecated,omitempty"` // stored only if this is true
-	ScopeNote        string          `json:"scopeNote,omitempty"`
-	Metrics          *ConceptMetrics `json:"metrics,omitempty"`
+	Id                     string          `json:"id"`
+	ApiUrl                 string          `json:"apiUrl"`
+	PrefLabel              string          `json:"prefLabel"`
+	Types                  []string        `json:"types"`
+	Authorities            []string        `json:"authorities"`
+	DirectType             string          `json:"directType"`
+	Aliases                []string        `json:"aliases,omitempty"`
+	LastModified           string          `json:"lastModified"`
+	PublishReference       string          `json:"publishReference"`
+	IsDeprecated           bool            `json:"isDeprecated,omitempty"` // stored only if this is true
+	ScopeNote              string          `json:"scopeNote,omitempty"`
+	CountryCode            string          `json:"countryCode,omitempty"`
+	CountryOfIncorporation string          `json:"countryOfIncorporation,omitempty"`
+	Metrics                *ConceptMetrics `json:"metrics,omitempty"`
 }
 
 type EsMembershipModel struct {
