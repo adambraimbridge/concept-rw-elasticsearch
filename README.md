@@ -32,6 +32,11 @@ go test -race ./...
 
 Either set the environment variable `ELASTICSEARCH_TEST_URL` to the URL of an ElasticSearch instance, or run with `-short` to skip integration tests.
 
+To run elasticsearch locally with docker execute:
+```
+docker run -p 9200:9200 -e "http.host=0.0.0.0" -e "transport.host=127.0.0.1" -e "xpack.security.enabled=false"  docker.elastic.co/elasticsearch/elasticsearch:5.3.3
+```
+
 Writing data to the ElasticSearch instance will create shards. If running a local standalone ElasticSearch instance, this may turn the ElasticSearch status YELLOW. To make it GREEN, make a PUT request to `/_settings` with the following JSON:
 
 ```
@@ -151,10 +156,10 @@ Will return 204 if successful, 404 if not found.
 
 ### -XPUT localhost:8080/{type}/{uuid}/metrics
 
-Given a request body containing concept metrics in JSON, i.e. `{"metrics":{"annotationsCount":1234}}`, this endpoint will patch update the concept with that data. This will overwrite the previous metrics data, but will not change the rest of the document.
+Given a request body containing concept metrics in JSON, i.e. `{"metrics":{"annotationsCount":1234, "prevWeekAnnotationsCount": 123}}`, this endpoint will patch update the concept with that data. This will overwrite the previous metrics data, but will not change the rest of the document.
 
 ```
-curl -XPUT -H'X-Request-Id: tid_example' http://localhost:8080/organisations/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8/metrics --data '{"metrics":{"annotationsCount":1234}}'
+curl -XPUT -H'X-Request-Id: tid_example' http://localhost:8080/organisations/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8/metrics --data '{"metrics":{"annotationsCount":1234, "prevWeekAnnotationsCount": 123}}'
 ```
 
 ## Available HEALTH endpoints:

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/Financial-Times/go-logger"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -13,6 +12,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/Financial-Times/go-logger"
 
 	tid "github.com/Financial-Times/transactionid-utils-go"
 	"github.com/satori/go.uuid"
@@ -339,7 +340,7 @@ func TestWritePreservesPatchableDataForPerson(t *testing.T) {
 	ctx := context.Background()
 	_, err = ec.Refresh(indexName).Do(ctx)
 	require.NoError(t, err, "expected successful flush")
-	service.PatchUpdateConcept(ctx, peopleType, testUuid, &EsConceptModelPatch{Metrics: &ConceptMetrics{AnnotationsCount: 1234}})
+	service.PatchUpdateConcept(ctx, peopleType, testUuid, &EsConceptModelPatch{Metrics: &ConceptMetrics{AnnotationsCount: 1234, PrevWeekAnnotationsCount: 123}})
 	err = service.bulkProcessor.Flush() // wait for the bulk processor to write the data
 	require.NoError(t, err, "require successful metrics write")
 
@@ -364,6 +365,9 @@ func TestWritePreservesPatchableDataForPerson(t *testing.T) {
 	var actual EsPersonConceptModel
 	assert.NoError(t, json.Unmarshal(*p.Source, &actual))
 
+	assert.Equal(t, actual.EsConceptModel.Metrics.AnnotationsCount, 1234)
+	assert.Equal(t, actual.EsConceptModel.Metrics.PrevWeekAnnotationsCount, 123)
+
 	previous.PrefLabel = payload.PrefLabel
 	assert.Equal(t, previous, actual)
 }
@@ -381,7 +385,7 @@ func TestWritePreservesMetrics(t *testing.T) {
 	_, _, _, err = writeDocument(service, organisationsType, testUuid)
 	require.NoError(t, err, "require successful concept write")
 
-	testMetrics := &EsConceptModelPatch{Metrics: &ConceptMetrics{AnnotationsCount: 150000}}
+	testMetrics := &EsConceptModelPatch{Metrics: &ConceptMetrics{AnnotationsCount: 150000, PrevWeekAnnotationsCount: 15}}
 	service.PatchUpdateConcept(newTestContext(), organisationsType, testUuid, testMetrics)
 	err = service.bulkProcessor.Flush() // wait for the bulk processor to write the data
 	require.NoError(t, err, "require successful metrics write")
@@ -399,6 +403,9 @@ func TestWritePreservesMetrics(t *testing.T) {
 	actualCount := int(actualMetrics["annotationsCount"].(float64))
 	assert.NoError(t, err, "expected concept to contain annotations count")
 	assert.Equal(t, 150000, actualCount)
+
+	prevWeekAnnotationsCount := int(actualMetrics["prevWeekAnnotationsCount"].(float64))
+	assert.Equal(t, 15, prevWeekAnnotationsCount)
 }
 
 func newBrokenESMock() *httptest.Server {
@@ -798,7 +805,7 @@ func TestMetricsUpdated(t *testing.T) {
 	assert.Equal(t, organisationsType, resp.Type, "concept type")
 	assert.Equal(t, testUUID, resp.Id, "document id")
 
-	testMetrics := &EsConceptModelPatch{Metrics: &ConceptMetrics{AnnotationsCount: 150000}}
+	testMetrics := &EsConceptModelPatch{Metrics: &ConceptMetrics{AnnotationsCount: 15000, PrevWeekAnnotationsCount: 150}}
 	service.PatchUpdateConcept(newTestContext(), organisationsType, testUUID, testMetrics)
 
 	service.bulkProcessor.Flush() // wait for the bulk processor to write the data
@@ -817,6 +824,7 @@ func TestMetricsUpdated(t *testing.T) {
 	assert.Equal(t, payload.PrefLabel, actualModel.PrefLabel, "Expect the original fields to still be intact")
 
 	assert.Equal(t, testMetrics.Metrics.AnnotationsCount, actualModel.Metrics.AnnotationsCount, "Count should be set")
+	assert.Equal(t, testMetrics.Metrics.PrevWeekAnnotationsCount, actualModel.Metrics.PrevWeekAnnotationsCount, "PrevWeekAnnotationsCount should be set")
 }
 
 func waitForClientInjection(service EsService) error {
