@@ -3,7 +3,7 @@ jobs:
   build:
     working_directory: /go/src/github.com/Financial-Times/concept-rw-elasticsearch
     docker:
-      - image: circleci/golang:1.10
+      - image: circleci/golang:1.12
         environment:
           ELASTICSEARCH_TEST_URL: http://localhost:9200
           CIRCLE_TEST_REPORT: /tmp/test-results
