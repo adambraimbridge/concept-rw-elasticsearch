@@ -9,8 +9,8 @@ COPY . ${SRC_FOLDER}
 WORKDIR ${SRC_FOLDER}
 
 # Install dependancies
-RUN go get -u github.com/kardianos/govendor \
-    && $GOPATH/bin/govendor sync
+RUN curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+RUN $GOPATH/bin/dep ensure -vendor-only
 
 # Build app
 RUN VERSION="version=$(git describe --tag --always 2> /dev/null)" \
