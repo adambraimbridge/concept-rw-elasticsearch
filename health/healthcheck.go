@@ -54,7 +54,7 @@ func (service *HealthService) esClusterIsHealthyCheck() fthealth.Check {
 		ID:               "check-elasticsearch-cluster-health",
 		BusinessImpact:   "Full or partial degradation in serving requests from Elasticsearch",
 		Name:             "Check Elasticsearch cluster health",
-		PanicGuide:       "https://dewey.ft.com/up-crwes.html",
+		PanicGuide:       "https://runbooks.in.ft.com/up-crwes",
 		Severity:         1,
 		TechnicalSummary: "Elasticsearch cluster is not healthy. Details on /__health-details",
 		Checker:          service.healthChecker,
@@ -77,7 +77,7 @@ func (service *HealthService) esConnectivityHealthyCheck() fthealth.Check {
 		ID:               "check-connectivity-to-elasticsearch-cluster",
 		BusinessImpact:   "Concepts could not be read from or written to Elasticsearch",
 		Name:             "Check connectivity to the Elasticsearch cluster",
-		PanicGuide:       "https://dewey.ft.com/up-crwes.html",
+		PanicGuide:       "https://runbooks.in.ft.com/up-crwes",
 		Severity:         1,
 		TechnicalSummary: "Connection to Elasticsearch cluster could not be created. Please check your AWS credentials.",
 		Checker:          service.esConnectivityChecker,
@@ -97,7 +97,7 @@ func (service *HealthService) indexIsWriteableCheck() fthealth.Check {
 		ID:             "check-elasticsearch-index-writeable",
 		BusinessImpact: "Updates to concepts cannot be written to ElasticSearch",
 		Name:           "Check index is writeable",
-		PanicGuide:     "https://dewey.ft.com/up-crwes.html",
+		PanicGuide:     "https://runbooks.in.ft.com/up-crwes",
 		Severity:       2,
 		TechnicalSummary: `Elasticsearch index is locked for writing.
 		This may be because the reindexer is creating a new index version, in which case this service will become healthy
