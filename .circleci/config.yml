@@ -8,7 +8,7 @@ jobs:
           ELASTICSEARCH_TEST_URL: http://localhost:9200
           CIRCLE_TEST_REPORT: /tmp/test-results
           CIRCLE_COVERAGE_REPORT: /tmp/coverage-results
-      - image:  elasticsearch:5.1
+      - image:  elasticsearch:5.3.3
     steps:
       - checkout
       - run:
