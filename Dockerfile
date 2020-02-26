@@ -1,12 +1,10 @@
 FROM golang:1
 
-ENV PROJECT="concept-rw-elasticsearch"
-ENV ORG_PATH="github.com/Financial-Times"
-ENV SRC_FOLDER="${GOPATH}/src/${ORG_PATH}/${PROJECT}"
+ENV PROJECT=concept-rw-elasticsearch
 ENV BUILDINFO_PACKAGE="github.com/Financial-Times/service-status-go/buildinfo."
 
-COPY . ${SRC_FOLDER}
-WORKDIR ${SRC_FOLDER}
+COPY . /${PROJECT}/
+WORKDIR /${PROJECT}
 
 # Build app
 RUN VERSION="version=$(git describe --tag --always 2> /dev/null)" \
