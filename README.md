@@ -14,17 +14,17 @@ The taken approach to access AES (Amazon Elasticsearch Service):
 
 If you need to set-up your elasticsearch first, please see some instructions [here](https://github.com/Financial-Times/concept-rw-elasticsearch/blob/master/mapping_readme.md).
 
-## How to build
+## Installation
+
+Download the source code, dependencies and build the binary:
 
 ```
-curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-mkdir $GOPATH/src/github.com/Financial-Times/concept-rw-elasticsearch
-cd $GOPATH/src/github.com/concept-rw-elasticsearch
-git clone https://github.com/Financial-Times/concept-rw-elasticsearch.git
-cd concept-rw-elasticsearch && dep ensure -vendor-only
+go get github.com/Financial-Times/concept-rw-elasticsearch
+cd $GOPATH/src/github.com/Financial-Times/concept-rw-elasticsearch
 go build .
 ```
-## How to test
+
+To run the tests:
 
 ```
 go test -race ./...
@@ -68,29 +68,29 @@ Other parameters:
 - whitelisted-concepts - comma separated values with concept types that are supported by this writer. This is important if we don't want to end-up with automatically defined mapping types in our index.
 - elasticsearch-trace (defaults to false)
 
-The currently supported concept types are: "genres,topics,sections,subjects,locations,brands,organisations,people, alphaville-series".
+The currently supported concept types are: "genres, topics, sections, subjects, locations, brands, organisations, people,  alphaville-series, memberships".
 
 ## Available DATA endpoints:
 
 localhost:8080/{type}/{uuid}
 
 Available types:
-`organisations, brands, genres, locations, people, sections, subjects, topics, alphaville-series`
+`organisations, brands, genres, locations, people, sections, subjects, topics, alphaville-series, memberships`
+
+When a membership arrives for an existing person, it updates the person by setting its `isFTAuthor` flag to `true`. However, there are cases in which a membership arrives first. In this case, the service will create a placeholder person object in Elasticsearch with an `id` and the `isFTAuthor` flag set to `true`. Otherwise, the person will have its `isFTAuthor` flag set to `false`, which is not correct.
 
 ### -XPUT localhost:8080/{type}/{uuid}
 
 A successful PUT results in 200. If a request fails it will return a 500 server error response.
 Invalid json body input, or uuids that don't match between the path and the body will result in a 400 bad request response.
 
-Old concept model
-
+Old concept model example:
 
 `curl -XPUT -H "Content-Type: application/json" -H "X-Request-Id: 123" localhost:8080/organisations/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8 --data '{"uuid":"2384fa7a-d514-3d6a-a0ea-3a711f66d0d8","type":"PublicCompany","properName":"Apple, Inc.","prefLabel":"Apple, Inc.","legalName":"Apple Inc.","shortName":"Apple","hiddenLabel":"APPLE INC","formerNames":["Apple Computer, Inc."],"aliases":["Apple Inc","Apple Computers","Apple","Apple Canada","Apple Computer","Apple Computer, Inc.","APPLE INC","Apple Incorporated","Apple Computer Inc","Apple Inc.","Apple, Inc."],"industryClassification":"7a01c847-a9bd-33be-b991-c6fbd8871a46","alternativeIdentifiers":{"TME":["TnN0ZWluX09OX0ZvcnR1bmVDb21wYW55X0FBUEw=-T04="],"uuids":["2384fa7a-d514-3d6a-a0ea-3a711f66d0d8","2abff0bd-544d-31c3-899b-fba2f60d53dd"],"factsetIdentifier":"000C7F-E","leiCode":"HWUPKR0MPOU8FGXBT394"}}'`
 
 The only fields which will be saved at this point are: uuid (transformed into id), prefLabel, aliases, type and types(generated from type), the others are ignored.
 
-New concept model example
-
+New concept model example:
 
 `curl -XPUT -H "Content-Type: application/json" -H "X-Request-Id: 123" localhost:8080/people/08147da5-8110-407c-a51c-a91855e6b071 --data '{
      "prefUUID": "08147da5-8110-407c-a51c-a91855e6b071",
@@ -132,9 +132,9 @@ New concept model example
 
 ### -XPUT localhost:8080/bulk/{type}/{uuid}
 
-Requests will be executed in batched, according to the bulk processor's configuration.
+Requests will be executed in batch, according to the bulk processor's configuration.
 If the request was correctly "taken" by the application, it will always return 200.
-If the request fails to correctly get written into elasticsearch, the requests will be logged. (Please verify application logs.)
+If the request fails to correctly get written into Elasticsearch, the requests will be logged. (Please verify application logs.)
 
 `curl -XPUT -H "Content-Type: application/json" -H "X-Request-Id: 123" localhost:8080/bulk/organisations/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8 --data '{"uuid":"2384fa7a-d514-3d6a-a0ea-3a711f66d0d8","type":"PublicCompany","properName":"Apple, Inc.","prefLabel":"Apple, Inc.","legalName":"Apple Inc.","shortName":"Apple","hiddenLabel":"APPLE INC","formerNames":["Apple Computer, Inc."],"aliases":["Apple Inc","Apple Computers","Apple","Apple Canada","Apple Computer","Apple Computer, Inc.","APPLE INC","Apple Incorporated","Apple Computer Inc","Apple Inc.","Apple, Inc."],"industryClassification":"7a01c847-a9bd-33be-b991-c6fbd8871a46","alternativeIdentifiers":{"TME":["TnN0ZWluX09OX0ZvcnR1bmVDb21wYW55X0FBUEw=-T04="],"uuids":["2384fa7a-d514-3d6a-a0ea-3a711f66d0d8","2abff0bd-544d-31c3-899b-fba2f60d53dd"],"factsetIdentifier":"000C7F-E","leiCode":"HWUPKR0MPOU8FGXBT394"}}'`
 
@@ -144,7 +144,6 @@ If the request fails to correctly get written into elasticsearch, the requests w
 The internal read should return what got written. If not found, you'll get a 404 response.
 
 `curl -H "X-Request-Id: 123" localhost:8080/organisations/2384fa7a-d514-3d6a-a0ea-3a711f66d0d8`
-
 
 The following fields should be returned: Id, ApiUrl, PrefLabel, Types, DirectType, Aliases(if exists).
 
