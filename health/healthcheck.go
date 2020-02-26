@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Financial-Times/concept-rw-elasticsearch/service"
+	"github.com/Financial-Times/concept-rw-elasticsearch/v2/service"
 	fthealth "github.com/Financial-Times/go-fthealth/v1_1"
 	"github.com/Financial-Times/service-status-go/gtg"
 	log "github.com/sirupsen/logrus"

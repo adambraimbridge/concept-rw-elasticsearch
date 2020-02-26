@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Financial-Times/concept-rw-elasticsearch/health"
-	"github.com/Financial-Times/concept-rw-elasticsearch/resources"
-	"github.com/Financial-Times/concept-rw-elasticsearch/service"
+	"github.com/Financial-Times/concept-rw-elasticsearch/v2/health"
+	"github.com/Financial-Times/concept-rw-elasticsearch/v2/resources"
+	"github.com/Financial-Times/concept-rw-elasticsearch/v2/service"
 	"github.com/Financial-Times/go-logger"
 	"github.com/Financial-Times/http-handlers-go/httphandlers"
 	status "github.com/Financial-Times/service-status-go/httphandlers"

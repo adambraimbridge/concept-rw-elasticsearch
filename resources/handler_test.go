@@ -10,7 +10,7 @@ import (
 
 	"context"
 
-	"github.com/Financial-Times/concept-rw-elasticsearch/service"
+	"github.com/Financial-Times/concept-rw-elasticsearch/v2/service"
 	"github.com/Financial-Times/go-logger"
 	tid "github.com/Financial-Times/transactionid-utils-go"
 	"github.com/gorilla/mux"
