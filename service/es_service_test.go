@@ -16,7 +16,7 @@ import (
 	"github.com/Financial-Times/go-logger"
 
 	tid "github.com/Financial-Times/transactionid-utils-go"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 	testLog "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
@@ -29,6 +29,7 @@ const (
 	indexName         = "concept"
 	organisationsType = "organisations"
 	peopleType        = "people"
+	membershipType    = "memberships"
 	testTID           = "tid_test"
 
 	esStatusCreated = "created"
@@ -79,26 +80,26 @@ func setReadOnly(t *testing.T, client *elastic.Client, indexName string, readOnl
 	assert.NoError(t, err, "expected no error for putting index settings")
 }
 
-func writeDocument(es EsService, t string, u string) (EsConceptModel, bool, *elastic.IndexResponse, error) {
+func writeDocument(es EsService, conceptType string, uuid string) (EsConceptModel, bool, *elastic.IndexResponse, error) {
 	payload := EsConceptModel{
-		Id:         u,
-		ApiUrl:     fmt.Sprintf("%s/%ss/%s", apiBaseUrl, t, u),
-		PrefLabel:  fmt.Sprintf("Test concept %s %s", t, u),
+		Id:         uuid,
+		ApiUrl:     fmt.Sprintf("%s/%s/%s", apiBaseUrl, conceptType, uuid),
+		PrefLabel:  fmt.Sprintf("Test concept %s %s", conceptType, uuid),
 		Types:      []string{},
 		DirectType: "",
 		Aliases:    []string{},
 	}
 
-	update, resp, err := es.LoadData(newTestContext(), t, u, payload)
+	update, resp, err := es.LoadData(newTestContext(), conceptType, uuid, payload)
 	return payload, update, resp, err
 }
 
-func writePersonDocument(es EsService, t string, u string, isFTAuthor string) (EsPersonConceptModel, bool, *elastic.IndexResponse, error) {
+func writePersonDocument(es EsService, conceptType string, uuid string, isFTAuthor string) (EsPersonConceptModel, bool, *elastic.IndexResponse, error) {
 	payload := EsPersonConceptModel{
 		EsConceptModel: &EsConceptModel{
-			Id:         u,
-			ApiUrl:     fmt.Sprintf("%s/%ss/%s", apiBaseUrl, t, u),
-			PrefLabel:  fmt.Sprintf("Test concept %s %s", t, u),
+			Id:         uuid,
+			ApiUrl:     fmt.Sprintf("%s/%ss/%s", apiBaseUrl, conceptType, uuid),
+			PrefLabel:  fmt.Sprintf("Test concept %s %s", conceptType, uuid),
 			Types:      []string{},
 			DirectType: "",
 			Aliases:    []string{},
@@ -106,7 +107,7 @@ func writePersonDocument(es EsService, t string, u string, isFTAuthor string) (E
 		IsFTAuthor: isFTAuthor,
 	}
 
-	updated, resp, err := es.LoadData(newTestContext(), t, u, payload)
+	updated, resp, err := es.LoadData(newTestContext(), conceptType, uuid, payload)
 	return payload, updated, resp, err
 }
 
@@ -123,14 +124,14 @@ func TestWrite(t *testing.T) {
 
 	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
 
-	testUuid := uuid.NewV4().String()
-	_, up, resp, err := writeDocument(service, organisationsType, testUuid)
+	testUUID := uuid.NewV4().String()
+	_, up, resp, err := writeDocument(service, organisationsType, testUUID)
 	assert.NoError(t, err, "expected successful write")
 
 	assert.Equal(t, esStatusCreated, resp.Result, "document should have been created")
 	assert.Equal(t, indexName, resp.Index, "index name")
 	assert.Equal(t, organisationsType, resp.Type, "concept type")
-	assert.Equal(t, testUuid, resp.Id, "document id")
+	assert.Equal(t, testUUID, resp.Id, "document id")
 	assert.True(t, up, "updated was true")
 }
 
@@ -144,14 +145,14 @@ func TestWriteWithGenericError(t *testing.T) {
 	require.NoError(t, err, "require a bulk processor")
 
 	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
-	testUuid := uuid.NewV4().String()
-	_, up, _, err := writeDocument(service, organisationsType, testUuid)
+	testUUID := uuid.NewV4().String()
+	_, up, _, err := writeDocument(service, organisationsType, testUUID)
 	assert.EqualError(t, err, "unexpected end of JSON input")
 	require.NotNil(t, hook.LastEntry())
 	assert.Equal(t, log.ErrorLevel, hook.LastEntry().Level)
 	assert.Equal(t, "Failed operation to Elasticsearch", hook.LastEntry().Message)
 	assert.Equal(t, organisationsType, hook.LastEntry().Data[conceptTypeField])
-	assert.Equal(t, testUuid, hook.LastEntry().Data[uuidField])
+	assert.Equal(t, testUUID, hook.LastEntry().Data[uuidField])
 	assert.EqualError(t, hook.LastEntry().Data["error"].(error), "unexpected end of JSON input")
 	assert.Equal(t, "unknown", hook.LastEntry().Data[statusField])
 	assert.Equal(t, "write", hook.LastEntry().Data[operationField])
@@ -169,14 +170,14 @@ func TestWriteWithESError(t *testing.T) {
 	require.NoError(t, err, "require a bulk processor")
 
 	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
-	testUuid := uuid.NewV4().String()
-	_, up, _, err := writeDocument(service, organisationsType, testUuid)
+	testUUID := uuid.NewV4().String()
+	_, up, _, err := writeDocument(service, organisationsType, testUUID)
 
 	assert.EqualError(t, err, "elastic: Error 500 (Internal Server Error)")
 	assert.Equal(t, log.ErrorLevel, hook.LastEntry().Level)
 	assert.Equal(t, "Failed operation to Elasticsearch", hook.LastEntry().Message)
 	assert.Equal(t, organisationsType, hook.LastEntry().Data[conceptTypeField])
-	assert.Equal(t, testUuid, hook.LastEntry().Data[uuidField])
+	assert.Equal(t, testUUID, hook.LastEntry().Data[uuidField])
 	assert.EqualError(t, hook.LastEntry().Data["error"].(error), "elastic: Error 500 (Internal Server Error)")
 	assert.Equal(t, "500", hook.LastEntry().Data[statusField])
 	assert.Equal(t, "write", hook.LastEntry().Data[operationField])
@@ -192,8 +193,8 @@ func TestWriteMakesPersonAnFTColumnist(t *testing.T) {
 	require.NoError(t, err, "require a bulk processor")
 
 	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
-	testUuid := uuid.NewV4().String()
-	op, _, _, err := writePersonDocument(service, peopleType, testUuid, "false")
+	testUUID := uuid.NewV4().String()
+	op, _, _, err := writePersonDocument(service, peopleType, testUUID, "false")
 	require.NoError(t, err, "expected successful write")
 	ctx := context.Background()
 	_, err = ec.Refresh(indexName).Do(ctx)
@@ -201,11 +202,11 @@ func TestWriteMakesPersonAnFTColumnist(t *testing.T) {
 
 	ftColumnist := &EsMembershipModel{
 		Id:             uuid.NewV4().String(),
-		PersonId:       testUuid,
+		PersonId:       testUUID,
 		OrganisationId: "7bcfe07b-0fb1-49ce-a5fa-e51d5c01c3e0",
 		Memberships:    []string{"7ef75a6a-b6bf-4eb7-a1da-03e0acabef1a", "7ef75a6a-b6bf-4eb7-a1da-03e0acabef1b", "7ef75a6a-b6bf-4eb7-a1da-03e0acabef1c"},
 	}
-	up, _, err := service.LoadData(newTestContext(), "memberships", ftColumnist.Id, ftColumnist)
+	up, _, err := service.LoadData(newTestContext(), membershipType, ftColumnist.Id, ftColumnist)
 	require.NoError(t, err, "expected successful write")
 	_, err = ec.Refresh(indexName).Do(ctx)
 	require.NoError(t, err, "expected successful flush")
@@ -213,7 +214,7 @@ func TestWriteMakesPersonAnFTColumnist(t *testing.T) {
 	require.NoError(t, err, "require successful write")
 	assert.True(t, up, "author was updated")
 
-	p, err := service.ReadData(peopleType, testUuid)
+	p, err := service.ReadData(peopleType, testUUID)
 	assert.NoError(t, err, "expected successful read")
 	var actual EsPersonConceptModel
 	assert.NoError(t, json.Unmarshal(*p.Source, &actual))
@@ -231,8 +232,8 @@ func TestWriteMakesPersonAnFTJournalist(t *testing.T) {
 	require.NoError(t, err, "require a bulk processor")
 
 	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
-	testUuid := uuid.NewV4().String()
-	_, _, _, err = writePersonDocument(service, peopleType, testUuid, "false")
+	testUUID := uuid.NewV4().String()
+	_, _, _, err = writePersonDocument(service, peopleType, testUUID, "false")
 	require.NoError(t, err, "expected successful write")
 	ctx := context.Background()
 	_, err = ec.Refresh(indexName).Do(ctx)
@@ -240,11 +241,11 @@ func TestWriteMakesPersonAnFTJournalist(t *testing.T) {
 
 	ftColumnist := &EsMembershipModel{
 		Id:             uuid.NewV4().String(),
-		PersonId:       testUuid,
+		PersonId:       testUUID,
 		OrganisationId: "7bcfe07b-0fb1-49ce-a5fa-e51d5c01c3e0",
 		Memberships:    []string{"7ef75a6a-b6bf-4eb7-a1da-03e0acabef1a", "33ee38a4-c677-4952-a141-2ae14da3aedd", "7ef75a6a-b6bf-4eb7-a1da-03e0acabef1c"},
 	}
-	up, _, err := service.LoadData(newTestContext(), "memberships", ftColumnist.Id, ftColumnist)
+	up, _, err := service.LoadData(newTestContext(), membershipType, ftColumnist.Id, ftColumnist)
 	require.NoError(t, err, "expected successful write")
 	_, err = ec.Refresh(indexName).Do(ctx)
 	require.NoError(t, err, "expected successful flush")
@@ -252,10 +253,80 @@ func TestWriteMakesPersonAnFTJournalist(t *testing.T) {
 	require.NoError(t, err, "require successful write")
 	assert.True(t, up, "Journalist updated")
 
-	p, err := service.ReadData(peopleType, testUuid)
+	p, err := service.ReadData(peopleType, testUUID)
 	assert.NoError(t, err, "expected successful read")
 	var actual EsPersonConceptModel
 	assert.NoError(t, json.Unmarshal(*p.Source, &actual))
+	assert.Equal(t, "true", actual.IsFTAuthor)
+}
+
+func TestWriteDummyPersonWhenMembershipArrives(t *testing.T) {
+	bulkProcessorConfig := NewBulkProcessorConfig(1, 1, 1, 100*time.Millisecond)
+	esURL := getElasticSearchTestURL(t)
+	ec := getElasticClient(t, esURL)
+	bulkProcessor, err := newBulkProcessor(ec, &bulkProcessorConfig)
+	require.NoError(t, err, "require a bulk processor")
+
+	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
+	testUUID := uuid.NewV4().String()
+	ctx := context.Background()
+
+	membership := &EsMembershipModel{
+		Id:             uuid.NewV4().String(),
+		PersonId:       testUUID,
+		OrganisationId: "7bcfe07b-0fb1-49ce-a5fa-e51d5c01c3e0",
+		Memberships:    []string{"7ef75a6a-b6bf-4eb7-a1da-03e0acabef1a", "33ee38a4-c677-4952-a141-2ae14da3aedd", "7ef75a6a-b6bf-4eb7-a1da-03e0acabef1c"},
+	}
+	up, _, err := service.LoadData(newTestContext(), membershipType, membership.Id, membership)
+	require.NoError(t, err, "expected successful write")
+	_, err = ec.Refresh(indexName).Do(ctx)
+	require.NoError(t, err, "expected successful flush")
+	err = service.bulkProcessor.Flush() // wait for the bulk processor to write the data
+	require.NoError(t, err, "require successful write")
+	assert.True(t, up, "Journalist updated")
+	p, err := service.ReadData(peopleType, testUUID)
+	assert.NoError(t, err, "expected successful read")
+	var actual EsPersonConceptModel
+	assert.NoError(t, json.Unmarshal(*p.Source, &actual))
+	assert.Equal(t, testUUID, actual.Id)
+	assert.Equal(t, "true", actual.IsFTAuthor)
+}
+
+func TestWritePersonAfterMembership(t *testing.T) {
+	bulkProcessorConfig := NewBulkProcessorConfig(1, 1, 1, 100*time.Millisecond)
+	esURL := getElasticSearchTestURL(t)
+	ec := getElasticClient(t, esURL)
+	bulkProcessor, err := newBulkProcessor(ec, &bulkProcessorConfig)
+	require.NoError(t, err, "require a bulk processor")
+
+	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
+	testUUID := uuid.NewV4().String()
+	ctx := context.Background()
+
+	membership := &EsMembershipModel{
+		Id:             uuid.NewV4().String(),
+		PersonId:       testUUID,
+		OrganisationId: "7bcfe07b-0fb1-49ce-a5fa-e51d5c01c3e0",
+		Memberships:    []string{"7ef75a6a-b6bf-4eb7-a1da-03e0acabef1a", "33ee38a4-c677-4952-a141-2ae14da3aedd", "7ef75a6a-b6bf-4eb7-a1da-03e0acabef1c"},
+	}
+	up, _, err := service.LoadData(newTestContext(), membershipType, membership.Id, membership)
+	require.NoError(t, err, "expected successful write")
+	_, err = ec.Refresh(indexName).Do(ctx)
+	require.NoError(t, err, "expected successful flush")
+	err = service.bulkProcessor.Flush() // wait for the bulk processor to write the data
+	require.NoError(t, err, "require successful write")
+	assert.True(t, up, "Journalist updated")
+	op, _, _, err := writeDocument(service, peopleType, testUUID)
+	require.NoError(t, err, "expected successful write")
+	_, err = ec.Refresh(indexName).Do(ctx)
+	require.NoError(t, err, "expected successful flush")
+	p, err := service.ReadData(peopleType, testUUID)
+	assert.NoError(t, err, "expected successful read")
+	var actual EsPersonConceptModel
+	assert.NoError(t, json.Unmarshal(*p.Source, &actual))
+	assert.Equal(t, op.Id, actual.Id)
+	assert.Equal(t, op.ApiUrl, actual.ApiUrl)
+	assert.Equal(t, op.PrefLabel, actual.PrefLabel)
 	assert.Equal(t, "true", actual.IsFTAuthor)
 }
 
@@ -267,8 +338,8 @@ func TestWriteMakesDoesNotMakePersonAnFTAuthor(t *testing.T) {
 	require.NoError(t, err, "require a bulk processor")
 
 	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
-	testUuid := uuid.NewV4().String()
-	_, _, _, err = writePersonDocument(service, peopleType, testUuid, "false")
+	testUUID := uuid.NewV4().String()
+	_, _, _, err = writePersonDocument(service, peopleType, testUUID, "false")
 	require.NoError(t, err, "expected successful write")
 	ctx := context.Background()
 	_, err = ec.Refresh(indexName).Do(ctx)
@@ -282,7 +353,7 @@ func TestWriteMakesDoesNotMakePersonAnFTAuthor(t *testing.T) {
 			name: "Not FT org",
 			model: &EsMembershipModel{
 				Id:             uuid.NewV4().String(),
-				PersonId:       testUuid,
+				PersonId:       testUUID,
 				OrganisationId: "7aafe07b-0fb1-49ce-a5fa-e51d5c01c3e0",
 				Memberships:    []string{"7ef75a6a-b6bf-4eb7-a1da-03e0acabef1a", "33ee38a4-c677-4952-a141-2ae14da3aedd", "7ef75a6a-b6bf-4eb7-a1da-03e0acabef1c"},
 			},
@@ -291,7 +362,7 @@ func TestWriteMakesDoesNotMakePersonAnFTAuthor(t *testing.T) {
 			name: "FT but not a columnist or journalist",
 			model: &EsMembershipModel{
 				Id:             uuid.NewV4().String(),
-				PersonId:       testUuid,
+				PersonId:       testUUID,
 				OrganisationId: "7bcfe07b-0fb1-49ce-a5fa-e51d5c01c3e0",
 				Memberships:    []string{"7af75a6a-b6bf-4eb7-a1da-03e0acabef1a", "33aa38a4-c677-4952-a141-2ae14da3aedd", "7af75a6a-b6bf-4eb7-a1da-03e0acabef1c"},
 			},
@@ -300,7 +371,7 @@ func TestWriteMakesDoesNotMakePersonAnFTAuthor(t *testing.T) {
 			name: "FT but has no memberships",
 			model: &EsMembershipModel{
 				Id:             uuid.NewV4().String(),
-				PersonId:       testUuid,
+				PersonId:       testUUID,
 				OrganisationId: "7bcfe07b-0fb1-49ce-a5fa-e51d5c01c3e0",
 			},
 		},
@@ -308,7 +379,7 @@ func TestWriteMakesDoesNotMakePersonAnFTAuthor(t *testing.T) {
 
 	for _, c := range testCases {
 		t.Run(c.name, func(t *testing.T) {
-			up, _, err := service.LoadData(newTestContext(), "memberships", c.model.Id, c.model)
+			up, _, err := service.LoadData(newTestContext(), membershipType, c.model.Id, c.model)
 			require.NoError(t, err, "expected successful write")
 			_, err = ec.Refresh(indexName).Do(ctx)
 			require.NoError(t, err, "expected successful flush")
@@ -316,7 +387,7 @@ func TestWriteMakesDoesNotMakePersonAnFTAuthor(t *testing.T) {
 			require.NoError(t, err, "require successful write")
 			assert.False(t, up, "should not have updated person")
 
-			p, err := service.ReadData(peopleType, testUuid)
+			p, err := service.ReadData(peopleType, testUUID)
 			assert.NoError(t, err, "expected successful read")
 			var actual EsPersonConceptModel
 			assert.NoError(t, json.Unmarshal(*p.Source, &actual))
@@ -334,17 +405,17 @@ func TestWritePreservesPatchableDataForPerson(t *testing.T) {
 
 	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
 
-	testUuid := uuid.NewV4().String()
-	payload, _, _, err := writePersonDocument(service, peopleType, testUuid, "true")
+	testUUID := uuid.NewV4().String()
+	payload, _, _, err := writePersonDocument(service, peopleType, testUUID, "true")
 	assert.NoError(t, err, "expected successful write")
 	ctx := context.Background()
 	_, err = ec.Refresh(indexName).Do(ctx)
 	require.NoError(t, err, "expected successful flush")
-	service.PatchUpdateConcept(ctx, peopleType, testUuid, &EsConceptModelPatch{Metrics: &ConceptMetrics{AnnotationsCount: 1234, PrevWeekAnnotationsCount: 123}})
+	service.PatchUpdateConcept(ctx, peopleType, testUUID, &EsConceptModelPatch{Metrics: &ConceptMetrics{AnnotationsCount: 1234, PrevWeekAnnotationsCount: 123}})
 	err = service.bulkProcessor.Flush() // wait for the bulk processor to write the data
 	require.NoError(t, err, "require successful metrics write")
 
-	p, err := service.ReadData(peopleType, testUuid)
+	p, err := service.ReadData(peopleType, testUUID)
 	assert.NoError(t, err, "expected successful read")
 	var previous EsPersonConceptModel
 	assert.NoError(t, json.Unmarshal(*p.Source, &previous))
@@ -352,7 +423,7 @@ func TestWritePreservesPatchableDataForPerson(t *testing.T) {
 
 	payload.PrefLabel = "Updated PrefLabel"
 	payload.Metrics = nil // blank metrics
-	up, _, err := service.LoadData(ctx, peopleType, testUuid, payload)
+	up, _, err := service.LoadData(ctx, peopleType, testUUID, payload)
 	require.NoError(t, err, "require successful metrics write")
 	err = service.bulkProcessor.Flush() // wait for the bulk processor to write the data
 	require.NoError(t, err, "require successful metrics write")
@@ -360,7 +431,7 @@ func TestWritePreservesPatchableDataForPerson(t *testing.T) {
 	require.NoError(t, err, "expected successful flush")
 	assert.True(t, up, "person should have been updated")
 
-	p, err = service.ReadData(peopleType, testUuid)
+	p, err = service.ReadData(peopleType, testUUID)
 	assert.NoError(t, err, "expected successful read")
 	var actual EsPersonConceptModel
 	assert.NoError(t, json.Unmarshal(*p.Source, &actual))
@@ -381,20 +452,20 @@ func TestWritePreservesMetrics(t *testing.T) {
 
 	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
 
-	testUuid := uuid.NewV4().String()
-	_, _, _, err = writeDocument(service, organisationsType, testUuid)
+	testUUID := uuid.NewV4().String()
+	_, _, _, err = writeDocument(service, organisationsType, testUUID)
 	require.NoError(t, err, "require successful concept write")
 
 	testMetrics := &EsConceptModelPatch{Metrics: &ConceptMetrics{AnnotationsCount: 150000, PrevWeekAnnotationsCount: 15}}
-	service.PatchUpdateConcept(newTestContext(), organisationsType, testUuid, testMetrics)
+	service.PatchUpdateConcept(newTestContext(), organisationsType, testUUID, testMetrics)
 	err = service.bulkProcessor.Flush() // wait for the bulk processor to write the data
 	require.NoError(t, err, "require successful metrics write")
 
-	_, _, _, err = writeDocument(service, organisationsType, testUuid)
+	_, _, _, _ = writeDocument(service, organisationsType, testUUID)
 	err = service.bulkProcessor.Flush() // wait for the bulk processor to write the data
 	require.NoError(t, err, "require successful concept update")
 
-	actual, err := service.ReadData(organisationsType, testUuid)
+	actual, err := service.ReadData(organisationsType, testUUID)
 	assert.NoError(t, err, "expected successful concept read")
 	m := make(map[string]interface{})
 	json.Unmarshal(*actual.Source, &m)
@@ -456,13 +527,13 @@ func TestRead(t *testing.T) {
 	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
 	defer ec.Stop()
 
-	testUuid := uuid.NewV4().String()
-	payload, _, _, err := writeDocument(service, organisationsType, testUuid)
+	testUUID := uuid.NewV4().String()
+	payload, _, _, err := writeDocument(service, organisationsType, testUUID)
 	assert.NoError(t, err, "expected successful write")
 	_, err = ec.Refresh(indexName).Do(context.Background())
 	require.NoError(t, err, "expected successful flush")
 
-	resp, err := service.ReadData(organisationsType, testUuid)
+	resp, err := service.ReadData(organisationsType, testUUID)
 
 	assert.NoError(t, err, "expected no error for ES read")
 	assert.True(t, resp.Found, "should find a result")
@@ -485,14 +556,14 @@ func TestDeleteWithESError(t *testing.T) {
 
 	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
 
-	testUuid := uuid.NewV4().String()
-	_, err = service.DeleteData(newTestContext(), organisationsType+"s", testUuid)
+	testUUID := uuid.NewV4().String()
+	_, err = service.DeleteData(newTestContext(), organisationsType+"s", testUUID)
 
 	assert.EqualError(t, err, "elastic: Error 500 (Internal Server Error)")
 	assert.Equal(t, log.ErrorLevel, hook.LastEntry().Level)
 	assert.Equal(t, "Failed operation to Elasticsearch", hook.LastEntry().Message)
 	assert.Equal(t, organisationsType+"s", hook.LastEntry().Data[conceptTypeField])
-	assert.Equal(t, testUuid, hook.LastEntry().Data[uuidField])
+	assert.Equal(t, testUUID, hook.LastEntry().Data[uuidField])
 	assert.EqualError(t, hook.LastEntry().Data["error"].(error), "elastic: Error 500 (Internal Server Error)")
 	assert.Equal(t, "500", hook.LastEntry().Data[statusField])
 	assert.Equal(t, "delete", hook.LastEntry().Data[operationField])
@@ -515,11 +586,11 @@ func TestPassClientThroughChannel(t *testing.T) {
 	err := waitForClientInjection(service)
 	require.NoError(t, err, "ES client injection failed or timed out")
 
-	testUuid := uuid.NewV4().String()
-	payload, _, _, err := writeDocument(service, organisationsType, testUuid)
+	testUUID := uuid.NewV4().String()
+	payload, _, _, err := writeDocument(service, organisationsType, testUUID)
 	assert.NoError(t, err, "expected successful write")
 
-	resp, err := service.ReadData(organisationsType, testUuid)
+	resp, err := service.ReadData(organisationsType, testUUID)
 
 	assert.NoError(t, err, "expected no error for ES read")
 	assert.True(t, resp.Found, "should find a result")
@@ -527,7 +598,7 @@ func TestPassClientThroughChannel(t *testing.T) {
 	obj := make(map[string]interface{})
 	err = json.Unmarshal(*resp.Source, &obj)
 
-	assert.Equal(t, fmt.Sprintf("%s/%ss/%s", apiBaseUrl, organisationsType, testUuid), obj["apiUrl"], "apiUrl")
+	assert.Equal(t, fmt.Sprintf("%s/%ss/%s", apiBaseUrl, organisationsType, testUUID), obj["apiUrl"], "apiUrl")
 	assert.Equal(t, payload.ApiUrl, obj["apiUrl"], "apiUrl")
 	assert.Equal(t, payload.PrefLabel, obj["prefLabel"], "prefLabel")
 }
@@ -572,8 +643,8 @@ func TestDeleteNotFoundConcept(t *testing.T) {
 
 	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
 
-	testUuid := uuid.NewV4().String()
-	resp, err := service.DeleteData(newTestContext(), organisationsType+"s", testUuid)
+	testUUID := uuid.NewV4().String()
+	resp, _ := service.DeleteData(newTestContext(), organisationsType+"s", testUUID)
 
 	assert.False(t, resp.Found, "document is not found")
 
@@ -591,15 +662,15 @@ func TestDeleteWithGenericError(t *testing.T) {
 	assert.NoError(t, err, "expected no error for ES client")
 	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
 
-	testUuid := uuid.NewV4().String()
+	testUUID := uuid.NewV4().String()
 
-	_, err = service.DeleteData(newTestContext(), organisationsType+"s", testUuid)
+	_, err = service.DeleteData(newTestContext(), organisationsType+"s", testUUID)
 
 	assert.EqualError(t, err, "unexpected end of JSON input")
 	assert.Equal(t, log.ErrorLevel, hook.LastEntry().Level)
 	assert.Equal(t, "Failed operation to Elasticsearch", hook.LastEntry().Message)
 	assert.Equal(t, organisationsType+"s", hook.LastEntry().Data[conceptTypeField])
-	assert.Equal(t, testUuid, hook.LastEntry().Data[uuidField])
+	assert.Equal(t, testUUID, hook.LastEntry().Data[uuidField])
 	assert.EqualError(t, hook.LastEntry().Data["error"].(error), "unexpected end of JSON input")
 	assert.Equal(t, "unknown", hook.LastEntry().Data[statusField])
 	assert.Equal(t, "delete", hook.LastEntry().Data[operationField])
@@ -708,7 +779,7 @@ func TestDeprecationFlagTrue(t *testing.T) {
 	testUUID := uuid.NewV4().String()
 	payload := EsConceptModel{
 		Id:           testUUID,
-		ApiUrl:       fmt.Sprintf("%s/%ss/%s", apiBaseUrl, organisationsType, testUUID),
+		ApiUrl:       fmt.Sprintf("%s/%s/%s", apiBaseUrl, organisationsType, testUUID),
 		PrefLabel:    fmt.Sprintf("Test concept %s %s", organisationsType, testUUID),
 		Types:        []string{},
 		DirectType:   "",
@@ -863,9 +934,9 @@ func TestGetAllIds(t *testing.T) {
 	}
 
 	for i := 0; i < max; i++ {
-		testUuid := uuid.NewV4().String()
-		expected[i] = testUuid
-		ids <- testUuid
+		testUUID := uuid.NewV4().String()
+		expected[i] = testUUID
+		ids <- testUUID
 	}
 
 	close(ids)
