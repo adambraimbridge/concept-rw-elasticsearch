@@ -57,14 +57,14 @@ func TestLoadData(t *testing.T) {
 		noop    bool
 	}{
 		{
-			name:    "Succesful write",
+			name:    "Successful write",
 			payload: `{"uuid":"8ff7dfef-0330-3de0-b37a-2d6aa9c98580","alternativeIdentifiers":{"TME":["Mg==-R2VucmVz"],"uuids":["8ff7dfef-0330-3de0-b37a-2d6aa9c98580"]},"prefLabel":"Market Report","type":"Genre"}`,
 			status:  http.StatusOK,
 			msg:     `{"message":"Concept written successfully"}`,
 			path:    "/valid-type/8ff7dfef-0330-3de0-b37a-2d6aa9c98580",
 		},
 		{
-			name:    "Succesful aggregate model write",
+			name:    "Successful aggregate model write",
 			payload: `{"prefUUID":"8ff7dfef-0330-3de0-b37a-2d6aa9c98580","prefLabel":"Smartlogics Brands PrefLabel","type":"Brand","strapline":"Some strapline","descriptionXML":"Some description","_imageUrl":"Some image url","sourceRepresentations":[{"uuid":"4ebbd9c4-3bb7-4d18-a14c-4c45aac5d966","prefLabel":"TMEs PrefLabel","type":"Brand","authority":"TME","authorityValue":"745212"},{"uuid":"56388858-38d6-4dfc-a001-506394259b51","prefLabel":"Smartlogics Brands PrefLabel","type":"Brand","authority":"Smartlogic","authorityValue":"123456789","lastModifiedEpoch":1498127042,"strapline":"Some strapline","descriptionXML":"Some description","_imageUrl":"Some image url"}]}`,
 			status:  http.StatusOK,
 			msg:     `{"message":"Concept written successfully"}`,
