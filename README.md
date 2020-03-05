@@ -77,7 +77,9 @@ localhost:8080/{type}/{uuid}
 Available types:
 `organisations, brands, genres, locations, people, sections, subjects, topics, alphaville-series, memberships`
 
-When a membership arrives for an existing person, it updates the person by setting its `isFTAuthor` flag to `true`. However, there are cases in which a membership arrives first. In this case, the service will create a placeholder person object in Elasticsearch with an `id` and the `isFTAuthor` flag set to `true`. Otherwise, the person will have its `isFTAuthor` flag set to `false`, which is not correct.
+Membership concepts are a special case. Only FT memberships are handled and they are not written into Elasticsearch, but modify the person concept entry associated with that membership. All other memberships are skipped.
+
+When a membership concept with `organisationUUID` FT (`7bcfe07b-0fb1-49ce-a5fa-e51d5c01c3e0`) and `membershipRoleUUID` either columnist (`7ef75a6a-b6bf-4eb7-a1da-03e0acabef1b`) or journalist (`33ee38a4-c677-4952-a141-2ae14da3aedd`) is sent to the service, the `isFTAuthor` field for the person is set to `true`. If there is no record for that person UUID, the service will create a placeholder person object in Elasticsearch with only the `id`, `lastModified` and `isFTAuthor` fields set. 
 
 ### -XPUT localhost:8080/{type}/{uuid}
 
