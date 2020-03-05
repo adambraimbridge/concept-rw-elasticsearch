@@ -24,11 +24,20 @@ cd $GOPATH/src/github.com/Financial-Times/concept-rw-elasticsearch
 go build .
 ```
 
-To run the tests:
+## Testing
+
+- To run the unit tests:
 
 ```
 go test -race ./...
 ```
+
+- To run unit and integration tests:
+
+```
+go test -tags=integration -count=1 -race ./...
+```
+
 
 Either set the environment variable `ELASTICSEARCH_TEST_URL` to the URL of an ElasticSearch instance, or run with `-short` to skip integration tests.
 
