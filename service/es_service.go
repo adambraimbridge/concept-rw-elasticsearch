@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/sirupsen/logrus"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/sirupsen/logrus"
 
 	"io"
 
@@ -170,37 +171,25 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 		if emm.OrganisationId != ftOrgUUID || len(emm.Memberships) < 1 || !isFtAuthor(emm.Memberships) { // drop as not FT Author
 			return updated, resp, err
 		}
-
 		readResult, err = es.ReadData(person, emm.PersonId)
 		uuid = emm.PersonId // membership is for person
 	} else {
 		readResult, err = es.ReadData(conceptType, uuid)
 	}
 
-	patchData := getPatchData(err, loadDataLog, conceptType, readResult)
+	patchData := getPatchData(err, loadDataLog, conceptType, uuid, readResult)
 
-	if conceptType != memberships { // memberships only patch people
-
-		log.Debugf("Writing: %s", uuid)
-		if resp, err = es.elasticClient.Index().
-			Index(es.indexName).
-			Type(conceptType).
-			Id(uuid).
-			BodyJson(payload).
-			Do(ctx); err != nil {
-
-			var status string
-			switch err.(type) {
-			case *elastic.Error:
-				status = strconv.Itoa(err.(*elastic.Error).Status)
-			default:
-				status = unknownStatus
-			}
-
-			loadDataLog.WithError(err).WithField(statusField, status).Error("Failed operation to Elasticsearch")
-			return updated, resp, err
+	if readResult != nil && !readResult.Found && conceptType == memberships {
+		//we write a dummy person
+		p := EsPersonConceptModel{
+			EsConceptModel: &EsConceptModel{
+				Id: uuid,
+			},
+			IsFTAuthor: "true",
 		}
-		updated = true
+		updated, resp, err = es.writeToEs(ctx, loadDataLog, person, uuid, p)
+	} else {
+		updated, resp, err = es.writeToEs(ctx, loadDataLog, conceptType, uuid, payload)
 	}
 
 	//check if patchData is empty
@@ -214,11 +203,35 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 		}
 		updated = true
 	}
+	return updated, resp, err
+}
+
+func (es *esService) writeToEs(ctx context.Context, loadDataLog *logrus.Entry, conceptType string, uuid string, payload EsModel) (updated bool, resp *elastic.IndexResponse, err error) {
+	log.Debugf("Writing: %s", uuid)
+	if resp, err = es.elasticClient.Index().
+		Index(es.indexName).
+		Type(conceptType).
+		Id(uuid).
+		BodyJson(payload).
+		Do(ctx); err != nil {
+
+		var status string
+		switch err := err.(type) {
+		case *elastic.Error:
+			status = strconv.Itoa(err.Status)
+		default:
+			status = unknownStatus
+		}
+
+		loadDataLog.WithError(err).WithField(statusField, status).Error("Failed operation to Elasticsearch")
+		return updated, resp, err
+	}
+	updated = true
 
 	return updated, resp, err
 }
 
-func getPatchData(err error, loadDataLog *logrus.Entry, conceptType string, readResult *elastic.GetResult) (patchData PayloadPatch) {
+func getPatchData(err error, loadDataLog *logrus.Entry, conceptType string, uuid string, readResult *elastic.GetResult) (patchData PayloadPatch) {
 	if err != nil {
 		loadDataLog.WithError(err).Error("Failed operation to Elasticsearch, could not retrieve current values before write")
 		return patchData
