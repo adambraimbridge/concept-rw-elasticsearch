@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -183,7 +184,8 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 		//we write a dummy person
 		p := EsPersonConceptModel{
 			EsConceptModel: &EsConceptModel{
-				Id: uuid,
+				Id:           uuid,
+				LastModified: time.Now().Format(time.RFC3339),
 			},
 			IsFTAuthor: "true",
 		}
