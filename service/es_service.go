@@ -210,6 +210,9 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 
 func (es *esService) writeToEs(ctx context.Context, loadDataLog *logrus.Entry, conceptType string, uuid string, payload EsModel) (updated bool, resp *elastic.IndexResponse, err error) {
 	log.Debugf("Writing: %s", uuid)
+	es.Lock()
+	defer es.Lock()
+
 	if resp, err = es.elasticClient.Index().
 		Index(es.indexName).
 		Type(conceptType).
