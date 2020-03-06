@@ -100,7 +100,7 @@ func writePersonDocument(es EsService, conceptType string, uuid string, isFTAuth
 	payload := EsPersonConceptModel{
 		EsConceptModel: &EsConceptModel{
 			Id:         uuid,
-			ApiUrl:     fmt.Sprintf("%s/%ss/%s", apiBaseUrl, conceptType, uuid),
+			ApiUrl:     fmt.Sprintf("%s/%s/%s", apiBaseUrl, conceptType, uuid),
 			PrefLabel:  fmt.Sprintf("Test concept %s %s", conceptType, uuid),
 			Types:      []string{},
 			DirectType: "",
@@ -292,6 +292,7 @@ func TestWriteDummyPersonWhenMembershipArrives(t *testing.T) {
 	assert.NoError(t, json.Unmarshal(*p.Source, &actual))
 	assert.Equal(t, testUUID, actual.Id)
 	assert.Equal(t, "true", actual.IsFTAuthor)
+	assert.Equal(t, time.Now().Format(time.RFC3339), actual.LastModified)
 }
 
 func TestWritePersonAfterMembership(t *testing.T) {
@@ -600,7 +601,7 @@ func TestPassClientThroughChannel(t *testing.T) {
 	obj := make(map[string]interface{})
 	err = json.Unmarshal(*resp.Source, &obj)
 
-	assert.Equal(t, fmt.Sprintf("%s/%ss/%s", apiBaseUrl, organisationsType, testUUID), obj["apiUrl"], "apiUrl")
+	assert.Equal(t, fmt.Sprintf("%s/%s/%s", apiBaseUrl, organisationsType, testUUID), obj["apiUrl"], "apiUrl")
 	assert.Equal(t, payload.ApiUrl, obj["apiUrl"], "apiUrl")
 	assert.Equal(t, payload.PrefLabel, obj["prefLabel"], "prefLabel")
 }
