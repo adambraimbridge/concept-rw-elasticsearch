@@ -1,7 +1,7 @@
 version: 2
 jobs:
   build:
-    working_directory: /go/src/github.com/Financial-Times/concept-rw-elasticsearch
+    working_directory: /concept-rw-elasticsearch
     docker:
       - image: golang:1
         environment:
@@ -31,11 +31,10 @@ jobs:
           command: golangci-lint run --config=.golangci.yml --new-from-rev=master
       - run:
           name: Run Tests
-          command: |
-            go test -tags=integration -mod=readonly -v -race -cover -coverprofile=${CIRCLE_COVERAGE_REPORT}/coverage.out ./... | go-junit-report > ${CIRCLE_TEST_REPORT}/junit.xml
+          command: go test -mod=readonly -v -race -tags=integration -cover -coverprofile=${CIRCLE_COVERAGE_REPORT}/coverage.out ./... | go-junit-report > ${CIRCLE_TEST_REPORT}/junit.xml
       - run:
           name: Upload Coverage
-          command: goveralls -coverprofile=$CIRCLE_COVERAGE_REPORT/coverage.out -service=circle-ci -repotoken=$COVERALLS_TOKEN
+          command: goveralls -coverprofile=${CIRCLE_COVERAGE_REPORT}/coverage.out -service=circle-ci -repotoken=${COVERALLS_TOKEN}
       - store_test_results:
           path: /tmp/test-results
   dockerfile:
