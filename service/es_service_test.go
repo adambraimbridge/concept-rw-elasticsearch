@@ -30,7 +30,7 @@ const (
 )
 
 func TestNoElasticClient(t *testing.T) {
-	service := esService{sync.RWMutex{}, nil, nil, "test", nil}
+	service := esService{sync.RWMutex{}, nil, nil, "test", nil, time.Now}
 
 	_, err := service.ReadData("any", "any")
 
@@ -46,7 +46,7 @@ func TestWriteWithGenericError(t *testing.T) {
 	bulkProcessor, err := newBulkProcessor(ec, &bulkProcessorConfig)
 	require.NoError(t, err, "require a bulk processor")
 
-	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
+	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig, time.Now}
 	testUUID := uuid.NewV4().String()
 	_, up, _, err := writeTestDocument(service, organisationsType, testUUID)
 	assert.EqualError(t, err, "unexpected end of JSON input")
@@ -71,7 +71,7 @@ func TestWriteWithESError(t *testing.T) {
 	bulkProcessor, err := newBulkProcessor(ec, &bulkProcessorConfig)
 	require.NoError(t, err, "require a bulk processor")
 
-	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
+	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig, time.Now}
 	testUUID := uuid.NewV4().String()
 	_, up, _, err := writeTestDocument(service, organisationsType, testUUID)
 
@@ -97,7 +97,7 @@ func TestDeleteWithESError(t *testing.T) {
 	)
 	assert.NoError(t, err, "expected no error for ES client")
 
-	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
+	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil, time.Now}
 
 	testUUID := uuid.NewV4().String()
 	_, err = service.DeleteData(newTestContext(), organisationsType+"s", testUUID)
@@ -122,7 +122,7 @@ func TestDeleteWithGenericError(t *testing.T) {
 		elastic.SetSniff(false),
 	)
 	assert.NoError(t, err, "expected no error for ES client")
-	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
+	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil, time.Now}
 
 	testUUID := uuid.NewV4().String()
 
@@ -149,7 +149,7 @@ func TestCleanupErrorLogging(t *testing.T) {
 	)
 	assert.NoError(t, err, "expected no error for ES client")
 
-	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
+	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil, time.Now}
 
 	testUUID1 := uuid.NewV4().String()
 	testUUID2 := uuid.NewV4().String()

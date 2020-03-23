@@ -39,7 +39,7 @@ func TestWrite(t *testing.T) {
 	bulkProcessor, err := newBulkProcessor(ec, &bulkProcessorConfig)
 	require.NoError(t, err, "require a bulk processor")
 
-	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
+	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig, time.Now}
 
 	testUUID := uuid.NewV4().String()
 	_, up, resp, err := writeTestDocument(service, organisationsType, testUUID)
@@ -61,7 +61,7 @@ func TestWriteMakesPersonAnFTColumnist(t *testing.T) {
 	bulkProcessor, err := newBulkProcessor(ec, &bulkProcessorConfig)
 	require.NoError(t, err, "require a bulk processor")
 
-	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
+	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig, time.Now}
 	testUUID := uuid.NewV4().String()
 	op, _, _, err := writeTestPersonDocument(service, peopleType, testUUID, "false")
 	defer deleteTestDocument(t, service, peopleType, testUUID)
@@ -102,7 +102,7 @@ func TestWriteMakesPersonAnFTJournalist(t *testing.T) {
 	bulkProcessor, err := newBulkProcessor(ec, &bulkProcessorConfig)
 	require.NoError(t, err, "require a bulk processor")
 
-	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
+	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig, time.Now}
 	testUUID := uuid.NewV4().String()
 	_, _, _, err = writeTestPersonDocument(service, peopleType, testUUID, "false")
 	defer deleteTestDocument(t, service, peopleType, testUUID)
@@ -139,7 +139,13 @@ func TestWriteDummyPersonWhenMembershipArrives(t *testing.T) {
 	bulkProcessor, err := newBulkProcessor(ec, &bulkProcessorConfig)
 	require.NoError(t, err, "require a bulk processor")
 
-	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
+	getTimeFunc := func() time.Time {
+		res, err := time.Parse(time.RFC3339, testLastModified)
+		require.NoError(t, err)
+		return res
+	}
+
+	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig, getTimeFunc}
 	testUUID := uuid.NewV4().String()
 	ctx := context.Background()
 
@@ -164,7 +170,7 @@ func TestWriteDummyPersonWhenMembershipArrives(t *testing.T) {
 	assert.NoError(t, json.Unmarshal(*p.Source, &actual))
 	assert.Equal(t, testUUID, actual.Id)
 	assert.Equal(t, "true", actual.IsFTAuthor)
-	assert.Equal(t, time.Now().Format(time.RFC3339), actual.LastModified)
+	assert.Equal(t, testLastModified, actual.LastModified)
 }
 
 func TestWritePersonAfterMembership(t *testing.T) {
@@ -174,7 +180,7 @@ func TestWritePersonAfterMembership(t *testing.T) {
 	bulkProcessor, err := newBulkProcessor(ec, &bulkProcessorConfig)
 	require.NoError(t, err, "require a bulk processor")
 
-	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
+	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig, time.Now}
 	testUUID := uuid.NewV4().String()
 	ctx := context.Background()
 
@@ -188,15 +194,18 @@ func TestWritePersonAfterMembership(t *testing.T) {
 	require.NoError(t, err, "expected successful write")
 	_, err = ec.Refresh(indexName).Do(ctx)
 	require.NoError(t, err, "expected successful flush")
-	err = service.bulkProcessor.Flush() // wait for the bulk processor to write the data
-	require.NoError(t, err, "require successful write")
-	assert.True(t, up, "Journalist updated")
+
 	op, _, _, err := writeTestDocument(service, peopleType, testUUID)
 	defer deleteTestDocument(t, service, peopleType, testUUID)
 
 	require.NoError(t, err, "expected successful write")
 	_, err = ec.Refresh(indexName).Do(ctx)
 	require.NoError(t, err, "expected successful flush")
+
+	err = service.bulkProcessor.Flush() // wait for the bulk processor to write the data
+	require.NoError(t, err, "require successful write")
+	assert.True(t, up, "Journalist updated")
+
 	p, err := service.ReadData(peopleType, testUUID)
 	assert.NoError(t, err, "expected successful read")
 	var actual EsPersonConceptModel
@@ -214,7 +223,7 @@ func TestWriteMakesDoesNotMakePersonAnFTAuthor(t *testing.T) {
 	bulkProcessor, err := newBulkProcessor(ec, &bulkProcessorConfig)
 	require.NoError(t, err, "require a bulk processor")
 
-	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
+	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig, time.Now}
 	testUUID := uuid.NewV4().String()
 	_, _, _, err = writeTestPersonDocument(service, peopleType, testUUID, "false")
 	defer deleteTestDocument(t, service, peopleType, testUUID)
@@ -282,7 +291,7 @@ func TestWritePreservesPatchableDataForPerson(t *testing.T) {
 	bulkProcessor, err := newBulkProcessor(ec, &bulkProcessorConfig)
 	require.NoError(t, err, "require a bulk processor")
 
-	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
+	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig, time.Now}
 
 	testUUID := uuid.NewV4().String()
 	payload, _, _, err := writeTestPersonDocument(service, peopleType, testUUID, "true")
@@ -331,7 +340,7 @@ func TestWritePreservesMetrics(t *testing.T) {
 	bulkProcessor, err := newBulkProcessor(ec, &bulkProcessorConfig)
 	require.NoError(t, err, "require a bulk processor")
 
-	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
+	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig, time.Now}
 
 	testUUID := uuid.NewV4().String()
 	_, _, _, err = writeTestDocument(service, organisationsType, testUUID)
@@ -365,7 +374,7 @@ func TestWritePreservesMetrics(t *testing.T) {
 func TestIsReadOnly(t *testing.T) {
 	esURL := getElasticSearchTestURL(t)
 	ec := getElasticClient(t, esURL)
-	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
+	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil, time.Now}
 	defer ec.Stop()
 	readOnly, name, err := service.IsIndexReadOnly()
 	assert.False(t, readOnly, "index should not be read-only")
@@ -384,7 +393,7 @@ func TestIsReadOnly(t *testing.T) {
 func TestIsReadOnlyIndexNotFound(t *testing.T) {
 	esURL := getElasticSearchTestURL(t)
 	ec := getElasticClient(t, esURL)
-	service := &esService{sync.RWMutex{}, ec, nil, "foo", nil}
+	service := &esService{sync.RWMutex{}, ec, nil, "foo", nil, time.Now}
 	defer ec.Stop()
 	readOnly, name, err := service.IsIndexReadOnly()
 	assert.False(t, readOnly, "index should not be read-only")
@@ -399,7 +408,7 @@ func TestRead(t *testing.T) {
 	bulkProcessor, err := newBulkProcessor(ec, &bulkProcessorConfig)
 	require.NoError(t, err, "require a bulk processor")
 
-	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
+	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig, time.Now}
 	defer ec.Stop()
 
 	testUUID := uuid.NewV4().String()
@@ -464,7 +473,7 @@ func TestDelete(t *testing.T) {
 	bulkProcessor, err := newBulkProcessor(ec, &bulkProcessorConfig)
 	require.NoError(t, err, "require a bulk processor")
 
-	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
+	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig, time.Now}
 
 	testUUID := uuid.NewV4().String()
 	_, _, resp, err := writeTestDocument(service, organisationsType, testUUID)
@@ -494,7 +503,7 @@ func TestDeleteNotFoundConcept(t *testing.T) {
 	)
 	assert.NoError(t, err, "expected no error for ES client")
 
-	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
+	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil, time.Now}
 
 	testUUID := uuid.NewV4().String()
 	resp, _ := service.DeleteData(newTestContext(), organisationsType+"s", testUUID)
@@ -512,7 +521,7 @@ func TestCleanup(t *testing.T) {
 	bulkProcessor, err := newBulkProcessor(ec, &bulkProcessorConfig)
 	require.NoError(t, err, "require a bulk processor")
 
-	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
+	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig, time.Now}
 
 	testUUID1 := uuid.NewV4().String()
 	_, _, resp, err := writeTestDocument(service, organisationsType, testUUID1)
@@ -570,7 +579,7 @@ func TestDeprecationFlagTrue(t *testing.T) {
 	bulkProcessor, err := newBulkProcessor(ec, &bulkProcessorConfig)
 	require.NoError(t, err, "require a bulk processor")
 
-	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
+	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig, time.Now}
 
 	testUUID := uuid.NewV4().String()
 	payload := EsConceptModel{
@@ -614,7 +623,7 @@ func TestDeprecationFlagFalse(t *testing.T) {
 	bulkProcessor, err := newBulkProcessor(ec, &bulkProcessorConfig)
 	require.NoError(t, err, "require a bulk processor")
 
-	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
+	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig, time.Now}
 
 	testUUID := uuid.NewV4().String()
 	payload := EsConceptModel{
@@ -658,7 +667,7 @@ func TestMetricsUpdated(t *testing.T) {
 	bulkProcessor, err := newBulkProcessor(ec, &bulkProcessorConfig)
 	require.NoError(t, err, "require a bulk processor")
 
-	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
+	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig, time.Now}
 
 	testUUID := uuid.NewV4().String()
 	payload := EsConceptModel{
@@ -706,7 +715,7 @@ func TestMetricsUpdated(t *testing.T) {
 func TestGetAllIds(t *testing.T) {
 	esURL := getElasticSearchTestURL(t)
 	ec := getElasticClient(t, esURL)
-	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil}
+	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil, time.Now}
 
 	max := 1001
 	expected := make([]string, max)
