@@ -1,49 +1,20 @@
-version: 2
-jobs:
-  build:
-    working_directory: /go/src/github.com/Financial-Times/concept-rw-elasticsearch
-    docker:
-      - image: golang:1
-        environment:
-          ELASTICSEARCH_TEST_URL: http://localhost:9200
-          CIRCLE_TEST_REPORT: /tmp/test-results
-          CIRCLE_COVERAGE_REPORT: /tmp/coverage-results
-      - image:  elasticsearch:5.3
-    steps:
-      - checkout
-      - run:
-          name: External Dependencies
-          command: |
-            go get -u github.com/mattn/goveralls
-            go get -u github.com/jstemmer/go-junit-report
-            curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-      - run:
-          name: Make result folders
-          command: |
-            mkdir -p ${CIRCLE_TEST_REPORT}
-            mkdir -p ${CIRCLE_COVERAGE_REPORT}
-      - run:
-          name: Download vendored dependencies
-          command: dep ensure -v -vendor-only
-      - run:
-          name: Go Build
-          command: go build -v
-      - run:
-          name: Run Tests
-          command: |
-            go test -v -race -cover -coverprofile=${CIRCLE_COVERAGE_REPORT}/coverage.out ./... | go-junit-report > ${CIRCLE_TEST_REPORT}/junit.xml
-      - run:
-          name: Upload Coverage
-          command: goveralls -coverprofile=$CIRCLE_COVERAGE_REPORT/coverage.out -service=circle-ci -repotoken=$COVERALLS_TOKEN
-      - store_test_results:
-          path: /tmp/test-results
-  dockerfile:
-    working_directory: /concept-rw-elasticsearch
-    docker:
-      - image: docker:18
-    steps:
-      - checkout
-      - setup_docker_engine
-      - run:
-          name: Build Dockerfile
-          command: docker build .
+version: 2.1
+
+orbs:
+  ft-golang-ci: financial-times/golang-ci@1
+
+workflows:
+  tests_and_docker:
+    jobs:
+      - ft-golang-ci/build-and-test:
+          name: build-and-test-project
+          executor-name: ft-golang-ci/default-with-elasticsearch
+      - ft-golang-ci/docker-build:
+          name: build-docker-image
+          requires:
+            - build-and-test-project
+  snyk-scanning:
+    jobs:
+      - ft-golang-ci/scan:
+          name: scan-dependencies
+          context: cm-team-snyk
