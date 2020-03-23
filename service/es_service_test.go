@@ -25,7 +25,8 @@ const (
 	indexName         = "concept"
 	organisationsType = "organisations"
 
-	testTID = "tid_test"
+	testTID          = "tid_test"
+	testLastModified = "2020-03-06T13:57:57+02:00"
 )
 
 func TestNoElasticClient(t *testing.T) {
@@ -47,7 +48,7 @@ func TestWriteWithGenericError(t *testing.T) {
 
 	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
 	testUUID := uuid.NewV4().String()
-	_, up, _, err := writeDocument(service, organisationsType, testUUID)
+	_, up, _, err := writeTestDocument(service, organisationsType, testUUID)
 	assert.EqualError(t, err, "unexpected end of JSON input")
 	require.NotNil(t, hook.LastEntry())
 	assert.Equal(t, log.ErrorLevel, hook.LastEntry().Level)
@@ -72,7 +73,7 @@ func TestWriteWithESError(t *testing.T) {
 
 	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
 	testUUID := uuid.NewV4().String()
-	_, up, _, err := writeDocument(service, organisationsType, testUUID)
+	_, up, _, err := writeTestDocument(service, organisationsType, testUUID)
 
 	assert.EqualError(t, err, "elastic: Error 500 (Internal Server Error)")
 	assert.Equal(t, log.ErrorLevel, hook.LastEntry().Level)
@@ -191,14 +192,15 @@ func getElasticClient(t *testing.T, url string) *elastic.Client {
 	return ec
 }
 
-func writeDocument(es EsService, conceptType string, uuid string) (EsConceptModel, bool, *elastic.IndexResponse, error) {
+func writeTestDocument(es EsService, conceptType string, uuid string) (EsConceptModel, bool, *elastic.IndexResponse, error) {
 	payload := EsConceptModel{
-		Id:         uuid,
-		ApiUrl:     fmt.Sprintf("%s/%s/%s", apiBaseURL, conceptType, uuid),
-		PrefLabel:  fmt.Sprintf("Test concept %s %s", conceptType, uuid),
-		Types:      []string{},
-		DirectType: "",
-		Aliases:    []string{},
+		Id:           uuid,
+		ApiUrl:       fmt.Sprintf("%s/%s/%s", apiBaseURL, conceptType, uuid),
+		PrefLabel:    fmt.Sprintf("Test concept %s %s", conceptType, uuid),
+		Types:        []string{},
+		DirectType:   "",
+		Aliases:      []string{},
+		LastModified: testLastModified,
 	}
 
 	update, resp, err := es.LoadData(newTestContext(), conceptType, uuid, payload)

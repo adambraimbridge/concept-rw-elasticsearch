@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/Financial-Times/go-logger"
-
 	uuid "github.com/satori/go.uuid"
 	testLog "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
@@ -43,7 +42,9 @@ func TestWrite(t *testing.T) {
 	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
 
 	testUUID := uuid.NewV4().String()
-	_, up, resp, err := writeDocument(service, organisationsType, testUUID)
+	_, up, resp, err := writeTestDocument(service, organisationsType, testUUID)
+	defer deleteTestDocument(t, service, organisationsType, testUUID)
+
 	assert.NoError(t, err, "expected successful write")
 
 	assert.Equal(t, esStatusCreated, resp.Result, "document should have been created")
@@ -62,7 +63,9 @@ func TestWriteMakesPersonAnFTColumnist(t *testing.T) {
 
 	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
 	testUUID := uuid.NewV4().String()
-	op, _, _, err := writePersonDocument(service, peopleType, testUUID, "false")
+	op, _, _, err := writeTestPersonDocument(service, peopleType, testUUID, "false")
+	defer deleteTestDocument(t, service, peopleType, testUUID)
+
 	require.NoError(t, err, "expected successful write")
 	ctx := context.Background()
 	_, err = ec.Refresh(indexName).Do(ctx)
@@ -101,7 +104,8 @@ func TestWriteMakesPersonAnFTJournalist(t *testing.T) {
 
 	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
 	testUUID := uuid.NewV4().String()
-	_, _, _, err = writePersonDocument(service, peopleType, testUUID, "false")
+	_, _, _, err = writeTestPersonDocument(service, peopleType, testUUID, "false")
+	defer deleteTestDocument(t, service, peopleType, testUUID)
 	require.NoError(t, err, "expected successful write")
 	ctx := context.Background()
 	_, err = ec.Refresh(indexName).Do(ctx)
@@ -146,6 +150,8 @@ func TestWriteDummyPersonWhenMembershipArrives(t *testing.T) {
 		Memberships:    []string{"7ef75a6a-b6bf-4eb7-a1da-03e0acabef1a", "33ee38a4-c677-4952-a141-2ae14da3aedd", "7ef75a6a-b6bf-4eb7-a1da-03e0acabef1c"},
 	}
 	up, _, err := service.LoadData(newTestContext(), membershipType, membership.Id, membership)
+	defer deleteTestDocument(t, service, peopleType, testUUID)
+
 	require.NoError(t, err, "expected successful write")
 	_, err = ec.Refresh(indexName).Do(ctx)
 	require.NoError(t, err, "expected successful flush")
@@ -185,7 +191,9 @@ func TestWritePersonAfterMembership(t *testing.T) {
 	err = service.bulkProcessor.Flush() // wait for the bulk processor to write the data
 	require.NoError(t, err, "require successful write")
 	assert.True(t, up, "Journalist updated")
-	op, _, _, err := writeDocument(service, peopleType, testUUID)
+	op, _, _, err := writeTestDocument(service, peopleType, testUUID)
+	defer deleteTestDocument(t, service, peopleType, testUUID)
+
 	require.NoError(t, err, "expected successful write")
 	_, err = ec.Refresh(indexName).Do(ctx)
 	require.NoError(t, err, "expected successful flush")
@@ -208,7 +216,9 @@ func TestWriteMakesDoesNotMakePersonAnFTAuthor(t *testing.T) {
 
 	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
 	testUUID := uuid.NewV4().String()
-	_, _, _, err = writePersonDocument(service, peopleType, testUUID, "false")
+	_, _, _, err = writeTestPersonDocument(service, peopleType, testUUID, "false")
+	defer deleteTestDocument(t, service, peopleType, testUUID)
+
 	require.NoError(t, err, "expected successful write")
 	ctx := context.Background()
 	_, err = ec.Refresh(indexName).Do(ctx)
@@ -275,7 +285,9 @@ func TestWritePreservesPatchableDataForPerson(t *testing.T) {
 	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
 
 	testUUID := uuid.NewV4().String()
-	payload, _, _, err := writePersonDocument(service, peopleType, testUUID, "true")
+	payload, _, _, err := writeTestPersonDocument(service, peopleType, testUUID, "true")
+	defer deleteTestDocument(t, service, peopleType, testUUID)
+
 	assert.NoError(t, err, "expected successful write")
 	ctx := context.Background()
 	_, err = ec.Refresh(indexName).Do(ctx)
@@ -322,7 +334,9 @@ func TestWritePreservesMetrics(t *testing.T) {
 	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
 
 	testUUID := uuid.NewV4().String()
-	_, _, _, err = writeDocument(service, organisationsType, testUUID)
+	_, _, _, err = writeTestDocument(service, organisationsType, testUUID)
+	defer deleteTestDocument(t, service, organisationsType, testUUID)
+
 	require.NoError(t, err, "require successful concept write")
 
 	testMetrics := &EsConceptModelPatch{Metrics: &ConceptMetrics{AnnotationsCount: 150000, PrevWeekAnnotationsCount: 15}}
@@ -330,7 +344,7 @@ func TestWritePreservesMetrics(t *testing.T) {
 	err = service.bulkProcessor.Flush() // wait for the bulk processor to write the data
 	require.NoError(t, err, "require successful metrics write")
 
-	_, _, _, _ = writeDocument(service, organisationsType, testUUID)
+	_, _, _, _ = writeTestDocument(service, organisationsType, testUUID)
 	err = service.bulkProcessor.Flush() // wait for the bulk processor to write the data
 	require.NoError(t, err, "require successful concept update")
 
@@ -389,7 +403,9 @@ func TestRead(t *testing.T) {
 	defer ec.Stop()
 
 	testUUID := uuid.NewV4().String()
-	payload, _, _, err := writeDocument(service, organisationsType, testUUID)
+	payload, _, _, err := writeTestDocument(service, organisationsType, testUUID)
+	defer deleteTestDocument(t, service, organisationsType, testUUID)
+
 	assert.NoError(t, err, "expected successful write")
 	_, err = ec.Refresh(indexName).Do(context.Background())
 	require.NoError(t, err, "expected successful flush")
@@ -422,7 +438,9 @@ func TestPassClientThroughChannel(t *testing.T) {
 	require.NoError(t, err, "ES client injection failed or timed out")
 
 	testUUID := uuid.NewV4().String()
-	payload, _, _, err := writeDocument(service, organisationsType, testUUID)
+	payload, _, _, err := writeTestDocument(service, organisationsType, testUUID)
+	defer deleteTestDocument(t, service, organisationsType, testUUID)
+
 	assert.NoError(t, err, "expected successful write")
 
 	resp, err := service.ReadData(organisationsType, testUUID)
@@ -449,7 +467,7 @@ func TestDelete(t *testing.T) {
 	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
 
 	testUUID := uuid.NewV4().String()
-	_, _, resp, err := writeDocument(service, organisationsType, testUUID)
+	_, _, resp, err := writeTestDocument(service, organisationsType, testUUID)
 	require.NoError(t, err, "expected successful write")
 
 	assert.Equal(t, esStatusCreated, resp.Result, "document should have been created")
@@ -497,17 +515,19 @@ func TestCleanup(t *testing.T) {
 	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig}
 
 	testUUID1 := uuid.NewV4().String()
-	_, _, resp, err := writeDocument(service, organisationsType, testUUID1)
+	_, _, resp, err := writeTestDocument(service, organisationsType, testUUID1)
+	defer deleteTestDocument(t, service, organisationsType, testUUID1)
+
 	require.NoError(t, err, "expected successful write")
 	require.Equal(t, esStatusCreated, resp.Result, "document should have been created")
 
 	testUUID2 := uuid.NewV4().String()
-	_, _, resp, err = writeDocument(service, peopleType, testUUID2)
+	_, _, resp, err = writeTestDocument(service, peopleType, testUUID2)
 	require.NoError(t, err, "expected successful write")
 	require.Equal(t, esStatusCreated, resp.Result, "document should have been created")
 
 	testUUID3 := uuid.NewV4().String()
-	_, _, resp, err = writeDocument(service, organisationsType, testUUID3)
+	_, _, resp, err = writeTestDocument(service, organisationsType, testUUID3)
 	require.NoError(t, err, "expected successful write")
 	require.Equal(t, esStatusCreated, resp.Result, "document should have been created")
 
@@ -561,9 +581,12 @@ func TestDeprecationFlagTrue(t *testing.T) {
 		DirectType:   "",
 		Aliases:      []string{},
 		IsDeprecated: true,
+		LastModified: testLastModified,
 	}
 
 	_, resp, err := service.LoadData(newTestContext(), organisationsType, testUUID, payload)
+	defer deleteTestDocument(t, service, organisationsType, testUUID)
+
 	assert.NoError(t, err, "expected successful write")
 
 	assert.Equal(t, esStatusCreated, resp.Result, "document should have been created")
@@ -595,15 +618,18 @@ func TestDeprecationFlagFalse(t *testing.T) {
 
 	testUUID := uuid.NewV4().String()
 	payload := EsConceptModel{
-		Id:         testUUID,
-		ApiUrl:     fmt.Sprintf("%s/%ss/%s", apiBaseURL, organisationsType, testUUID),
-		PrefLabel:  fmt.Sprintf("Test concept %s %s", organisationsType, testUUID),
-		Types:      []string{},
-		DirectType: "",
-		Aliases:    []string{},
+		Id:           testUUID,
+		ApiUrl:       fmt.Sprintf("%s/%ss/%s", apiBaseURL, organisationsType, testUUID),
+		PrefLabel:    fmt.Sprintf("Test concept %s %s", organisationsType, testUUID),
+		Types:        []string{},
+		DirectType:   "",
+		Aliases:      []string{},
+		LastModified: testLastModified,
 	}
 
 	_, resp, err := service.LoadData(newTestContext(), organisationsType, testUUID, payload)
+	defer deleteTestDocument(t, service, organisationsType, testUUID)
+
 	assert.NoError(t, err, "expected successful write")
 
 	assert.Equal(t, esStatusCreated, resp.Result, "document should have been created")
@@ -636,15 +662,18 @@ func TestMetricsUpdated(t *testing.T) {
 
 	testUUID := uuid.NewV4().String()
 	payload := EsConceptModel{
-		Id:         testUUID,
-		ApiUrl:     fmt.Sprintf("%s/%ss/%s", apiBaseURL, organisationsType, testUUID),
-		PrefLabel:  fmt.Sprintf("Test concept %s %s", organisationsType, testUUID),
-		Types:      []string{},
-		DirectType: "",
-		Aliases:    []string{},
+		Id:           testUUID,
+		ApiUrl:       fmt.Sprintf("%s/%ss/%s", apiBaseURL, organisationsType, testUUID),
+		PrefLabel:    fmt.Sprintf("Test concept %s %s", organisationsType, testUUID),
+		Types:        []string{},
+		DirectType:   "",
+		Aliases:      []string{},
+		LastModified: testLastModified,
 	}
 
 	_, resp, err := service.LoadData(newTestContext(), organisationsType, testUUID, payload)
+	defer deleteTestDocument(t, service, organisationsType, testUUID)
+
 	assert.NoError(t, err, "expected successful write")
 
 	assert.Equal(t, esStatusCreated, resp.Result, "document should have been created")
@@ -689,7 +718,7 @@ func TestGetAllIds(t *testing.T) {
 	for i := 0; i < workers; i++ {
 		go func() {
 			for id := range ids {
-				_, _, _, err := writeDocument(service, organisationsType, id)
+				_, _, _, err := writeTestDocument(service, organisationsType, id)
 				require.NoError(t, err, "expected successful write")
 				wg.Done()
 			}
@@ -718,7 +747,10 @@ func TestGetAllIds(t *testing.T) {
 		_, found := actual[id]
 		if !found {
 			notFound++
+			continue
 		}
+
+		deleteTestDocument(t, service, organisationsType, id)
 	}
 	assert.Equal(t, 0, notFound, "UUIDs not found")
 }
@@ -744,15 +776,16 @@ func setReadOnly(t *testing.T, client *elastic.Client, indexName string, readOnl
 	assert.NoError(t, err, "expected no error for putting index settings")
 }
 
-func writePersonDocument(es EsService, conceptType string, uuid string, isFTAuthor string) (EsPersonConceptModel, bool, *elastic.IndexResponse, error) {
+func writeTestPersonDocument(es EsService, conceptType string, uuid string, isFTAuthor string) (EsPersonConceptModel, bool, *elastic.IndexResponse, error) {
 	payload := EsPersonConceptModel{
 		EsConceptModel: &EsConceptModel{
-			Id:         uuid,
-			ApiUrl:     fmt.Sprintf("%s/%s/%s", apiBaseURL, conceptType, uuid),
-			PrefLabel:  fmt.Sprintf("Test concept %s %s", conceptType, uuid),
-			Types:      []string{},
-			DirectType: "",
-			Aliases:    []string{},
+			Id:           uuid,
+			ApiUrl:       fmt.Sprintf("%s/%s/%s", apiBaseURL, conceptType, uuid),
+			PrefLabel:    fmt.Sprintf("Test concept %s %s", conceptType, uuid),
+			Types:        []string{},
+			DirectType:   "",
+			Aliases:      []string{},
+			LastModified: testLastModified,
 		},
 		IsFTAuthor: isFTAuthor,
 	}
@@ -772,4 +805,10 @@ func waitForClientInjection(service EsService) error {
 	}
 
 	return err
+}
+
+func deleteTestDocument(t *testing.T, es EsService, conceptType string, uuid string) {
+	deleteResp, err := es.DeleteData(newTestContext(), conceptType, uuid)
+	require.NoError(t, err)
+	assert.True(t, deleteResp.Found)
 }
