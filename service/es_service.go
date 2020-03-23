@@ -44,6 +44,7 @@ type esService struct {
 	bulkProcessor       *elastic.BulkProcessor
 	indexName           string
 	bulkProcessorConfig *BulkProcessorConfig
+	getCurrentTime      func() time.Time
 }
 
 type EsService interface {
@@ -60,7 +61,7 @@ type EsService interface {
 }
 
 func NewEsService(ch chan *elastic.Client, indexName string, bulkProcessorConfig *BulkProcessorConfig) EsService {
-	es := &esService{bulkProcessorConfig: bulkProcessorConfig, indexName: indexName}
+	es := &esService{bulkProcessorConfig: bulkProcessorConfig, indexName: indexName, getCurrentTime: time.Now}
 	go func() {
 		for ec := range ch {
 			es.setElasticClient(ec)
@@ -185,7 +186,7 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 		p := EsPersonConceptModel{
 			EsConceptModel: &EsConceptModel{
 				Id:           uuid,
-				LastModified: time.Now().Format(time.RFC3339),
+				LastModified: es.getCurrentTime().Format(time.RFC3339),
 			},
 			IsFTAuthor: "true",
 		}
