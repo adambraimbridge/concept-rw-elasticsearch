@@ -6,6 +6,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -28,13 +30,24 @@ const (
 	esStatusCreated = "created"
 )
 
-func init() {
-	logger.InitLogger("test-concept-rw-elasticsearch", "error")
+func TestMain(m *testing.M) {
+	conceptCountBefore := getESConceptsCount()
+
+	code := m.Run()
+
+	conceptCountAfter := getESConceptsCount()
+
+	if conceptCountBefore != conceptCountAfter {
+		logger.Errorf("expected concept count %d, got %d", conceptCountBefore, conceptCountAfter)
+		code = 1
+	}
+
+	os.Exit(code)
 }
 
 func TestWrite(t *testing.T) {
 	bulkProcessorConfig := NewBulkProcessorConfig(1, 1, 1, time.Second)
-	esURL := getElasticSearchTestURL(t)
+	esURL := getElasticSearchTestURL()
 	ec := getElasticClient(t, esURL)
 	bulkProcessor, err := newBulkProcessor(ec, &bulkProcessorConfig)
 	require.NoError(t, err, "require a bulk processor")
@@ -56,7 +69,7 @@ func TestWrite(t *testing.T) {
 
 func TestWriteMakesPersonAnFTColumnist(t *testing.T) {
 	bulkProcessorConfig := NewBulkProcessorConfig(1, 1, 1, 100*time.Millisecond)
-	esURL := getElasticSearchTestURL(t)
+	esURL := getElasticSearchTestURL()
 	ec := getElasticClient(t, esURL)
 	bulkProcessor, err := newBulkProcessor(ec, &bulkProcessorConfig)
 	require.NoError(t, err, "require a bulk processor")
@@ -97,7 +110,7 @@ func TestWriteMakesPersonAnFTColumnist(t *testing.T) {
 
 func TestWriteMakesPersonAnFTJournalist(t *testing.T) {
 	bulkProcessorConfig := NewBulkProcessorConfig(1, 1, 1, 100*time.Millisecond)
-	esURL := getElasticSearchTestURL(t)
+	esURL := getElasticSearchTestURL()
 	ec := getElasticClient(t, esURL)
 	bulkProcessor, err := newBulkProcessor(ec, &bulkProcessorConfig)
 	require.NoError(t, err, "require a bulk processor")
@@ -134,7 +147,7 @@ func TestWriteMakesPersonAnFTJournalist(t *testing.T) {
 
 func TestWriteDummyPersonWhenMembershipArrives(t *testing.T) {
 	bulkProcessorConfig := NewBulkProcessorConfig(1, 1, 1, 100*time.Millisecond)
-	esURL := getElasticSearchTestURL(t)
+	esURL := getElasticSearchTestURL()
 	ec := getElasticClient(t, esURL)
 	bulkProcessor, err := newBulkProcessor(ec, &bulkProcessorConfig)
 	require.NoError(t, err, "require a bulk processor")
@@ -175,7 +188,7 @@ func TestWriteDummyPersonWhenMembershipArrives(t *testing.T) {
 
 func TestWritePersonAfterMembership(t *testing.T) {
 	bulkProcessorConfig := NewBulkProcessorConfig(1, 1, 1, 100*time.Millisecond)
-	esURL := getElasticSearchTestURL(t)
+	esURL := getElasticSearchTestURL()
 	ec := getElasticClient(t, esURL)
 	bulkProcessor, err := newBulkProcessor(ec, &bulkProcessorConfig)
 	require.NoError(t, err, "require a bulk processor")
@@ -218,7 +231,7 @@ func TestWritePersonAfterMembership(t *testing.T) {
 
 func TestWriteMakesDoesNotMakePersonAnFTAuthor(t *testing.T) {
 	bulkProcessorConfig := NewBulkProcessorConfig(1, 1, 1, 100*time.Millisecond)
-	esURL := getElasticSearchTestURL(t)
+	esURL := getElasticSearchTestURL()
 	ec := getElasticClient(t, esURL)
 	bulkProcessor, err := newBulkProcessor(ec, &bulkProcessorConfig)
 	require.NoError(t, err, "require a bulk processor")
@@ -286,7 +299,7 @@ func TestWriteMakesDoesNotMakePersonAnFTAuthor(t *testing.T) {
 
 func TestWritePreservesPatchableDataForPerson(t *testing.T) {
 	bulkProcessorConfig := NewBulkProcessorConfig(1, 1, 1, 100*time.Millisecond)
-	esURL := getElasticSearchTestURL(t)
+	esURL := getElasticSearchTestURL()
 	ec := getElasticClient(t, esURL)
 	bulkProcessor, err := newBulkProcessor(ec, &bulkProcessorConfig)
 	require.NoError(t, err, "require a bulk processor")
@@ -335,7 +348,7 @@ func TestWritePreservesPatchableDataForPerson(t *testing.T) {
 
 func TestWritePreservesMetrics(t *testing.T) {
 	bulkProcessorConfig := NewBulkProcessorConfig(1, 1, 1, 100*time.Millisecond)
-	esURL := getElasticSearchTestURL(t)
+	esURL := getElasticSearchTestURL()
 	ec := getElasticClient(t, esURL)
 	bulkProcessor, err := newBulkProcessor(ec, &bulkProcessorConfig)
 	require.NoError(t, err, "require a bulk processor")
@@ -372,7 +385,7 @@ func TestWritePreservesMetrics(t *testing.T) {
 }
 
 func TestIsReadOnly(t *testing.T) {
-	esURL := getElasticSearchTestURL(t)
+	esURL := getElasticSearchTestURL()
 	ec := getElasticClient(t, esURL)
 	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil, time.Now}
 	defer ec.Stop()
@@ -391,7 +404,7 @@ func TestIsReadOnly(t *testing.T) {
 }
 
 func TestIsReadOnlyIndexNotFound(t *testing.T) {
-	esURL := getElasticSearchTestURL(t)
+	esURL := getElasticSearchTestURL()
 	ec := getElasticClient(t, esURL)
 	service := &esService{sync.RWMutex{}, ec, nil, "foo", nil, time.Now}
 	defer ec.Stop()
@@ -403,7 +416,7 @@ func TestIsReadOnlyIndexNotFound(t *testing.T) {
 
 func TestRead(t *testing.T) {
 	bulkProcessorConfig := NewBulkProcessorConfig(1, 1, 1, time.Second)
-	esURL := getElasticSearchTestURL(t)
+	esURL := getElasticSearchTestURL()
 	ec := getElasticClient(t, esURL)
 	bulkProcessor, err := newBulkProcessor(ec, &bulkProcessorConfig)
 	require.NoError(t, err, "require a bulk processor")
@@ -432,7 +445,7 @@ func TestRead(t *testing.T) {
 
 func TestPassClientThroughChannel(t *testing.T) {
 	bulkProcessorConfig := NewBulkProcessorConfig(1, 1, 1, time.Second)
-	esURL := getElasticSearchTestURL(t)
+	esURL := getElasticSearchTestURL()
 
 	ecc := make(chan *elastic.Client)
 	defer close(ecc)
@@ -448,7 +461,7 @@ func TestPassClientThroughChannel(t *testing.T) {
 
 	testUUID := uuid.NewV4().String()
 	payload, _, _, err := writeTestDocument(service, organisationsType, testUUID)
-	defer deleteTestDocument(t, service, organisationsType, testUUID)
+	defer deleteTestDocument(t, service.(*esService), organisationsType, testUUID)
 
 	assert.NoError(t, err, "expected successful write")
 
@@ -467,7 +480,7 @@ func TestPassClientThroughChannel(t *testing.T) {
 
 func TestDelete(t *testing.T) {
 	bulkProcessorConfig := NewBulkProcessorConfig(1, 1, 1, time.Second)
-	esURL := getElasticSearchTestURL(t)
+	esURL := getElasticSearchTestURL()
 
 	ec := getElasticClient(t, esURL)
 	bulkProcessor, err := newBulkProcessor(ec, &bulkProcessorConfig)
@@ -495,7 +508,7 @@ func TestDelete(t *testing.T) {
 
 func TestDeleteNotFoundConcept(t *testing.T) {
 	hook := testLog.NewGlobal()
-	esURL := getElasticSearchTestURL(t)
+	esURL := getElasticSearchTestURL()
 
 	ec, err := elastic.NewClient(
 		elastic.SetURL(esURL),
@@ -515,7 +528,7 @@ func TestDeleteNotFoundConcept(t *testing.T) {
 
 func TestCleanup(t *testing.T) {
 	bulkProcessorConfig := NewBulkProcessorConfig(1, 1, 1, time.Second)
-	esURL := getElasticSearchTestURL(t)
+	esURL := getElasticSearchTestURL()
 
 	ec := getElasticClient(t, esURL)
 	bulkProcessor, err := newBulkProcessor(ec, &bulkProcessorConfig)
@@ -573,7 +586,7 @@ func TestCleanup(t *testing.T) {
 
 func TestDeprecationFlagTrue(t *testing.T) {
 	bulkProcessorConfig := NewBulkProcessorConfig(1, 1, 1, time.Second)
-	esURL := getElasticSearchTestURL(t)
+	esURL := getElasticSearchTestURL()
 
 	ec := getElasticClient(t, esURL)
 	bulkProcessor, err := newBulkProcessor(ec, &bulkProcessorConfig)
@@ -617,7 +630,7 @@ func TestDeprecationFlagTrue(t *testing.T) {
 
 func TestDeprecationFlagFalse(t *testing.T) {
 	bulkProcessorConfig := NewBulkProcessorConfig(1, 1, 1, time.Second)
-	esURL := getElasticSearchTestURL(t)
+	esURL := getElasticSearchTestURL()
 
 	ec := getElasticClient(t, esURL)
 	bulkProcessor, err := newBulkProcessor(ec, &bulkProcessorConfig)
@@ -661,7 +674,7 @@ func TestDeprecationFlagFalse(t *testing.T) {
 
 func TestMetricsUpdated(t *testing.T) {
 	bulkProcessorConfig := NewBulkProcessorConfig(1, 1, 1, time.Second)
-	esURL := getElasticSearchTestURL(t)
+	esURL := getElasticSearchTestURL()
 
 	ec := getElasticClient(t, esURL)
 	bulkProcessor, err := newBulkProcessor(ec, &bulkProcessorConfig)
@@ -713,9 +726,12 @@ func TestMetricsUpdated(t *testing.T) {
 }
 
 func TestGetAllIds(t *testing.T) {
-	esURL := getElasticSearchTestURL(t)
+	esURL := getElasticSearchTestURL()
 	ec := getElasticClient(t, esURL)
-	service := &esService{sync.RWMutex{}, ec, nil, indexName, nil, time.Now}
+	bulkProcessorConfig := NewBulkProcessorConfig(1, 1, 1, time.Second)
+	bulkProcessor, _ := newBulkProcessor(ec, &bulkProcessorConfig)
+
+	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig, time.Now}
 
 	max := 1001
 	expected := make([]string, max)
@@ -764,14 +780,10 @@ func TestGetAllIds(t *testing.T) {
 	assert.Equal(t, 0, notFound, "UUIDs not found")
 }
 
-func getElasticSearchTestURL(t *testing.T) string {
-	if testing.Short() {
-		t.Skip("ElasticSearch integration for long tests only.")
-	}
-
+func getElasticSearchTestURL() string {
 	esURL := os.Getenv("ELASTICSEARCH_TEST_URL")
 	if strings.TrimSpace(esURL) == "" {
-		t.Fatal("Please set the environment variable ELASTICSEARCH_TEST_URL to run ElasticSearch integration tests (e.g. export ELASTICSEARCH_TEST_URL=http://localhost:9200). Alternatively, run `go test -short` to skip them.")
+		esURL = "http://localhost:9200"
 	}
 
 	return esURL
@@ -816,8 +828,40 @@ func waitForClientInjection(service EsService) error {
 	return err
 }
 
-func deleteTestDocument(t *testing.T, es EsService, conceptType string, uuid string) {
+func deleteTestDocument(t *testing.T, es *esService, conceptType string, uuid string) {
 	deleteResp, err := es.DeleteData(newTestContext(), conceptType, uuid)
 	require.NoError(t, err)
 	assert.True(t, deleteResp.Found)
+
+	err = es.bulkProcessor.Flush()
+	require.NoError(t, err)
+	_, err = es.elasticClient.Refresh(indexName).Do(context.Background())
+	require.NoError(t, err)
+}
+
+func getESConceptsCount() int {
+	esURL := getElasticSearchTestURL()
+	resp, err := http.Get(esURL + "/concept/_count")
+	if err != nil {
+		fmt.Printf("%s", err)
+		os.Exit(1)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		logger.Error(err)
+		os.Exit(1)
+	}
+
+	var esCountResp struct {
+		Count int
+	}
+
+	if err := json.Unmarshal(respBody, &esCountResp); err != nil {
+		logger.Error(err)
+		os.Exit(1)
+	}
+
+	return esCountResp.Count
 }

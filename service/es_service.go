@@ -77,7 +77,7 @@ func (es *esService) setElasticClient(ec *elastic.Client) {
 	es.elasticClient = ec
 
 	if es.bulkProcessor != nil {
-		es.CloseBulkProcessor()
+		es.CloseBulkProcessor()		
 	}
 
 	if es.bulkProcessorConfig != nil {
@@ -179,7 +179,7 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 		readResult, err = es.ReadData(conceptType, uuid)
 	}
 
-	patchData := getPatchData(err, loadDataLog, conceptType, uuid, readResult)
+	patchData := getPatchData(err, loadDataLog, conceptType, readResult)
 
 	if readResult != nil && !readResult.Found && conceptType == memberships {
 		//we write a dummy person
@@ -190,8 +190,11 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 			},
 			IsFTAuthor: "true",
 		}
-		updated, resp, err = es.writeToEs(ctx, loadDataLog, person, uuid, p)
-	} else {
+		loadDataLog.Debugf("Writing a dummy person: %s", uuid)
+		return es.writeToEs(ctx, loadDataLog, person, uuid, p)
+	}
+
+	if conceptType != memberships {
 		updated, resp, err = es.writeToEs(ctx, loadDataLog, conceptType, uuid, payload)
 	}
 
@@ -234,7 +237,7 @@ func (es *esService) writeToEs(ctx context.Context, loadDataLog *logrus.Entry, c
 	return updated, resp, err
 }
 
-func getPatchData(err error, loadDataLog *logrus.Entry, conceptType string, uuid string, readResult *elastic.GetResult) (patchData PayloadPatch) {
+func getPatchData(err error, loadDataLog *logrus.Entry, conceptType string, readResult *elastic.GetResult) (patchData PayloadPatch) {
 	if err != nil {
 		loadDataLog.WithError(err).Error("Failed operation to Elasticsearch, could not retrieve current values before write")
 		return patchData
