@@ -29,6 +29,10 @@ const (
 	testLastModified = "2020-03-06T13:57:57+02:00"
 )
 
+func init() {
+	logger.InitLogger("test-concept-rw-elasticsearch", "error")
+}
+
 func TestNoElasticClient(t *testing.T) {
 	service := esService{sync.RWMutex{}, nil, nil, "test", nil, time.Now}
 
