@@ -35,11 +35,10 @@ go test -race ./...
 - To run unit and integration tests:
 
 ```
-go test -tags=integration -count=1 -race ./...
+docker-compose -f docker-compose-tests.yml up -d --build && \
+docker logs -f test-runner && \
+docker-compose -f docker-compose-tests.yml down -v 
 ```
-
-
-Either set the environment variable `ELASTICSEARCH_TEST_URL` to the URL of an ElasticSearch instance, or run with `-short` to skip integration tests.
 
 To run elasticsearch locally with docker execute:
 ```

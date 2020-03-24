@@ -6,20 +6,18 @@ services:
       dockerfile: Dockerfile.tests
     container_name: test-runner
     environment:
-      - ELASTICSEARCH_TEST_URL=http://elasticsearch:9200
-    command:
-      [
-        "go",
-        "test",
-        "-mod=readonly",
-        "-v",
-        "-race",
-        "-tags=integration",
-        "./...",
-      ]
+        ELASTICSEARCH_TEST_URL: "http://elastic-search:9200"
+    command: bash -c "
+              curl -sL https://raw.githubusercontent.com/Financial-Times/concept-search-index-mapping/master/mapping.json -o mapping.json &&
+              curl -s --request PUT 'http://elastic-search:9200/concept' --data '@mapping.json' &&
+              go test -mod=readonly -race -tags=integration ./..."
     depends_on:
-      - elasticsearch
-  elasticsearch:
+      - elastic-search
+  elastic-search:
     image: elasticsearch:5.3
+    environment:
+        http.host: "0.0.0.0"
+        transport.host: "127.0.0.1"
+        xpack.security.enabled: "false"
     ports:
       - "9201:9200"
