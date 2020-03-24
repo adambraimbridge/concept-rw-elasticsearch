@@ -191,7 +191,9 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 			IsFTAuthor: "true",
 		}
 		updated, resp, err = es.writeToEs(ctx, loadDataLog, person, uuid, p)
-	} else {
+	}
+
+	if conceptType != memberships {
 		updated, resp, err = es.writeToEs(ctx, loadDataLog, conceptType, uuid, payload)
 	}
 
