@@ -1,10 +1,10 @@
 version: "3"
 services:
-  test-runner:
+  test-runner2:
     build:
       context: .
       dockerfile: Dockerfile.tests
-    container_name: test-runner
+    container_name: test-runner2
     environment:
       - ELASTICSEARCH_TEST_URL=http://elasticsearch:9200
     command:
@@ -22,4 +22,4 @@ services:
   elasticsearch:
     image: elasticsearch:5.3
     ports:
-      - "9200:9200"
+      - "9201:9200"
