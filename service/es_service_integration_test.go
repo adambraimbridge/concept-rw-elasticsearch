@@ -229,6 +229,42 @@ func TestWritePersonAfterMembership(t *testing.T) {
 	assert.Equal(t, "true", actual.IsFTAuthor)
 }
 
+func TestFTAuthorWriteOrder(t *testing.T) {
+	service := getTestESService(t)
+
+	testUUID := uuid.NewV4().String()
+	membership := &EsMembershipModel{
+		Id:             uuid.NewV4().String(),
+		PersonId:       testUUID,
+		OrganisationId: "7bcfe07b-0fb1-49ce-a5fa-e51d5c01c3e0",
+		Memberships:    []string{"7ef75a6a-b6bf-4eb7-a1da-03e0acabef1a", "33ee38a4-c677-4952-a141-2ae14da3aedd", "7ef75a6a-b6bf-4eb7-a1da-03e0acabef1c"},
+	}
+
+	writeTestDocument(service, peopleType, testUUID)
+	service.LoadData(newTestContext(), membershipType, membership.Id, membership)
+	flushChangesToIndex(t, service)
+
+	var p1 EsPersonConceptModel
+	esResult, _ := service.ReadData(peopleType, testUUID)
+	require.NoError(t, json.Unmarshal(*esResult.Source, &p1))
+
+	deleteTestDocument(t, service, peopleType, testUUID)
+
+	service.LoadData(newTestContext(), membershipType, membership.Id, membership)
+	writeTestDocument(service, peopleType, testUUID)
+	flushChangesToIndex(t, service)
+
+	var p2 EsPersonConceptModel
+	esResult, _ = service.ReadData(peopleType, testUUID)
+	require.NoError(t, json.Unmarshal(*esResult.Source, &p2))
+
+	deleteTestDocument(t, service, peopleType, testUUID)
+
+	assert.Equal(t, "true", p1.IsFTAuthor)
+	assert.Equal(t, "true", p2.IsFTAuthor)
+	assert.Equal(t, p1, p2)
+}
+
 func TestWriteMakesDoesNotMakePersonAnFTAuthor(t *testing.T) {
 	bulkProcessorConfig := NewBulkProcessorConfig(1, 1, 1, 100*time.Millisecond)
 	esURL := getElasticSearchTestURL()
@@ -780,6 +816,22 @@ func TestGetAllIds(t *testing.T) {
 	assert.Equal(t, 0, notFound, "UUIDs not found")
 }
 
+func getTestESService(t *testing.T) *esService {
+	bulkProcessorConfig := NewBulkProcessorConfig(1, 1, 1, 100*time.Millisecond)
+	esURL := getElasticSearchTestURL()
+	ec := getElasticClient(t, esURL)
+	bulkProcessor, err := newBulkProcessor(ec, &bulkProcessorConfig)
+	require.NoError(t, err, "require a bulk processor")
+
+	return &esService{
+		elasticClient:       ec,
+		bulkProcessor:       bulkProcessor,
+		indexName:           indexName,
+		bulkProcessorConfig: &bulkProcessorConfig,
+		getCurrentTime:      time.Now,
+	}
+}
+
 func getElasticSearchTestURL() string {
 	esURL := os.Getenv("ELASTICSEARCH_TEST_URL")
 	if strings.TrimSpace(esURL) == "" {
@@ -833,7 +885,11 @@ func deleteTestDocument(t *testing.T, es *esService, conceptType string, uuid st
 	require.NoError(t, err)
 	assert.True(t, deleteResp.Found)
 
-	err = es.bulkProcessor.Flush()
+	flushChangesToIndex(t, es)
+}
+
+func flushChangesToIndex(t *testing.T, es *esService) {
+	err := es.bulkProcessor.Flush()
 	require.NoError(t, err)
 	_, err = es.elasticClient.Refresh(indexName).Do(context.Background())
 	require.NoError(t, err)
