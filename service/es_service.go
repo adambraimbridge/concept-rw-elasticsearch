@@ -77,7 +77,10 @@ func (es *esService) setElasticClient(ec *elastic.Client) {
 	es.elasticClient = ec
 
 	if es.bulkProcessor != nil {
-		es.CloseBulkProcessor()		
+		err := es.CloseBulkProcessor()
+		if err != nil {
+			log.Errorf("Error closing bulk processor")
+		}
 	}
 
 	if es.bulkProcessorConfig != nil {
