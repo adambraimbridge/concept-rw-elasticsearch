@@ -146,17 +146,17 @@ func TestWriteMakesPersonAnFTJournalist(t *testing.T) {
 }
 
 func TestWriteDummyPersonWhenMembershipArrives(t *testing.T) {
-	bulkProcessorConfig := NewBulkProcessorConfig(1, 1, 1, 100*time.Millisecond)
-	esURL := getElasticSearchTestURL()
-	ec := getElasticClient(t, esURL)
-	bulkProcessor, err := newBulkProcessor(ec, &bulkProcessorConfig)
-	require.NoError(t, err, "require a bulk processor")
-
 	getTimeFunc := func() time.Time {
 		res, err := time.Parse(time.RFC3339, testLastModified)
 		require.NoError(t, err)
 		return res
 	}
+
+	bulkProcessorConfig := NewBulkProcessorConfig(1, 1, 1, 100*time.Millisecond)
+	esURL := getElasticSearchTestURL()
+	ec := getElasticClient(t, esURL)
+	bulkProcessor, err := newBulkProcessor(ec, &bulkProcessorConfig)
+	require.NoError(t, err, "require a bulk processor")
 
 	service := &esService{sync.RWMutex{}, ec, bulkProcessor, indexName, &bulkProcessorConfig, getTimeFunc}
 	testUUID := uuid.NewV4().String()
@@ -240,8 +240,10 @@ func TestFTAuthorWriteOrder(t *testing.T) {
 		Memberships:    []string{"7ef75a6a-b6bf-4eb7-a1da-03e0acabef1a", "33ee38a4-c677-4952-a141-2ae14da3aedd", "7ef75a6a-b6bf-4eb7-a1da-03e0acabef1c"},
 	}
 
-	writeTestDocument(service, peopleType, testUUID)
-	service.LoadData(newTestContext(), membershipType, membership.Id, membership)
+	_, _, _, err := writeTestDocument(service, peopleType, testUUID)
+	require.NoError(t, err)
+	_, _, err = service.LoadData(newTestContext(), membershipType, membership.Id, membership)
+	require.NoError(t, err)
 	flushChangesToIndex(t, service)
 
 	var p1 EsPersonConceptModel
@@ -250,8 +252,10 @@ func TestFTAuthorWriteOrder(t *testing.T) {
 
 	deleteTestDocument(t, service, peopleType, testUUID)
 
-	service.LoadData(newTestContext(), membershipType, membership.Id, membership)
-	writeTestDocument(service, peopleType, testUUID)
+	_, _, err = service.LoadData(newTestContext(), membershipType, membership.Id, membership)
+	require.NoError(t, err)
+	_, _, _, err = writeTestDocument(service, peopleType, testUUID)
+	require.NoError(t, err)
 	flushChangesToIndex(t, service)
 
 	var p2 EsPersonConceptModel
@@ -409,7 +413,7 @@ func TestWritePreservesMetrics(t *testing.T) {
 	actual, err := service.ReadData(organisationsType, testUUID)
 	assert.NoError(t, err, "expected successful concept read")
 	m := make(map[string]interface{})
-	json.Unmarshal(*actual.Source, &m)
+	assert.NoError(t, json.Unmarshal(*actual.Source, &m))
 
 	actualMetrics := m["metrics"].(map[string]interface{})
 	actualCount := int(actualMetrics["annotationsCount"].(float64))
@@ -474,7 +478,7 @@ func TestRead(t *testing.T) {
 	assert.True(t, resp.Found, "should find a result")
 
 	obj := make(map[string]interface{})
-	err = json.Unmarshal(*resp.Source, &obj)
+	assert.NoError(t, json.Unmarshal(*resp.Source, &obj))
 	assert.Equal(t, payload.ApiUrl, obj["apiUrl"], "apiUrl")
 	assert.Equal(t, payload.PrefLabel, obj["prefLabel"], "prefLabel")
 }
@@ -507,7 +511,7 @@ func TestPassClientThroughChannel(t *testing.T) {
 	assert.True(t, resp.Found, "should find a result")
 
 	obj := make(map[string]interface{})
-	err = json.Unmarshal(*resp.Source, &obj)
+	assert.NoError(t, json.Unmarshal(*resp.Source, &obj))
 
 	assert.Equal(t, fmt.Sprintf("%s/%s/%s", apiBaseURL, organisationsType, testUUID), obj["apiUrl"], "apiUrl")
 	assert.Equal(t, payload.ApiUrl, obj["apiUrl"], "apiUrl")
@@ -658,7 +662,7 @@ func TestDeprecationFlagTrue(t *testing.T) {
 	assert.True(t, readResp.Found, "should find a result")
 
 	obj := make(map[string]interface{})
-	err = json.Unmarshal(*readResp.Source, &obj)
+	assert.NoError(t, json.Unmarshal(*readResp.Source, &obj))
 	assert.Equal(t, payload.ApiUrl, obj["apiUrl"], "apiUrl")
 	assert.Equal(t, payload.PrefLabel, obj["prefLabel"], "prefLabel")
 	assert.Equal(t, true, obj["isDeprecated"], "deprecation flag")
@@ -701,7 +705,7 @@ func TestDeprecationFlagFalse(t *testing.T) {
 	assert.True(t, readResp.Found, "should find a result")
 
 	obj := make(map[string]interface{})
-	err = json.Unmarshal(*readResp.Source, &obj)
+	assert.NoError(t, json.Unmarshal(*readResp.Source, &obj))
 	assert.Equal(t, payload.ApiUrl, obj["apiUrl"], "apiUrl")
 	assert.Equal(t, payload.PrefLabel, obj["prefLabel"], "prefLabel")
 	_, deprecatedFlagExists := obj["isDeprecated"]
