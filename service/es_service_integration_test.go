@@ -31,6 +31,7 @@ const (
 )
 
 func TestMain(m *testing.M) {
+	logger.InitLogger("test-concept-rw-elasticsearch", "error")
 	conceptCountBefore := getESConceptsCount()
 
 	code := m.Run()
@@ -681,7 +682,7 @@ func TestDeprecationFlagFalse(t *testing.T) {
 	testUUID := uuid.NewV4().String()
 	payload := EsConceptModel{
 		Id:           testUUID,
-		ApiUrl:       fmt.Sprintf("%s/%ss/%s", apiBaseURL, organisationsType, testUUID),
+		ApiUrl:       fmt.Sprintf("%s/%s/%s", apiBaseURL, organisationsType, testUUID),
 		PrefLabel:    fmt.Sprintf("Test concept %s %s", organisationsType, testUUID),
 		Types:        []string{},
 		DirectType:   "",
