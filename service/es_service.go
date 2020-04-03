@@ -79,7 +79,7 @@ func (es *esService) setElasticClient(ec *elastic.Client) {
 	if es.bulkProcessor != nil {
 		err := es.CloseBulkProcessor()
 		if err != nil {
-			log.Errorf("Error closing bulk processor")
+			log.Errorf("Error closing bulk processor: %v", err)
 		}
 	}
 
@@ -217,27 +217,23 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 
 func (es *esService) writeToEs(ctx context.Context, loadDataLog *logrus.Entry, conceptType string, uuid string, payload EsModel) (updated bool, resp *elastic.IndexResponse, err error) {
 	log.Debugf("Writing: %s", uuid)
-	if resp, err = es.elasticClient.Index().
+	resp, err = es.elasticClient.Index().
 		Index(es.indexName).
 		Type(conceptType).
 		Id(uuid).
 		BodyJson(payload).
-		Do(ctx); err != nil {
+		Do(ctx)
 
-		var status string
-		switch err := err.(type) {
-		case *elastic.Error:
-			status = strconv.Itoa(err.Status)
-		default:
-			status = unknownStatus
+	if err != nil {
+		status := unknownStatus
+		var esErr *elastic.Error
+		if errors.As(err, &esErr) {
+			status = strconv.Itoa(esErr.Status)
 		}
-
 		loadDataLog.WithError(err).WithField(statusField, status).Error("Failed operation to Elasticsearch")
-		return updated, resp, err
+		return false, resp, err
 	}
-	updated = true
-
-	return updated, resp, err
+	return true, resp, nil
 }
 
 func getPatchData(err error, loadDataLog *logrus.Entry, conceptType string, readResult *elastic.GetResult) (patchData PayloadPatch) {
