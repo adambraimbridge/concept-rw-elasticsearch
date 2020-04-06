@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/sirupsen/logrus"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
+
+	"github.com/sirupsen/logrus"
 
 	"io"
 
@@ -42,6 +44,7 @@ type esService struct {
 	bulkProcessor       *elastic.BulkProcessor
 	indexName           string
 	bulkProcessorConfig *BulkProcessorConfig
+	getCurrentTime      func() time.Time
 }
 
 type EsService interface {
@@ -58,7 +61,7 @@ type EsService interface {
 }
 
 func NewEsService(ch chan *elastic.Client, indexName string, bulkProcessorConfig *BulkProcessorConfig) EsService {
-	es := &esService{bulkProcessorConfig: bulkProcessorConfig, indexName: indexName}
+	es := &esService{bulkProcessorConfig: bulkProcessorConfig, indexName: indexName, getCurrentTime: time.Now}
 	go func() {
 		for ec := range ch {
 			es.setElasticClient(ec)
@@ -74,7 +77,10 @@ func (es *esService) setElasticClient(ec *elastic.Client) {
 	es.elasticClient = ec
 
 	if es.bulkProcessor != nil {
-		es.CloseBulkProcessor()
+		err := es.CloseBulkProcessor()
+		if err != nil {
+			log.Errorf("Error closing bulk processor: %v", err)
+		}
 	}
 
 	if es.bulkProcessorConfig != nil {
@@ -170,7 +176,6 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 		if emm.OrganisationId != ftOrgUUID || len(emm.Memberships) < 1 || !isFtAuthor(emm.Memberships) { // drop as not FT Author
 			return updated, resp, err
 		}
-
 		readResult, err = es.ReadData(person, emm.PersonId)
 		uuid = emm.PersonId // membership is for person
 	} else {
@@ -179,28 +184,21 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 
 	patchData := getPatchData(err, loadDataLog, conceptType, readResult)
 
-	if conceptType != memberships { // memberships only patch people
-
-		log.Debugf("Writing: %s", uuid)
-		if resp, err = es.elasticClient.Index().
-			Index(es.indexName).
-			Type(conceptType).
-			Id(uuid).
-			BodyJson(payload).
-			Do(ctx); err != nil {
-
-			var status string
-			switch err.(type) {
-			case *elastic.Error:
-				status = strconv.Itoa(err.(*elastic.Error).Status)
-			default:
-				status = unknownStatus
-			}
-
-			loadDataLog.WithError(err).WithField(statusField, status).Error("Failed operation to Elasticsearch")
-			return updated, resp, err
+	if readResult != nil && !readResult.Found && conceptType == memberships {
+		//we write a dummy person
+		p := EsPersonConceptModel{
+			EsConceptModel: &EsConceptModel{
+				Id:           uuid,
+				LastModified: es.getCurrentTime().Format(time.RFC3339),
+			},
+			IsFTAuthor: "true",
 		}
-		updated = true
+		loadDataLog.Debugf("Writing a dummy person: %s", uuid)
+		return es.writeToEs(ctx, loadDataLog, person, uuid, p)
+	}
+
+	if conceptType != memberships {
+		updated, resp, err = es.writeToEs(ctx, loadDataLog, conceptType, uuid, payload)
 	}
 
 	//check if patchData is empty
@@ -214,8 +212,28 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 		}
 		updated = true
 	}
-
 	return updated, resp, err
+}
+
+func (es *esService) writeToEs(ctx context.Context, loadDataLog *logrus.Entry, conceptType string, uuid string, payload EsModel) (updated bool, resp *elastic.IndexResponse, err error) {
+	log.Debugf("Writing: %s", uuid)
+	resp, err = es.elasticClient.Index().
+		Index(es.indexName).
+		Type(conceptType).
+		Id(uuid).
+		BodyJson(payload).
+		Do(ctx)
+
+	if err != nil {
+		status := unknownStatus
+		var esErr *elastic.Error
+		if errors.As(err, &esErr) {
+			status = strconv.Itoa(esErr.Status)
+		}
+		loadDataLog.WithError(err).WithField(statusField, status).Error("Failed operation to Elasticsearch")
+		return false, resp, err
+	}
+	return true, resp, nil
 }
 
 func getPatchData(err error, loadDataLog *logrus.Entry, conceptType string, readResult *elastic.GetResult) (patchData PayloadPatch) {
