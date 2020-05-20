@@ -3,4 +3,4 @@ replicaCount: 2
 service:
   name: concept-rw-elasticsearch
 env:
-  LOG_LEVEL: info
+  LOG_LEVEL: debug
