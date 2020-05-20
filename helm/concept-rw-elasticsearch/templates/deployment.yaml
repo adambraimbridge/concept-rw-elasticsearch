@@ -35,6 +35,8 @@ spec:
         env:
         - name: APP_PORT
           value: "8080"
+        - name: LOG_LEVEL
+          value: {{ .Values.env.LOG_LEVEL}}
         - name: ELASTICSEARCH_WHITELISTED_CONCEPTS
           value: "genres,topics,sections,subjects,locations,brands,organisations,people,alphaville-series,memberships"
         - name: ELASTICSEARCH_ENDPOINT
