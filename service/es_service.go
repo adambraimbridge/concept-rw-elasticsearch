@@ -193,7 +193,7 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 			},
 			IsFTAuthor: "true",
 		}
-		loadDataLog.Debugf("Writing a dummy person: %s", uuid)
+		logDebugPersonData(loadDataLog, &p, "Writing a dummy person")
 		return es.writeToEs(ctx, loadDataLog, person, uuid, p)
 	}
 
@@ -203,11 +203,12 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 
 	//check if patchData is empty
 	if patchData != nil {
-		loadDataLog.Debugf("Patching: %s", uuid)
 		if conceptType == memberships {
 			// `patchData` is for a person
+			logDebugPatchData(loadDataLog, patchData, "patch for person ")
 			es.PatchUpdateConcept(ctx, person, uuid, patchData)
 		} else {
+			logDebugPatchData(loadDataLog, patchData, "patch for concept ")
 			es.PatchUpdateConcept(ctx, conceptType, uuid, patchData)
 		}
 		updated = true
@@ -216,7 +217,7 @@ func (es *esService) LoadData(ctx context.Context, conceptType string, uuid stri
 }
 
 func (es *esService) writeToEs(ctx context.Context, loadDataLog *logrus.Entry, conceptType string, uuid string, payload EsModel) (updated bool, resp *elastic.IndexResponse, err error) {
-	log.Debugf("Writing: %s", uuid)
+	loadDataLog.Debugf("Writing: %s", uuid)
 	resp, err = es.elasticClient.Index().
 		Index(es.indexName).
 		Type(conceptType).
@@ -457,4 +458,31 @@ func (es *esService) processScrollPage(ctx context.Context, r *elastic.ScrollSer
 	}
 
 	return elastic.NewScrollService(es.elasticClient).ScrollId(scrollId), nil
+}
+
+func logDebugPatchData(log *logrus.Entry, payload PayloadPatch, msg string) {
+
+	var data []byte
+	var err error
+	switch payload := payload.(type) {
+	case *EsConceptModelPatch, *EsPersonConceptPatch:
+		data, err = json.Marshal(payload)
+	default:
+		log.Error("called logDebugPersonPatchData with unexpected payload type")
+		return
+	}
+	if err != nil {
+		log.Errorf("could not log payload: %v", err)
+		return
+	}
+	log.Debugf("%s: %s", msg, string(data))
+}
+
+func logDebugPersonData(log *logrus.Entry, concept *EsPersonConceptModel, msg string) {
+	data, err := json.Marshal(concept)
+	if err != nil {
+		log.Errorf("could not log concept: %v", err)
+		return
+	}
+	log.Debugf("%s: %s", msg, string(data))
 }
