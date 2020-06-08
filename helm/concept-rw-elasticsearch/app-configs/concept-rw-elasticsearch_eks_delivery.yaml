@@ -1,0 +1,7 @@
+# Values used for the deployed application.
+replicaCount: 2
+eksCluster: true
+service:
+  name: concept-rw-elasticsearch
+env:
+  LOG_LEVEL: debug
